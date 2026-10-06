@@ -2252,3 +2252,4 @@ kbd {
 
 /* Status messages must never swallow construction or combat input. */
 .toast{pointer-events:none}
+.settlement-list{display:grid;gap:8px;margin:10px 0 16px}.settlement-row{display:grid;grid-template-columns:1fr auto auto;gap:5px;align-items:center;padding:9px;border:1px solid #c2c8b7;border-radius:6px;background:#f2f1e7}.settlement-row>div{display:grid;gap:3px}.settlement-row small{font-size:10px;color:#657062}.settlement-row input{grid-column:1/-1;width:100%;min-width:0;padding:7px 8px;border:1px solid #aab4a4;border-radius:4px;background:#fffdf4;color:#253a2f}.settlement-row button{min-height:36px;padding:5px 7px;font-size:11px}.settlement-row>small{grid-column:1/-1}

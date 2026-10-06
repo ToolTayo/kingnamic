@@ -8,10 +8,10 @@ export type ArmyOrder = 'move' | 'attack' | 'hunt' | 'defend' | 'patrol' | 'hold
 export type ExpeditionApproach = 'ridge' | 'ford';
 export type UnitKind = SoldierKind | 'hollow' | 'runner' | 'brute';
 export type TerritoryId = 'hearthmere' | 'pinewatch' | 'greybank' | 'fen';
-export type Terrain = 'grass' | 'forest' | 'rock' | 'water' | 'road' | 'marsh';
+export type Terrain = 'grass' | 'forest' | 'rock' | 'water' | 'road' | 'marsh' | 'heath' | 'field';
 export interface Point { x: number; y: number }
 export interface Tile extends Point { terrain: Terrain; territory: TerritoryId | 'wild'; height: number; variant: number }
-export interface Building extends Point { id: number; kind: BuildingKind; hp: number; maxHp: number; level: number; progress: number; cooldown: number; rotation?: 0 | 1 }
+export interface Building extends Point { id: number; kind: BuildingKind; hp: number; maxHp: number; level: number; progress: number; cooldown: number; rotation?: 0 | 1; name?: string }
 export interface Unit extends Point {
   id: number; kind: UnitKind; hp: number; maxHp: number; cooldown: number;
   target: Point; path: Point[]; repath: number; attackFlash: number; order?: ArmyOrder;
@@ -34,7 +34,7 @@ export interface Effect extends Point { id: number; kind: 'hit' | 'arrow' | 'hea
 export interface Stats { slain: number; lost: number; built: number; nights: number; cured: number; claimed: number }
 export interface Commander { id:number; weapon:'sword'|'spear'|'bow'; xp:number }
 export interface CommanderInput { walk:Point; attack:boolean; aim?:Point }
-export interface March { seen:string[]; secured:boolean; rewarded:boolean; incursion:number; warning:number }
+export interface March { seen:string[]; rescued?:string[]; secured:boolean; rewarded:boolean; incursion:number; warning:number }
 export interface Empire { reserve:State; elapsed:number }
 export interface State {
   version: 2; seed: number; rng: number; time: number; day: number; phaseTime: number;
@@ -55,6 +55,7 @@ export interface BuildingDef { name: string; subtitle: string; description: stri
 export type Command =
   | { type:'commander-appoint'; id?:number }
   | { type:'commander-weapon'; weapon:'sword'|'spear'|'bow' }
+  | { type:'settlement-rename'; id:number; name:string }
   | { type:'travel'|'gather-company'; ids:number[] }
   | { type:'home-watch' }
 

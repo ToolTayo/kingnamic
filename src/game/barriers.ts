@@ -1,13 +1,14 @@
+import {MAP_W} from './config';
 import type {Building,Point} from './types';
 export const isBarrier=(b:Pick<Building,'kind'>)=>b.kind==='wall'||b.kind==='gate';
-export const barrierIndex=(buildings:Building[])=>new Map(buildings.filter(b=>b.hp>0&&isBarrier(b)).map(b=>[b.y*30+b.x,b]));
+export const barrierIndex=(buildings:Building[])=>new Map(buildings.filter(b=>b.hp>0&&isBarrier(b)).map(b=>[b.y*MAP_W+b.x,b]));
 export function barrierRotation(b:Building,index:Map<number,Building>):0|1 {
  if(b.rotation!==undefined)return b.rotation;
- return !index.has(b.y*30+b.x-1)&&!index.has(b.y*30+b.x+1)&&(index.has((b.y-1)*30+b.x)||index.has((b.y+1)*30+b.x))?1:0;
+ return !index.has(b.y*MAP_W+b.x-1)&&!index.has(b.y*MAP_W+b.x+1)&&(index.has((b.y-1)*MAP_W+b.x)||index.has((b.y+1)*MAP_W+b.x))?1:0;
 }
 export function barrierMask(b:Building,index:Map<number,Building>):number {
  const axis=barrierRotation(b,index);if(b.kind==='gate')return axis?12:3;
- let mask=0;for(const [dx,dy,bit]of [[1,0,1],[-1,0,2],[0,1,4],[0,-1,8]]){const n=index.get((b.y+dy)*30+b.x+dx);if(n&&(n.kind!=='gate'||barrierRotation(n,index)===(dx?0:1)))mask|=bit;}
+ let mask=0;for(const [dx,dy,bit]of [[1,0,1],[-1,0,2],[0,1,4],[0,-1,8]]){const n=index.get((b.y+dy)*MAP_W+b.x+dx);if(n&&(n.kind!=='gate'||barrierRotation(n,index)===(dx?0:1)))mask|=bit;}
  return mask|| (axis?12:3);
 }
 // Two real grid axes. The square occupied cell remains solid to infected;

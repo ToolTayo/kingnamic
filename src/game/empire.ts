@@ -2,15 +2,27 @@ import {army,enemies,log,makeBuilding,makeUnit,newGame} from './state';
 import {distance,key,tileAt} from './map';
 import {nearestOpen} from './navigation';
 import {illnessFor,recordDeath,resolveResidentDeaths} from './disease';
-import {assignResidentJobs,removeResident} from './population';
+import {addResidents,assignResidentJobs,removeResident} from './population';
 import {rebalanceJobs} from './economy';
 import {credit} from './treasury';
-import type {BuildingKind,CommandResult,State} from './types';
+import {MAP_W} from './config';
+import type {BuildingKind,CommandResult,Resource,Resources,State,UnitKind} from './types';
 export const ROAD_EXIT={x:14,y:24};
-export const LANDMARKS=[{id:'village',name:'Briar village',x:14,y:11},{id:'grove',name:'The timber grove',x:5,y:14},{id:'ruins',name:'The old watch',x:22,y:8}];
+export interface Landmark {id:string;name:string;x:number;y:number;art:'village'|'grove'|'ruin'|'ford'|'shrine'|'homestead'|'camp'|'watch';reward:Partial<Resources>;hostiles?:UnitKind[];survivors?:number}
+export const LANDMARKS:Landmark[]=[
+ {id:'village',name:'Briar village',x:14,y:11,art:'village',reward:{food:18}},
+ {id:'grove',name:'The timber grove',x:5,y:14,art:'grove',reward:{wood:22}},
+ {id:'ruins',name:'The old watch',x:22,y:8,art:'ruin',reward:{stone:8}},
+ {id:'splitford',name:'Splitwater Ford',x:33,y:24,art:'ford',reward:{food:16},hostiles:['hollow','hollow','runner']},
+ {id:'pilgrim-shrine',name:'Saint Orla’s shrine',x:39,y:8,art:'shrine',reward:{herbs:7},hostiles:['hollow','hollow','hollow','runner']},
+ {id:'mossgate',name:'Mossgate hamlet',x:47,y:29,art:'village',reward:{wood:16},hostiles:['hollow','runner','hollow','runner'],survivors:3},
+ {id:'bogstead',name:'The peat-cutters’ stead',x:16,y:39,art:'homestead',reward:{food:20,herbs:4},hostiles:['hollow','hollow','runner']},
+ {id:'wayfarer-camp',name:'The wayfarers’ camp',x:32,y:42,art:'camp',reward:{food:12},hostiles:['hollow','hollow','runner'],survivors:2},
+ {id:'northwatch',name:'Northwatch bell tower',x:52,y:35,art:'watch',reward:{stone:12},hostiles:['hollow','hollow','runner','brute']},
+];
 export const empireArmy=(s:State)=>army(s).length+(s.empire?army(s.empire.reserve).length:0);
 export function createMarch(s:State):State{
-  const w=newGame(s.seed);w.region='march';w.march={seen:[],secured:false,rewarded:false,incursion:0,warning:0};
+  const w=newGame(s.seed);w.region='march';w.march={seen:[],rescued:[],secured:false,rewarded:false,incursion:0,warning:0};
   w.units=[];w.buildings=[];w.residents=[];w.population=0;w.infection=[];w.corpses=[];w.logs=[];w.effects=[];w.completed=[];
   w.jobs={farmers:0,woodcutters:0,miners:0,builders:0,healers:0};w.nextId=s.nextId;w.resources=s.resources;w.squads=s.squads;w.speed=0;
   for(const [x,y]of [[12,10],[16,10],[21,7]]){const b=makeBuilding(w,'cottage',x,y,true);b.hp=60;}
@@ -64,11 +76,15 @@ function exchangeRegions(s:State,ids:number[]):CommandResult{
   return {ok:true,message:`${party.length} travellers arrived. Other soldiers stayed at their posts. Time is paused.`};
 }
 export function outpostError(s:State,x:number,y:number):string|null{
-  if(!s.region||!s.march||s.march.secured)return 'The Last Hearth cannot be replaced.';
+  if(!s.region||!s.march)return 'Outposts can only be founded on frontier ground.';
   const hero=army(s).find(u=>u.id===s.commander?.id);
   if(!hero||distance(hero,{x,y})>5)return 'Bring the commander within five tiles of this site.';
-  if(enemies(s).length||s.corpses?.some(c=>c.tainted))return 'Clear the region and its infected remains before founding.';
-  if(army(s).filter(u=>!u.injury&&!illnessFor(s,u.id)).length<2)return 'Two fit soldiers must establish the defensive presence.';
+  const established=s.march.secured&&s.buildings.some(b=>b.kind==='hearth');
+  if(s.buildings.some(b=>b.kind==='hearth'&&distance(b,{x,y})<12))return 'Choose open ground at least twelve tiles from another settlement.';
+  if(!established&&(enemies(s).length||s.corpses?.some(c=>c.tainted)))return 'Clear the region and its infected remains before founding.';
+  if(established&&(enemies(s).some(z=>distance(z,{x,y})<7)||s.corpses?.some(c=>c.tainted&&distance(c,{x,y})<7)))return 'Clear the infected around this site before founding.';
+  const fit=army(s).filter(u=>!u.injury&&!illnessFor(s,u.id));
+  if(established?fit.filter(u=>distance(u,{x,y})<7).length<2:fit.length<2)return 'Bring two fit soldiers to establish the defensive presence.';
   const home=s.empire?.reserve;
   if(!home)return 'The home settlement must supply the founding crew.';
   assignResidentJobs(home);
@@ -78,7 +94,7 @@ export function outpostError(s:State,x:number,y:number):string|null{
 }
 export function foundOutpost(s:State,x:number,y:number):void{
   s.resources.wood-=80;s.resources.stone-=40;
-  const b=makeBuilding(s,'hearth',x,y,true);b.hp=b.maxHp=800;s.march!.secured=true;
+  const n=s.buildings.filter(b=>b.kind==='hearth').length+1,b=makeBuilding(s,'hearth',x,y,true);b.hp=b.maxHp=800;b.name=n===1?'Briar Outpost':`Frontier ${n}`;s.march!.secured=true;
   const home=s.empire!.reserve,crew=home.residents!.filter(r=>r.job==='idle'&&!illnessFor(home,r.id)&&r.hp>=r.maxHp*.7).slice(0,2);
   const reserved=new Set(s.units.map(key));for(const person of crew){removeResident(home,person.id);const p=nearestOpen(s,{x,y:y+1},reserved);reserved.add(key(p));Object.assign(person,p,{job:'builders',path:[],goal:{...p},wait:0,activity:'work'});s.residents!.push(person);}
   s.population=s.residents!.length;s.jobs.builders+=crew.length;home.nextId=s.nextId;
@@ -106,10 +122,24 @@ export function empireStep(s:State,dt:number):void{
   }
   const m=s.march;if(!s.region||!m)return;
   const hero=army(s).find(u=>u.id===s.commander?.id);
-  if(hero)for(const site of LANDMARKS)if(!m.seen.includes(site.id)&&distance(hero,site)<5){m.seen.push(site.id);log(s,`${site.name} discovered. No map purchase is needed.`,'good');}
-  if(m.secured&&!s.buildings.some(b=>b.kind==='hearth')){m.secured=false;log(s,'The outpost beacon fell. Clear the land and re-establish your position.','danger');}
+  if(hero)for(const site of LANDMARKS)if(!m.seen.includes(site.id)&&distance(hero,site)<4){
+    m.seen.push(site.id);const found=Object.entries(site.reward).filter((entry):entry is [Resource,number]=>typeof entry[1]==='number');
+    for(const [resource,amount]of found)credit(s,resource,amount);
+    const cache=found.map(([resource,amount])=>`${amount} ${resource==='stone'?'Crowns':resource==='wood'?'Timber':resource==='food'?'provisions':'herbs'}`).join(' · ');
+    log(s,`${site.name} discovered${cache?` · ${cache} recovered`:''}.`,'good');
+    if(site.hostiles?.length){const danger=Math.min(2,Math.floor(distance(hero,ROAD_EXIT)/18)),count=Math.min(site.hostiles.length,2+danger),reserved=new Set(s.units.map(key)),offsets=[{x:1,y:0},{x:-1,y:1},{x:1,y:2},{x:-2,y:-1},{x:2,y:-2}];
+      for(let i=0;i<count;i++){const at=offsets[i%offsets.length],p=nearestOpen(s,{x:site.x+at.x,y:site.y+at.y},reserved);reserved.add(key(p));const u=makeUnit(s,site.hostiles[i],p.x,p.y);u.order='defend';u.anchor={x:site.x,y:site.y};}
+      log(s,`The infected stir around ${site.name}. The road is not safe yet.`,'danger');
+    }
+  }
+  m.rescued??=[];
+  for(const site of LANDMARKS)if(site.survivors&&!m.rescued.includes(site.id)&&m.seen.includes(site.id)&&!enemies(s).some(z=>distance(z,site)<6)){
+    const home=s.empire?.reserve;if(!home)continue;home.nextId=Math.max(home.nextId,s.nextId);const joined=addResidents(home,site.survivors).length;s.nextId=home.nextId;m.rescued.push(site.id);
+    log(s,`${joined} survivors from ${site.name} join your people${joined?' at Hearthmere':''}.`,'good');
+  }
+  if(m.secured&&!s.buildings.some(b=>b.kind==='hearth')){m.secured=false;log(s,'The last outpost beacon fell. Clear the land and re-establish your position.','danger');}
   if(!m.secured)return;
   m.incursion+=dt;
   if(m.incursion>=90&&!m.warning&&!enemies(s).length){m.warning=8;log(s,'Scouts warn: an infected band approaches the eastern old watch in 8 seconds.','danger');}
-  else if(m.warning){m.warning=Math.max(0,m.warning-dt);if(!m.warning){m.incursion=0;const count=Math.min(18,4+Math.floor(army(s).length/15)),reserved=new Set(s.units.map(key));for(let n=0;n<count;n++){const p=nearestOpen(s,{x:27,y:8+n%4},reserved);reserved.add(key(p));makeUnit(s,n%4===0?'runner':'hollow',p.x,p.y);}}}
+  else if(m.warning){m.warning=Math.max(0,m.warning-dt);if(!m.warning){m.incursion=0;const count=Math.min(18,4+Math.floor(army(s).length/15)),reserved=new Set(s.units.map(key));for(let n=0;n<count;n++){const p=nearestOpen(s,{x:MAP_W-5,y:8+n%4},reserved);reserved.add(key(p));makeUnit(s,n%4===0?'runner':'hollow',p.x,p.y);}}}
 }

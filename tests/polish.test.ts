@@ -7,6 +7,7 @@ import { combatStep } from '../src/game/combat';
 import { distance, tileAt } from '../src/game/map';
 import { clearMelee } from '../src/game/navigation';
 import { decode } from '../src/game/persistence';
+import { MAP_H, MAP_W } from '../src/game/config';
 import { makeBuilding, makeUnit, newGame } from '../src/game/state';
 
 describe('individual civilian routines', () => {
@@ -69,7 +70,7 @@ describe('individual civilian routines', () => {
 describe('battle orders and legacy save compatibility', () => {
   it('reads an actual pre-polish v2 fixture without losing any progress or adding required fields', () => {
     const raw = readFileSync(new URL('./fixtures/milestone-v2.json', import.meta.url), 'utf8');
-    const migrated=decode(raw)!;const legacy=JSON.parse(raw);expect(migrated.biteRulesRevision).toBe(1);const {biteRulesRevision:_,...compatible}=migrated;expect({...compatible,residents:undefined,nextId:legacy.nextId}).toEqual({...legacy,economyRevision:1,residents:undefined});
+    const migrated=decode(raw)!;const legacy=JSON.parse(raw),{biteRulesRevision:_biteRulesRevision,contamination:_migratedGrid,...migratedProgress}=migrated,{contamination:legacyGrid,...legacyProgress}=legacy;expect(migrated.biteRulesRevision).toBe(1);expect({...migratedProgress,residents:undefined,nextId:legacy.nextId}).toEqual({...legacyProgress,economyRevision:1,residents:undefined});expect(migrated.contamination).toHaveLength(MAP_W*MAP_H);expect(migrated.contamination[25*MAP_W+29]).toBe(legacyGrid[25*30+29]);
     const s = decode(raw)!; command(s, { type: 'rally', x: 16, y: 16 });
     expect(decode(JSON.stringify(s))).toEqual(s);
     s.units[0].order = 'invalid' as 'move'; expect(decode(JSON.stringify(s))).toBeNull();

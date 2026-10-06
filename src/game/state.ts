@@ -31,7 +31,7 @@ export function newGame(seed = 74019): State {
     formation: 'line', quarantine: false, biteRulesRevision: 1, logs: [], effects: [], stats: { slain: 0, lost: 0, built: 0, nights: 0, cured: 0, claimed: 0 },
     completed: [], outcome: 'playing', tutorialSeen: false,
   };
-  makeBuilding(s, 'hearth', 14, 11, true);
+  makeBuilding(s, 'hearth', 14, 11, true).name='Hearthmere';
   makeBuilding(s, 'cottage', 11, 12, true); makeBuilding(s, 'cottage', 16, 14, true);
   makeBuilding(s, 'farm', 11, 15, true); makeBuilding(s, 'lumberyard', 10, 9, true);
   makeBuilding(s, 'barracks', 17, 10, true); makeBuilding(s, 'tower', 17, 17, true);

@@ -21,7 +21,7 @@ export function buildError(s: State, kind: BuildingKind, x: number, y: number, r
   if(s.region&&tile.terrain==='rock')return 'The bedrock cannot support a foundation. Choose open ground.';
   if(s.region&&tile.terrain==='forest')return 'Keep the dense grove for timber. Build on open ground beside it.';
   if(s.region&&enemies(s).some(u=>distance(u,tile)<5))return 'Drive the infected away from this building site.';
-  if (tile.territory === 'wild' || !s.owned.includes(tile.territory)) return 'Reclaim this territory before building here.';
+  if ((tile.territory === 'wild' || !s.owned.includes(tile.territory)) && !(s.region==='march'&&s.march?.secured)) return 'Reclaim this territory before building here.';
   if (tile.terrain === 'water') return 'You cannot build on the river.';
   if (s.buildings.some(b => b.x === x && b.y === y)) return 'There is already a building here.';
   if (s.units.some(u => distance(u, tile) < 0.65)) return 'Move the troops off this tile first.';
@@ -52,6 +52,12 @@ function applyCommand(s: State, c: Command): CommandResult {
     const u=army(s).find(u=>u.id===s.commander?.id);if(!u||s.expedition)return result(false,'The commander is not available here.');
     if(!['sword','spear','bow'].includes(c.weapon))return result(false,'Choose sword, spear or bow.');
     s.commander!.weapon=c.weapon;u.kind=c.weapon==='bow'?'ranger':c.weapon==='spear'?'spearman':'warden';return result(true,c.weapon+' equipped. Health and recovery remain unchanged.');
+  }
+  if(c.type==='settlement-rename'){
+    if(s.expedition)return result(false,'Return from the expedition before naming a settlement.');
+    const b=s.buildings.find(b=>b.id===c.id&&b.kind==='hearth'),name=c.name.trim().replace(/\s+/g,' ').slice(0,32);
+    if(!b||name.length<2)return result(false,'Choose a settlement and give it a name of at least two characters.');
+    b.name=name;log(s,`${name} is entered in the kingdom ledger.`,'good');return result(true,`${name} named.`);
   }
   if (c.type === 'expedition-launch') {if(s.region)return result(false,'Depart for the Broken Standard from Hearthmere.');return launchExpedition(s, c.ids, c.approach);}
   if (c.type === 'expedition-share' || c.type === 'expedition-retreat' || c.type === 'expedition-extract') return expeditionAction(s, c.type);
@@ -113,7 +119,7 @@ function applyCommand(s: State, c: Command): CommandResult {
     case 'build': {
       if(c.rotation!==undefined&&(![0,1].includes(c.rotation)||!['wall','gate'].includes(c.kind)))return result(false,'Choose a supported barrier orientation.');
       const error = buildError(s, c.kind, c.x, c.y,c.rotation); if (error) return result(false, error);
-      if(c.kind==='hearth'){foundOutpost(s,c.x,c.y);return result(true,'Briar outpost founded. Build freely on accessible open terrain.');}
+      if(c.kind==='hearth'){foundOutpost(s,c.x,c.y);const b=s.buildings.filter(v=>v.kind==='hearth').at(-1)!;return result(true,`${b.name} founded. Build freely on accessible open terrain.`);}
       spend(s, BUILDINGS[c.kind].cost); const built=makeBuilding(s, c.kind, c.x, c.y);if(c.rotation!==undefined)built.rotation=c.rotation;
       return result(true, `${BUILDINGS[c.kind].name} construction started.`);
     }

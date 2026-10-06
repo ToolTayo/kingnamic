@@ -1,4 +1,4 @@
-import { MAP_W, MAX_HOSTILES, MAX_UNITS, TERRITORIES, UNITS } from './config';
+import { MAP_H, MAP_W, MAX_HOSTILES, MAX_UNITS, TERRITORIES, UNITS } from './config';
 import { distance, key, tileAt } from './map';
 import { clearMelee, findPath, movementBlocker, nearestOpen, navigation, type Navigation } from './navigation';
 import { separateCrowd } from './crowd';
@@ -148,7 +148,7 @@ export function combatStep(s: State, dt: number, separate = true,input?:Commande
         if(s.effects.length<100&&(u.reanimatedFrom!==undefined||s.theatre))s.effects.push({id:s.nextId++,kind:'reward',x:u.x,y:u.y,ttl:1.6,amount:0,note:u.reanimatedFrom!==undefined?'reanimated':'claimed'});
       }
       s.resources.herbs=Math.min(Math.max(9999,s.resources.herbs),s.resources.herbs+.12);
-      const k=key(u);if(k>=0&&k<MAP_W*26)s.contamination[k]=Math.min(100,s.contamination[k]+15);
+      const k=key(u);if(k>=0&&k<MAP_W*MAP_H)s.contamination[k]=Math.min(100,s.contamination[k]+15);
     }
   }
   if(bounty)log(s,`+${bounty} Crowns · ${rewarded} infected defeated.`,'good');

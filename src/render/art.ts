@@ -1,7 +1,7 @@
 import { MAP_H, MAP_W } from '../game/config';
 import { hash, TILES } from '../game/map';
 import type { BuildingKind, Tile } from '../game/types';
-export const TW = 64, TH = 32, ORIGIN_X = 890, ORIGIN_Y = 80;
+export const TW = 64, TH = 32, ORIGIN_X = (MAP_H - 1) * TW / 2 + 80, ORIGIN_Y = 80;
 export const iso = (x: number, y: number) => ({ x: ORIGIN_X + (x - y) * TW / 2, y: ORIGIN_Y + (x + y) * TH / 2 });
 export const uniso = (x: number, y: number) => ({ x: ((x - ORIGIN_X) / 32 + (y - ORIGIN_Y) / 16) / 2, y: ((y - ORIGIN_Y) / 16 - (x - ORIGIN_X) / 32) / 2 });
 export function canvas(w: number, h: number): [HTMLCanvasElement, CanvasRenderingContext2D] { const c = document.createElement('canvas'); c.width = w; c.height = h; return [c, c.getContext('2d')!]; }
@@ -31,19 +31,20 @@ function tree(c: CanvasRenderingContext2D, x: number, y: number, scale = 1, vari
   c.restore();
 }
 export function terrainArt(source:Tile[]=TILES,march=false): HTMLCanvasElement {
-  const [cv, c] = canvas(1900, 1080);
+  const [cv, c] = canvas(ORIGIN_X + (MAP_W - 1) * TW / 2 + 80, Math.max(1080, ORIGIN_Y + (MAP_W + MAP_H) * TH / 2 + 48));
   // The river and land continue under the vignette; tile edges are intentionally subtle.
   const tiles = [...source].sort((a, b) => a.x + a.y - b.x - b.y);
   for (const t of tiles) {
     const p = iso(t.x, t.y), n = t.variant;
-    const color = t.terrain === 'water' ? ['#426c70', '#456f72', '#487477'][Math.floor(n * 3)] : t.terrain === 'road' ? ['#929274', '#989779', '#a09c7c'][Math.floor(n * 3)] : t.terrain === 'marsh' ? ['#687f6a', '#6b826f', '#6b7e65'][Math.floor(n * 3)] : t.terrain === 'rock' ? '#8b927d' : ['#7d906e', '#829674', '#899a75', '#819373'][Math.floor(n * 4)];
+    const color = t.terrain === 'water' ? ['#426c70', '#456f72', '#487477'][Math.floor(n * 3)] : t.terrain === 'road' ? ['#929274', '#989779', '#a09c7c'][Math.floor(n * 3)] : t.terrain === 'marsh' ? ['#687f6a', '#6b826f', '#6b7e65'][Math.floor(n * 3)] : t.terrain === 'rock' ? '#8b927d' : t.terrain === 'heath' ? ['#78836b','#85896d','#707b64'][Math.floor(n*3)] : t.terrain === 'field' ? ['#92936c','#a29a70','#888e68'][Math.floor(n*3)] : ['#7d906e', '#829674', '#899a75', '#819373'][Math.floor(n * 4)];
     poly(c, [p.x, p.y - 16, p.x + 32, p.y, p.x, p.y + 16, p.x - 32, p.y], color);
-    if (t.x === MAP_W - 1 || t.y === MAP_H - 1) { poly(c, [p.x - 32, p.y, p.x, p.y + 16, p.x + 32, p.y, p.x + 32, p.y + 16, p.x, p.y + 32, p.x - 32, p.y + 16], '#43594c'); }
     if (t.terrain === 'water') {
       line(c, [p.x - 12, p.y + 2, p.x + 6, p.y + 2], '#91b1a733'); line(c, [p.x, p.y - 7, p.x + 12, p.y - 7], '#b6cbc233');
     } else {
       for (let i = 0; i < 5; i++) { const nx = hash(t.x * 5 + i, t.y), ny = hash(t.y * 7 + i, t.x); const x = p.x + (nx - 0.5) * 35, y = p.y + (ny - 0.5) * 15; c.fillStyle = i % 2 ? '#c4c29930' : '#4b694331'; c.fillRect(x, y, 2, 1); }
       if (t.terrain === 'grass' && n > 0.55) { const x = p.x + 8, y = p.y + 3; line(c, [x - 2, y - 2, x, y, x + 2, y - 4], '#607c55', 1); }
+      if(t.terrain==='field'&&n>.35){line(c,[p.x-11,p.y-2,p.x-4,p.y+2],'#c4b67d88',1);line(c,[p.x+5,p.y-5,p.x+12,p.y-1],'#c4b67d66',1);}
+      if(t.terrain==='heath'&&n>.7)line(c,[p.x-3,p.y+2,p.x-1,p.y-3,p.x+1,p.y+1],'#a07c6577',1);
     }
     if (!march&&((t.y === 20 || t.y === 21) && (t.x === 14 || t.x === 15) || (t.x === 23 || t.x === 24) && (t.y === 11 || t.y === 12))) {
       poly(c, [p.x, p.y - 15, p.x + 30, p.y, p.x, p.y + 15, p.x - 30, p.y], '#b1a17b');
@@ -63,6 +64,38 @@ export function sceneryArt(kind: 'forest' | 'rock' | 'marsh', variant = 0): HTML
   }
   if (kind === 'marsh') for (let i = 0; i < 4; i++) line(c, [x + i * 3, y, x + i * 3 - 2, y - 12 - i % 2 * 4], '#4a6854', 1.5);
   return cv;
+}
+export type LandmarkArtKind='village'|'grove'|'ruin'|'ford'|'shrine'|'homestead'|'camp'|'watch';
+export function landmarkArt(kind:LandmarkArtKind):HTMLCanvasElement{
+ const [cv,c]=canvas(112,128),x=56,y=106;
+ ellipse(c,x,y,42,13,'#172d2730');
+ const stone=['#a7a58d','#777b6b','#c1b99d'];
+ if(kind==='village'||kind==='homestead'){
+   box(c,x-17,y-2,23,18,21,stone);roof(c,x-17,y-2,23,18,21,['#725e4d','#504a3e']);
+   box(c,x+13,y+2,17,15,17,['#a79c7f','#76694f','#beb18b']);roof(c,x+13,y+2,17,15,17,['#73634a','#514a3d']);
+   if(kind==='homestead')poly(c,[x-28,y-4,x-9,y-13,x+12,y-5,x+12,y+1,x-8,y-7,x-28,y+1],'#3e4d42');
+   line(c,[x-39,y+6,x-14,y+14,x+13,y+8,x+38,y+15],'#79694d',2);
+ }else if(kind==='grove'){
+   tree(c,x,y,1.18,1);line(c,[x-10,y-34,x-8,y-57,x+3,y-68,x+11,y-55],'#9a8960',3);
+ }else if(kind==='ruin'||kind==='watch'){
+   poly(c,[x-37,y+3,x-33,y-31,x-22,y-43,x-11,y-30,x-13,y+2],'#a7a894','#5a6558');
+   poly(c,[x+10,y+4,x+8,y-39,x+20,y-54,x+34,y-39,x+31,y+6],'#8e9686','#505c52');
+   if(kind==='watch')box(c,x-8,y-6,18,12,36,['#aaa991','#7b806d','#d1c8a7']);
+   else line(c,[x-12,y-8,x-12,y-24,x+9,y-24,x+9,y-7],'#625f4f',3);
+ }else if(kind==='ford'){
+   ellipse(c,x,y+5,41,12,'#4d7778');
+   for(let i=-2;i<=2;i++)ellipse(c,x+i*13,y+2+(i%2)*3,6,3,['#aaa991','#c1b99d','#868b7b'][Math.abs(i)%3]);
+   line(c,[x-35,y-10,x-21,y-9,x-11,y-7],'#c7b38b',3);line(c,[x+15,y+10,x+27,y+11,x+39,y+15],'#c7b38b',3);
+ }else if(kind==='shrine'){
+   poly(c,[x-19,y+7,x-15,y-34,x-5,y-51,x+6,y-40,x+10,y+5],'#aaa991','#626a5a');
+   line(c,[x-4,y-28,x+2,y-35,x+8,y-28],'#d1c59f',2);
+   poly(c,[x+13,y+10,x+17,y-7,x+32,y-11,x+34,y+12],'#8a8d7b');
+ }else{
+   line(c,[x-34,y+3,x-31,y-35,x-7,y-35,x-7,y+5],'#a98e61',4);line(c,[x-34,y-33,x-19,y-50,x-4,y-32],'#a76e4f',5);
+   line(c,[x+4,y+7,x+8,y-24,x+34,y-24,x+36,y+12],'#a98e61',4);line(c,[x+5,y-25,x+21,y-40,x+37,y-24],'#8f674e',5);
+   ellipse(c,x-1,y+1,6,4,'#d3a85e');ellipse(c,x-1,y+1,3,2,'#f1cc7a');
+ }
+ return cv;
 }
 export function buildingArt(kind: BuildingKind): HTMLCanvasElement {
   const [cv, c] = canvas(156, 180); const x = 78, y = 143;

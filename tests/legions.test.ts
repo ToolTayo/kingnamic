@@ -10,6 +10,7 @@ import { addResidents,assignResidentJobs } from '../src/game/population';
 import { decode } from '../src/game/persistence';
 import { distance,key,tileAt } from '../src/game/map';
 import { nearestOpen,navigationMetrics } from '../src/game/navigation';
+import { MAP_H, MAP_W } from '../src/game/config';
 import { healthy,rebalanceJobs,economyStep } from '../src/game/economy';
 import { step } from '../src/game/simulation';
 import { expeditionParty } from '../src/game/expedition';
@@ -141,7 +142,7 @@ describe('large army simulation',()=>{
   });
   it('keeps dense edge formations inside the saved coordinate bounds',()=>{
     const s=empty();for(let i=0;i<20;i++)makeUnit(s,'warden',i%2?0:29,i<10?0:25);for(let n=0;n<100;n++)separateCrowd(s,s.units,.1);
-    expect(s.units.every(u=>u.x>=0&&u.x<=29&&u.y>=0&&u.y<=25)).toBe(true);expect(decode(JSON.stringify(s))).not.toBeNull();
+    expect(s.units.every(u=>u.x>=0&&u.x<=MAP_W-1&&u.y>=0&&u.y<=MAP_H-1)).toBe(true);expect(decode(JSON.stringify(s))).not.toBeNull();
   });
   for(const count of [10,50,100,200])it(`moves and saves ${count} soldiers under combat stress`,()=>{
     const s=empty();s.buildings=newGame().buildings;s.nextId=Math.max(s.nextId,...s.buildings.map(b=>b.id+1));const reserved=new Set<number>();

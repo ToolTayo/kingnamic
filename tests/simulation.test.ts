@@ -93,7 +93,7 @@ describe('campaign and simulation budget', () => {
     for (let i = 0; i < 100; i++) makeUnit(s, i < 24 ? i % 2 ? 'ranger' : 'warden' : 'hollow', 10 + i % 9, 19 + Math.floor(i / 25));
     const start = performance.now(); advance(s, 10); const ms = performance.now() - start;
     console.log('STRESS METRICS', JSON.stringify({ steps: 100, elapsedMs: Number(ms.toFixed(1)), msPerStep: Number((ms / 100).toFixed(2)), buildings: s.buildings.length, units: s.units.length }));
-    expect(s.units.length).toBeLessThanOrEqual(100); expect(s.buildings.length).toBeLessThanOrEqual(150); expect(s.effects.length).toBeLessThanOrEqual(100); expect(s.contamination).toHaveLength(780);
+    expect(s.units.length).toBeLessThanOrEqual(100); expect(s.buildings.length).toBeLessThanOrEqual(150); expect(s.effects.length).toBeLessThanOrEqual(100); expect(s.contamination).toHaveLength(MAP_W*MAP_H);
     expect(ms).toBeLessThan(8000);
   });
   it('completes a five-night campaign using only legal gameplay commands', () => {

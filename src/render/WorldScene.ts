@@ -1,12 +1,12 @@
 import {barrierIndex,barrierMask,isBarrier} from '../game/barriers';
 import Phaser from 'phaser';
-import { BUILDINGS, JOBS, MAP_W, TERRITORIES } from '../game/config';
+import { BUILDINGS, JOBS, MAP_H, MAP_W, TERRITORIES } from '../game/config';
 import { CivilianSystem } from '../game/civilians';
 import { distance, tileAt, tilesFor } from '../game/map';
 import type { Runtime } from '../game/runtime';
 import { isFriendly } from '../game/state';
-import type { Point, State, TerritoryId } from '../game/types';
-import { buildingArt, barrierArt, iso, sceneryArt, terrainArt, unitArt, uniso } from './art';
+import type { Point, State, TerritoryId, Tile } from '../game/types';
+import { buildingArt, barrierArt, iso, LandmarkArtKind, landmarkArt, sceneryArt, terrainArt, unitArt, uniso } from './art';
 import { missionRoute } from '../game/expedition';
 import { ambushFronts } from '../game/encounters';
 import { indexActorsByScreenY, obscuresActor } from './visibility';
@@ -25,7 +25,8 @@ export class WorldScene extends Phaser.Scene {
   readonly civilians = new CivilianSystem();
   private health = new Map<number, { hp: number; until: number }>();
   private renderedState?: State;
-  private scenery: { tile: Point; sprite: Phaser.GameObjects.Image; height: number; width: number }[] = [];
+  private scenery: { tile: Tile; sprite?: Phaser.GameObjects.Image; height: number; width: number; texture:string; scale:number }[] = [];
+  private siteProps: {site:typeof LANDMARKS[number];sprite?:Phaser.GameObjects.Image}[]=[];
   private rewards=new Map<number,Phaser.GameObjects.Text>();
   private fallen = new Map<number, Phaser.GameObjects.Image>();
   private remains = new Map<number, Phaser.GameObjects.Image>();
@@ -55,6 +56,7 @@ export class WorldScene extends Phaser.Scene {
     for (const kind of ['warden', 'ranger', 'spearman', 'scout', 'hollow', 'runner', 'brute', ...JOBS.map(j => j.id), 'idle']) for (let frame = 0; frame < 7; frame++) this.textures.addCanvas(`unit-${kind}-${frame}`, unitArt(kind, frame));
 
     for (const kind of ['forest', 'rock', 'marsh'] as const) for (let n = 0; n < (kind === 'forest' ? 2 : 1); n++) this.textures.addCanvas(`scenery-${kind}-${n}`, sceneryArt(kind, n));
+    for(const kind of [...new Set(LANDMARKS.map(p=>p.art))] as LandmarkArtKind[])this.textures.addCanvas(`site-${kind}`,landmarkArt(kind));
     this.syncTerrain();
     this.borders = this.add.graphics().setDepth(-90);
     this.ground = this.add.graphics().setDepth(-80);
@@ -63,7 +65,8 @@ export class WorldScene extends Phaser.Scene {
     this.hover = this.add.graphics().setDepth(3100);
     this.night = this.add.rectangle(0, 0, 4000, 3000, 0x12263f, 0).setOrigin(0).setScrollFactor(0).setDepth(3500);
     this.cameras.main.setBackgroundColor('#61776b');
-    this.cameras.main.setBounds(50, 0, 1820, 1050);
+    const corners=[iso(0,0),iso(MAP_W-1,0),iso(0,MAP_H-1),iso(MAP_W-1,MAP_H-1)],xs=corners.map(p=>p.x),ys=corners.map(p=>p.y),left=Math.min(...xs)-80,top=Math.max(0,Math.min(...ys)-80),right=Math.max(...xs)+80,bottom=Math.max(...ys)+200;
+    this.cameras.main.setBounds(left,top,right-left,bottom-top);
     this.home();
     this.input.mouse?.disableContextMenu();
     this.input.addPointer(1);
@@ -104,16 +107,16 @@ export class WorldScene extends Phaser.Scene {
     const region=this.rt.world.region??'home';if(this.terrainRegion===region)return;
     this.terrainRegion=region;this.landscape?.destroy();if(this.textures.exists('valley'))this.textures.remove('valley');
     this.textures.addCanvas('valley',terrainArt(tilesFor(this.rt.world),region==='march'));this.landscape=this.add.image(0,0,'valley').setOrigin(0).setDepth(-100);
-    for(const prop of this.scenery)prop.sprite.destroy();
+    for(const prop of this.scenery)prop.sprite?.destroy();for(const prop of this.siteProps)prop.sprite?.destroy();
     this.scenery = tilesFor(this.rt.world).filter(t=>t.terrain==='forest'||t.terrain==='rock'||t.terrain==='marsh'&&t.variant>.65).map(t => {
-      const p = iso(t.x, t.y), tree = t.terrain === 'forest', scale = tree ? .75 + t.variant * .5 : 1;
-      const sprite = this.add.image(p.x + (tree ? (t.variant - .5) * 18 : 0), p.y + 4, `scenery-${t.terrain}-${tree && t.variant > .8 ? 1 : 0}`).setOrigin(.5, .8).setScale(scale).setDepth(p.y + 4);
-      return { tile: t, sprite, height: tree ? 60 * scale : 26, width: tree ? 22 * scale : 18 };
+      const tree = t.terrain === 'forest', scale = tree ? .75 + t.variant * .5 : 1;
+      return { tile:t, height:tree?60*scale:26, width:tree?22*scale:18, texture:`scenery-${t.terrain}-${tree&&t.variant>.8?1:0}`, scale };
     });
+    this.siteProps=LANDMARKS.map(site=>({site}));
 
     this.renderedState=undefined;this.labelSignature='';
   }
-  home(): void { const p = iso(14, 12); this.cameras.main.setZoom(this.scale.width < 700 ? 0.72 : Math.min(1.25, Math.max(0.8, this.scale.width / 1080))); this.cameras.main.centerOn(p.x, p.y - 20); }
+  home(): void { const hero=this.rt.world.region?this.rt.world.units.find(u=>u.id===this.rt.state.commander?.id):undefined,anchor=hero??(this.rt.world.region?this.rt.world.buildings.find(b=>b.kind==='hearth'):{x:14,y:12}),p=iso(anchor?.x??14,anchor?.y??12); this.cameras.main.setZoom(this.scale.width < 700 ? 0.72 : Math.min(1.25, Math.max(0.8, this.scale.width / 1080))); this.cameras.main.centerOn(p.x, p.y - 20); }
   zoom(delta: number, anchor?: Point): void {
     const cam = this.cameras.main, old = cam.zoom, next = Phaser.Math.Clamp(old + delta, 0.48, 1.8);
     cam.setZoom(next);
@@ -212,8 +215,15 @@ export class WorldScene extends Phaser.Scene {
     ) ? .18 : 1);
     const occupied = new Set(s.buildings.map(b => b.y * MAP_W + b.x));
     for (const prop of this.scenery) {
-      prop.sprite.setVisible(!occupied.has(prop.tile.y * MAP_W + prop.tile.x));
-      prop.sprite.setAlpha(obscuresActor(prop.sprite, prop.width, prop.height, actorPoints) ? .28 : 1);
+      const p=iso(prop.tile.x,prop.tile.y),view=this.cameras.main.worldView,visible=p.x>view.x-160&&p.x<view.right+160&&p.y>view.y-140&&p.y<view.bottom+120;
+      if(visible&&!prop.sprite)prop.sprite=this.add.image(p.x+(prop.tile.terrain==='forest'?(prop.tile.variant-.5)*18:0),p.y+4,prop.texture).setOrigin(.5,.8).setScale(prop.scale).setDepth(p.y+4);
+      else if(!visible&&prop.sprite){prop.sprite.destroy();prop.sprite=undefined;}
+      if(prop.sprite){prop.sprite.setVisible(!occupied.has(prop.tile.y*MAP_W+prop.tile.x));prop.sprite.setAlpha(obscuresActor(prop.sprite,prop.width,prop.height,actorPoints) ? .28 : 1);}
+    }
+    for(const prop of this.siteProps){const p=iso(prop.site.x,prop.site.y),view=this.cameras.main.worldView,visible=p.x>view.x-180&&p.x<view.right+180&&p.y>view.y-170&&p.y<view.bottom+140;
+      if(visible&&!prop.sprite)prop.sprite=this.add.image(p.x,p.y+2,`site-${prop.site.art}`).setOrigin(.5,.86).setDepth(p.y+3);
+      else if(!visible&&prop.sprite){prop.sprite.destroy();prop.sprite=undefined;}
+      if(prop.sprite){const found=!!s.march?.seen.includes(prop.site.id);prop.sprite.setAlpha(found?1:.78).setTint(found?0xffffff:0xc6c7b0);}
     }
     const bIds = new Set(s.buildings.map(b => b.id));
     const barriers=barrierIndex(s.buildings);

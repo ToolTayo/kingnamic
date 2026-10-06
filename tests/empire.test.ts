@@ -9,7 +9,8 @@ import {infect,plagueStep} from '../src/game/disease';
 import {rates} from '../src/game/economy';
 import {launchError} from '../src/game/expedition';
 import {nearestOpen} from '../src/game/navigation';
-import {tilesFor} from '../src/game/map';
+import {tileAt,tilesFor} from '../src/game/map';
+import {MAP_W,MAP_H} from '../src/game/config';
 import type {State} from '../src/game/types';
 function depart(){const s=newGame();command(s,{type:'commander-appoint'});const party=army(s).slice(0,2);for(const u of party)Object.assign(u,ROAD_EXIT,{target:{...ROAD_EXIT},order:'hold'});expect(command(s,{type:'travel',ids:party.map(u=>u.id)}).ok).toBe(true);return s;}
 function cleared(){const s=depart();s.units=army(s);s.resources.wood=500;s.resources.stone=500;return s;}
@@ -56,8 +57,15 @@ describe('connected regions and identity ledger',()=>{
  });
 });
 describe('secure territory and free construction',()=>{
- it('discovers landmarks through proximity, without spending supplies or purchasing claims',()=>{
-  const s=cleared(),hero=army(s)[0],before={...s.resources};Object.assign(hero,{x:14,y:12});empireStep(s,.1);expect(s.march!.seen).toEqual(['village']);expect(s.resources).toEqual(before);expect(command(s,{type:'claim',territory:'pinewatch'}).ok).toBe(false);
+ it('discovers places through proximity, recovers their supplies once and needs no map purchase',()=>{
+  const s=cleared(),hero=army(s)[0],before={...s.resources};Object.assign(hero,{x:14,y:12});empireStep(s,.1);expect(s.march!.seen).toEqual(['village']);expect(s.resources).toEqual({...before,food:before.food+18});expect(command(s,{type:'claim',territory:'pinewatch'}).ok).toBe(false);
+ });
+ it('opens a large connected landscape with varied terrain and a road to distant landmarks',()=>{
+  const s=depart(),march=tilesFor(s),kinds=new Set(march.map(t=>t.terrain));expect(march).toHaveLength(MAP_W*MAP_H);for(const kind of ['grass','forest','rock','water','road','marsh','heath','field'])expect(kinds.has(kind as any)).toBe(true);expect(tileAt(52,35,s)).toBeDefined();expect(tileAt(60,35,s)).toBeUndefined();expect(march.filter(t=>t.terrain==='road'&&t.x>30&&t.y>30).length).toBeGreaterThan(10);
+ });
+ it('spawns a finite ambush at a discovered camp and escorts its real survivors back once',()=>{
+  const s=cleared(),home=s.empire!.reserve,before=home.population,hero=army(s)[0];Object.assign(hero,{x:33,y:24});empireStep(s,.1);expect(s.march!.seen).toContain('splitford');expect(enemies(s)).toHaveLength(3);
+  s.units=army(s);Object.assign(hero,{x:47,y:29});empireStep(s,.1);expect(s.march!.seen).toContain('mossgate');expect(enemies(s)).toHaveLength(3);s.units=army(s);empireStep(s,.1);expect(home.population).toBe(before+3);expect(s.march!.rescued).toContain('mossgate');const saved=reload(s);expect(saved.empire!.reserve.population).toBe(before+3);expect(saved.march!.rescued).toEqual(['mossgate']);
  });
  it('requires clearing and a genuine defensive and civilian founding crew',()=>{
   const s=depart();expect(buildError(s,'hearth',16,21)).toContain('Clear');s.units=army(s);s.resources.stone=100;s.empire!.reserve.jobs.builders=6;s.empire!.reserve.jobs.miners=8;expect(buildError(s,'hearth',16,21)).toContain('unassigned');
@@ -75,6 +83,11 @@ describe('secure territory and free construction',()=>{
  it('constructs using the outpost crew and retains buildings, damage and local defense orders on return',()=>{
   let s=founded();command(s,{type:'build',kind:'farm',x:18,y:20});advance(s,25);const farm=s.buildings.find(b=>b.kind==='farm')!;expect(farm.progress).toBe(1);farm.hp-=17;const defender=army(s).find(u=>u.id!==s.commander!.id)!;defender.order='defend';defender.anchor={x:16,y:21};const snapshot=JSON.stringify(s.buildings);
   road(s);expect(command(s,{type:'travel',ids:[]}).ok).toBe(true);s=reload(s);advance(s,2);road(s);expect(command(s,{type:'travel',ids:[]}).ok).toBe(true);expect(JSON.stringify(s.buildings)).toBe(snapshot);expect(army(s).find(u=>u.id===defender.id)!.order).toBe('defend');reload(s);
+ });
+ it('names and persists multiple distant settlements with separate construction crews',()=>{
+  let s=founded(),first=s.buildings.find(b=>b.kind==='hearth')!;expect(first.name).toBe('Briar Outpost');expect(command(s,{type:'settlement-rename',id:first.id,name:'Greenhollow'}).ok).toBe(true);
+  const hero=army(s).find(u=>u.id===s.commander!.id)!,guard=army(s).find(u=>u.id!==hero.id)!,candidate=tilesFor(s).filter(t=>t.x>=30&&t.y>=30&&['grass','field','heath'].includes(t.terrain)&&Math.hypot(t.x-first.x,t.y-first.y)>=12).find(t=>{Object.assign(hero,{x:t.x-2,y:t.y});Object.assign(guard,{x:t.x-1,y:t.y+1});return buildError(s,'hearth',t.x,t.y)===null;});
+  expect(candidate).toBeDefined();expect(command(s,{type:'build',kind:'hearth',x:candidate!.x,y:candidate!.y})).toMatchObject({ok:true});const second=s.buildings.filter(b=>b.kind==='hearth').at(-1)!;expect(command(s,{type:'settlement-rename',id:second.id,name:'Northwatch'}).ok).toBe(true);expect(s.buildings.filter(b=>b.kind==='hearth').map(b=>b.name)).toEqual(['Greenhollow','Northwatch']);expect(s.empire!.reserve.population).toBe(14);expect(s.population).toBe(4);s=reload(s);expect(s.buildings.filter(b=>b.kind==='hearth').map(b=>b.name)).toEqual(['Greenhollow','Northwatch']);expect(s.buildings.some(b=>b.x===candidate!.x&&b.y===candidate!.y)).toBe(true);
  });
  it('warns before a bounded incursion and persists the warning without rerolling',()=>{
   let s=founded();s.march!.incursion=89.9;empireStep(s,.1);expect(s.march!.warning).toBe(8);expect(enemies(s)).toHaveLength(0);s=reload(s);empireStep(s,7);expect(enemies(s)).toHaveLength(0);empireStep(s,1);expect(enemies(s)).toHaveLength(4);expect(new Set(enemies(s).map(u=>u.x+','+u.y)).size).toBe(4);reload(s);

@@ -1,3 +1,4 @@
+import {MAP_W} from './config';
 import {key,tileAt,distance} from './map';
 import {enemies} from './state';
 import {barrierIndex,barrierRotation,gateEdge,isBarrier} from './barriers';
@@ -37,7 +38,7 @@ function layoutAccessError(s:State,candidate:Building,next:Building[]):string|nu
  const door=(v:Building,area:Set<number>)=>[[1,0],[-1,0],[0,1],[0,-1]].some(([dx,dy])=>area.has(key({x:v.x+dx,y:v.y+dy})));
  if(next.some((v,i)=>!isBarrier(v)&&(v.id===candidate.id||door(s.buildings[i],before))&&!door(v,after)))return 'Keep a doorway connected to the road; use an aligned gate through walls.';
  if([...s.units,...(s.residents??[])].some(u=>before.has(key(u))&&!after.has(key(u))))return 'This move would trap someone. Leave an accessible route.';
- for(const k of before)if(tileAt(k%30,Math.floor(k/30),s)?.terrain==='road'&&!after.has(k))return 'This would cut a road. Leave a connected passage.';
+ for(const k of before)if(tileAt(k%MAP_W,Math.floor(k/MAP_W),s)?.terrain==='road'&&!after.has(k))return 'This would cut a road. Leave a connected passage.';
  return null;
 }
 export function relocate(s:State,id:number,x:number,y:number,rotation?:0|1):void{
