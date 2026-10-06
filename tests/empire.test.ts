@@ -70,6 +70,9 @@ describe('secure territory and free construction',()=>{
  it('requires clearing and a genuine defensive and civilian founding crew',()=>{
   const s=depart();expect(buildError(s,'hearth',16,21)).toContain('Clear');s.units=army(s);s.resources.stone=100;s.empire!.reserve.jobs.builders=6;s.empire!.reserve.jobs.miners=8;expect(buildError(s,'hearth',16,21)).toContain('unassigned');
  });
+ it('lets a cleared local beacon secure distant ground while threats remain elsewhere',()=>{
+  const s=cleared();s.units=army(s);makeUnit(s,'hollow',33,24);s.corpses!.push({id:s.nextId++,personId:999,kind:'warden',x:34,y:24,remaining:8,tainted:true});expect(buildError(s,'hearth',16,21)).toBeNull();expect(command(s,{type:'build',kind:'hearth',x:16,y:21}).ok).toBe(true);expect(enemies(s)).toHaveLength(1);expect(s.corpses!.some(c=>c.tainted)).toBe(true);
+ });
  it('transfers two real home workers and awards recovered stores only once after rebuilding',()=>{
   let s=cleared(),pop=s.empire!.reserve.population,ids=new Set(s.empire!.reserve.residents!.map(r=>r.id));expect(command(s,{type:'build',kind:'hearth',x:16,y:21}).ok).toBe(true);
   expect(s.resources.wood).toBe(480);expect(s.resources.stone).toBe(480);expect(s.population).toBe(2);expect(s.empire!.reserve.population).toBe(pop-2);expect(s.residents!.every(r=>ids.has(r.id))).toBe(true);s=reload(s);

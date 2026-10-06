@@ -72,7 +72,7 @@ function exchangeRegions(s:State,ids:number[]):CommandResult{
   parked.resources=resources;parked.squads=squads;parked.nextId=nextId;
   const reserved=new Set([...s.units,...(s.residents??[])].map(key));
   for(const u of party){const p=nearestOpen(s,ROAD_EXIT,reserved);reserved.add(key(p));Object.assign(u,p,{target:{...p},anchor:{...p},path:[],repath:0,order:'hold'});delete u.patrol;delete u.focus;delete u.muster;s.units.push(u);}
-  log(s,s.region?'You reached Briar March. Explore the three landmarks, clear the infected and establish an outpost.':'The company returned to Hearthmere. Its defenders and buildings remain in place.','good');
+  log(s,s.region?'You reached Briar March. Explore the frontier, discover nine places, clear infected sites and establish a settlement.':'The company returned to Hearthmere. Its defenders and buildings remain in place.','good');
   return {ok:true,message:`${party.length} travellers arrived. Other soldiers stayed at their posts. Time is paused.`};
 }
 export function outpostError(s:State,x:number,y:number):string|null{
@@ -81,7 +81,7 @@ export function outpostError(s:State,x:number,y:number):string|null{
   if(!hero||distance(hero,{x,y})>5)return 'Bring the commander within five tiles of this site.';
   const established=s.march.secured&&s.buildings.some(b=>b.kind==='hearth');
   if(s.buildings.some(b=>b.kind==='hearth'&&distance(b,{x,y})<12))return 'Choose open ground at least twelve tiles from another settlement.';
-  if(!established&&(enemies(s).length||s.corpses?.some(c=>c.tainted)))return 'Clear the region and its infected remains before founding.';
+  if(!established&&(enemies(s).some(z=>distance(z,{x,y})<7)||s.corpses?.some(c=>c.tainted&&distance(c,{x,y})<7)))return 'Clear infected and tainted remains within seven tiles of this settlement site.';
   if(established&&(enemies(s).some(z=>distance(z,{x,y})<7)||s.corpses?.some(c=>c.tainted&&distance(c,{x,y})<7)))return 'Clear the infected around this site before founding.';
   const fit=army(s).filter(u=>!u.injury&&!illnessFor(s,u.id));
   if(established?fit.filter(u=>distance(u,{x,y})<7).length<2:fit.length<2)return 'Bring two fit soldiers to establish the defensive presence.';
