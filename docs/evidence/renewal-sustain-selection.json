@@ -1,9 +1,0 @@
-{
-  "selected": 198,
-  "held": 198,
-  "message": "198 soldiers hold their ground.",
-  "orderLatency": {
-    "inputToApplyMs": 9.100000023841858,
-    "applyMs": 8.400000005960464
-  }
-}

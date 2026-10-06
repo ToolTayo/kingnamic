@@ -1,9 +1,0 @@
-{
-  "scenario": "second ambush, real combat",
-  "medianFrameMs": 8.30000000000291,
-  "p95FrameMs": 8.5,
-  "engineFps": 118.61539279227145,
-  "units": 11,
-  "peakUnits": 11,
-  "heapMB": 42.1339168548584
-}
