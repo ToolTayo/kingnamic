@@ -26,8 +26,8 @@ test('available selection, mixed injured squad orders and dense overlays',async(
   await page.evaluate(()=>{const a=(window as any).__KINGNAMIC__,rt=a.runtime,original=rt.act.bind(rt);let lastInput=0;document.addEventListener('click',()=>{lastInput=performance.now();},true);rt.act=(c:any)=>{const started=performance.now(),r=original(c);if(c.type==='order')(window as any).__orderLatency={inputToApplyMs:performance.now()-lastInput,applyMs:performance.now()-started};return r;};});
   await page.locator('#army-orders').click();await page.locator('#select-all').click();await page.locator('#army-orders').click();await page.locator('#order-hold').click();
   const result=await page.evaluate(()=>{const rt=(window as any).__KINGNAMIC__.runtime;return {selected:rt.selectedIds.length,held:rt.world.units.filter((u:any)=>u.order==='hold').length,message:rt.message,orderLatency:(window as any).__orderLatency};});
-  const bodyScales=await page.evaluate(()=>[...(window as any).__KINGNAMIC__.scene.units.values()].map((sprite:any)=>sprite.scaleX));
-  expect(bodyScales).toHaveLength(200);expect(bodyScales.some(scale=>scale<1)).toBe(true);expect(bodyScales.every(scale=>scale>=.72&&scale<=1)).toBe(true);
+  const rendered=await page.evaluate(()=>{const s=(window as any).__KINGNAMIC__.scene;return {bodyScales:[...s.units.values()].map((sprite:any)=>sprite.scaleX),markers:s.markers.size,markerLayerChildren:s.markerLayer.list.length};});
+  expect(rendered.bodyScales).toHaveLength(200);expect(rendered.bodyScales.some(scale=>scale<1)).toBe(true);expect(rendered.bodyScales.every(scale=>scale>=.72&&scale<=1)).toBe(true);expect(rendered.markers).toBe(200);expect(rendered.markerLayerChildren).toBe(200);
   await writeFile('docs/evidence/renewal-sustain-selection.json',JSON.stringify(result,null,2));
   await page.screenshot({path:'docs/evidence/renewal-sustain-polished-200.png'});
   expect(result.selected).toBe(198);expect(result.held).toBe(198);

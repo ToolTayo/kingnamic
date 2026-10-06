@@ -18,6 +18,8 @@ export class WorldScene extends Phaser.Scene {
   private landscape?:Phaser.GameObjects.Image;private terrainRegion='';
   private buildings = new Map<number, Phaser.GameObjects.Image>();
   private units = new Map<number, Phaser.GameObjects.Image>();
+  private markers = new Map<number, Phaser.GameObjects.Image>();
+  private markerLayer!: Phaser.GameObjects.Layer;
   private workers = new Map<number, Phaser.GameObjects.Image>();
   private actorDensity = new Map<number, number>();
   readonly civilians = new CivilianSystem();
@@ -47,6 +49,7 @@ export class WorldScene extends Phaser.Scene {
   create(): void {
 
     for (const kind of Object.keys(BUILDINGS)) this.textures.addCanvas(`building-${kind}`, buildingArt(kind as keyof typeof BUILDINGS));
+    const marker=document.createElement('canvas');marker.width=40;marker.height=20;const markerContext=marker.getContext('2d')!;markerContext.strokeStyle='#fff';markerContext.lineWidth=1.8;markerContext.beginPath();markerContext.ellipse(20,10,17,8,0,0,Math.PI*2);markerContext.stroke();this.textures.addCanvas('unit-marker',marker);
     for(let mask=1;mask<16;mask++)this.textures.addCanvas('barrier-'+mask,barrierArt(mask));
     for(const mask of [3,12])this.textures.addCanvas('gate-'+mask,barrierArt(mask,true));
     for (const kind of ['warden', 'ranger', 'spearman', 'scout', 'hollow', 'runner', 'brute', ...JOBS.map(j => j.id), 'idle']) for (let frame = 0; frame < 7; frame++) this.textures.addCanvas(`unit-${kind}-${frame}`, unitArt(kind, frame));
@@ -55,6 +58,7 @@ export class WorldScene extends Phaser.Scene {
     this.syncTerrain();
     this.borders = this.add.graphics().setDepth(-90);
     this.ground = this.add.graphics().setDepth(-80);
+    this.markerLayer = this.add.layer().setDepth(-79);
     this.overlay = this.add.graphics().setDepth(3000);
     this.hover = this.add.graphics().setDepth(3100);
     this.night = this.add.rectangle(0, 0, 4000, 3000, 0x12263f, 0).setOrigin(0).setScrollFactor(0).setDepth(3500);
@@ -197,7 +201,7 @@ export class WorldScene extends Phaser.Scene {
     if(this.boxSelecting&&this.dragStart&&this.boxEnd){const a=this.cameras.main.getWorldPoint(this.dragStart.x,this.dragStart.y),b=this.cameras.main.getWorldPoint(this.boxEnd.x,this.boxEnd.y);this.hover.lineStyle(2,0xf6df99).strokeRect(Math.min(a.x,b.x),Math.min(a.y,b.y),Math.abs(a.x-b.x),Math.abs(a.y-b.y));}
     if (this.renderedState !== s) {
       if (this.renderedState && this.renderedState.theatre !== s.theatre) this.home();
-      for (const sprites of [this.buildings, this.units, this.workers, this.fallen,this.remains]) { for (const sprite of sprites.values()) sprite.destroy(); sprites.clear(); }
+      for (const sprites of [this.buildings, this.units, this.markers, this.workers, this.fallen,this.remains]) { for (const sprite of sprites.values()) sprite.destroy(); sprites.clear(); }
       this.health.clear(); this.renderedState = s;
     }
     const flowing = this.rt.ready && this.rt.state.speed > 0 && s.outcome === 'playing';
@@ -244,7 +248,7 @@ export class WorldScene extends Phaser.Scene {
     this.actorDensity.clear();
     for (const u of s.units) this.addActorDensity(u.x, u.y);
     for (const c of this.civilians.people) this.addActorDensity(c.x, c.y);
-    const uIds = new Set(s.units.map(u => u.id)); for (const [id, sprite] of this.units) if (!uIds.has(id)) { sprite.destroy(); this.units.delete(id); this.health.delete(id); }
+    const uIds = new Set(s.units.map(u => u.id)); for (const [id, sprite] of this.units) if (!uIds.has(id)) { sprite.destroy(); this.units.delete(id); this.markers.get(id)?.destroy(); this.markers.delete(id); this.health.delete(id); }
     for (const u of s.units) {
       const p = iso(u.x, u.y), moving = flowing && u.path.length > 0 && u.attackFlash === 0, frame = u.attackFlash > 0 ? u.attackFlash > .15 ? 3 : 4 : moving ? [1,5,2,6][Math.floor(s.time / (u.kind==='brute'?.18:.12) + u.id) % 4] : 0;
       let sprite = this.units.get(u.id); if (!sprite) { sprite = this.add.image(p.x, p.y, `unit-${u.kind}-${frame}`).setOrigin(0.5, 43 / 52); this.units.set(u.id, sprite); }
@@ -262,10 +266,13 @@ export class WorldScene extends Phaser.Scene {
       if (isFriendly(u) && u.id !== s.commander?.id) { const density = this.localActorDensity(u.x, u.y); bodyScale = density >= 28 ? .72 : density >= 18 ? .84 : 1; }
       if (sprite.scaleX !== bodyScale || sprite.scaleY !== bodyScale) sprite.setScale(bodyScale);
       sprite.setTexture(`unit-${u.kind}-${frame}`).setPosition(x + (sprite.flipX ? -1 : 1) * (strike * 2 - recoil), y+bob).setDepth(y + 1).setRotation((sprite.flipX?-1:1)*(strike*.055-recoil*.018)).setTint(hurt ? 0xff967d : u.attackFlash > 0 ? 0xffe5ad : sickColor);
-      const view=this.cameras.main.worldView,visible=p.x>view.x-55&&p.x<view.right+55&&p.y>view.y-55&&p.y<view.bottom+55;sprite.setVisible(visible);if(!visible)continue;
       const selectedUnit=selected.has(u.id),color=selectedUnit?0xffe29a:isFriendly(u)?squadColors.get(u.squadId!)??0xb5d5d8:u.kind==='brute'?0xf1ba72:0xe6a37d;
       const massSelection=selectedUnit&&selected.size>24,markScale=massSelection?.8:1;
-      this.ground.lineStyle(selectedUnit?(massSelection?1.2:1.8):isFriendly(u)?.7:1.8,color,selectedUnit?(massSelection?.6:.9):isFriendly(u)?.45:.95).strokeEllipse(p.x,p.y,(u.kind==='brute'?23:17)*markScale,(u.kind==='brute'?11:8)*markScale);
+      const view=this.cameras.main.worldView,visible=p.x>view.x-55&&p.x<view.right+55&&p.y>view.y-55&&p.y<view.bottom+55;sprite.setVisible(visible);
+      let marker=this.markers.get(u.id);if(!marker){marker=this.add.image(p.x,p.y,'unit-marker').setOrigin(.5);this.markerLayer.add(marker);this.markers.set(u.id,marker);}
+      const markAlpha=selectedUnit?(massSelection?.6:.9):isFriendly(u)?.45:.95,markSize=(u.kind==='brute'?23/17:1)*markScale;
+      marker.setPosition(p.x,p.y).setScale(markSize).setTint(color).setAlpha(markAlpha).setVisible(visible);
+      if(!visible)continue;
       if (u.hp < u.maxHp*.65 || hurt || selectedUnit&&selected.size<=24 || illness) {
         this.overlay.fillStyle(0x18332b, 0.8).fillRect(p.x - 10, p.y - 42, 20, 3); this.overlay.fillStyle(isFriendly(u) ? 0xbbd7ac : 0xd29179).fillRect(p.x - 10, p.y - 42, 20 * u.hp / u.maxHp, 3);
       }
@@ -275,7 +282,6 @@ export class WorldScene extends Phaser.Scene {
       if(illness)this.overlay.lineStyle(2,illness.age>=55?0xff967d:illness.age>=18?0xc7d975:0xf1d695).strokeCircle(p.x,p.y-48,4);
       if(illness&&s.quarantine)this.overlay.lineStyle(1.5,0xc4e2da).strokeRect(p.x-6,p.y-54,12,12);
       if(this.rt.inspectedPersonId===u.id)this.overlay.lineStyle(2,0xffffff).strokeEllipse(p.x,p.y,28,15);
-      if(u.squadId)this.ground.fillStyle(squadColors.get(u.squadId)??0xb5d5d8).fillCircle(p.x,p.y+6,2);
       if (selectedUnit && u.order && selected.size<=12) { const destination = iso(u.target.x, u.target.y); this.ground.lineStyle(1, squadColors.get(u.squadId!)??0xc9dfd2, .3).lineBetween(p.x, p.y, destination.x, destination.y).strokeEllipse(destination.x, destination.y, 14, 7); }
     }
     if(selected.size>12){
