@@ -1,0 +1,36 @@
+{
+  "files": [
+    {
+      "file": "dist/assets/index-BcYnR_Ge.css",
+      "bytes": 38162,
+      "gzipBytes": 9292
+    },
+    {
+      "file": "dist/assets/index-tq-5BLi5.js",
+      "bytes": 1394643,
+      "gzipBytes": 397219
+    },
+    {
+      "file": "dist/crest.svg",
+      "bytes": 234,
+      "gzipBytes": 185
+    },
+    {
+      "file": "dist/index.html",
+      "bytes": 652,
+      "gzipBytes": 398
+    },
+    {
+      "file": "dist/sw.js",
+      "bytes": 870,
+      "gzipBytes": 493
+    },
+    {
+      "file": "dist/THIRD_PARTY_NOTICES.txt",
+      "bytes": 2236,
+      "gzipBytes": 825
+    }
+  ],
+  "rawBytes": 1436797,
+  "gzipBytes": 408412
+}

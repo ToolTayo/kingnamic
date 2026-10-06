@@ -1,0 +1,8 @@
+{
+  "viewport": "1440x960",
+  "renderer": "WebGL",
+  "medianFrameMs": 8.3,
+  "p95FrameMs": 16.6,
+  "engineFps": 63,
+  "heapMB": 39
+}

@@ -1,0 +1,31 @@
+{
+  "scenario": "four 100-soldier worlds; 6 seconds each; explicit Chromium GC between worlds",
+  "heaps": [
+    11108648,
+    12103860,
+    10451740,
+    12384660
+  ],
+  "counts": [
+    {
+      "unitSprites": 136,
+      "workerSprites": 18,
+      "units": 136
+    },
+    {
+      "unitSprites": 147,
+      "workerSprites": 18,
+      "units": 147
+    },
+    {
+      "unitSprites": 146,
+      "workerSprites": 18,
+      "units": 146
+    },
+    {
+      "unitSprites": 148,
+      "workerSprites": 18,
+      "units": 148
+    }
+  ]
+}

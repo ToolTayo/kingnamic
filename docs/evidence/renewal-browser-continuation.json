@@ -1,0 +1,13 @@
+[
+  {
+    "config": "playwright.expedition.config.ts",
+    "filter": "complete the Broken Standard",
+    "exitCode": 0,
+    "note": "Managed recovery rerun; 3 other scenarios passed preceding full run"
+  },
+  {
+    "config": "playwright.tactics.config.ts",
+    "exitCode": 1,
+    "completedUtc": "2026-10-05T12:36:17.7207473Z"
+  }
+]

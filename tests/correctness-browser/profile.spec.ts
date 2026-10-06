@@ -1,0 +1,19 @@
+import {test,expect} from '@playwright/test';
+import {writeFile} from 'node:fs/promises';
+
+test('attribute remaining 200-soldier stalls across UI, scene, simulation, saves and WebGL render',async({page})=>{
+ await page.goto('/');await page.locator('#start').click();await page.evaluate(async()=>{
+  const load=(p:string)=>import(/* @vite-ignore */p),{newGame,army,makeUnit}=await load('/src/game/state.ts'),{command}=await load('/src/game/commands.ts'),{nearestOpen}=await load('/src/game/navigation.ts'),{key}=await load('/src/game/map.ts');
+  const s=newGame();s.resources={wood:4000,stone:3000,food:4000,herbs:100};command(s,{type:'commander-appoint'});for(const u of army(s))Object.assign(u,{x:14,y:24});command(s,{type:'travel',ids:army(s).map((u:any)=>u.id)});s.units=army(s);command(s,{type:'build',kind:'hearth',x:16,y:21});s.units=[];const reserved=new Set<number>(s.residents.map(key));
+  for(let n=0;n<200;n++){const p=nearestOpen(s,{x:11+n%11,y:11+Math.floor(n/11)},reserved);reserved.add(key(p));makeUnit(s,['warden','ranger','spearman','scout'][n%4],p.x,p.y);}command(s,{type:'commander-appoint',id:s.units[0].id});command(s,{type:'order',order:'hunt',ids:army(s).map((u:any)=>u.id),x:21,y:12});
+  for(let n=0;n<120;n++){const p=nearestOpen(s,{x:26,y:8+n%8},reserved);reserved.add(key(p));makeUnit(s,n%7===0?'brute':n%3===0?'runner':'hollow',p.x,p.y);}command(s,{type:'speed',speed:0});const rt=(window as any).__KINGNAMIC__.runtime;rt.state=s;rt.onChange();
+ });await page.locator('#tab-army').click();await page.locator('#speed-2').click();
+ const result=await page.evaluate(async()=>{
+  const {Interface}=await import('/src/ui/interface.ts' as string),a=(window as any).__KINGNAMIC__,timings:Record<string,number[]>={},restore:(()=>void)[]=[],longTasks:any[]=[];
+  const wrap=(obj:any,key:string,name:string)=>{const fn=obj[key],out:number[]=[];timings[name]=out;obj[key]=function(...args:any[]){const t=performance.now();try{return fn.apply(this,args);}finally{out.push(performance.now()-t);}};restore.push(()=>obj[key]=fn);};
+  wrap(Interface.prototype,'render','ui');wrap(a.runtime,'tick','simulation');wrap(a.runtime,'persist','save');wrap(a.scene.sys,'sceneUpdate','sceneInclusive');wrap(a.game.renderer,'render','webglRender');
+  const observer=new PerformanceObserver(list=>{for(const e of list.getEntries())longTasks.push({startMs:e.startTime,durationMs:e.duration});});observer.observe({entryTypes:['longtask']});const start=performance.now(),sim=a.runtime.state.time,frames:number[]=[];let previous=start;
+  try{await new Promise<void>(resolve=>{const f=(now:number)=>{frames.push(now-previous);previous=now;if(now-start<45000)requestAnimationFrame(f);else resolve();};requestAnimationFrame(f);});}finally{for(const f of restore)f();observer.disconnect();}
+  timings.frames=frames.slice(1);const results=Object.fromEntries(Object.entries(timings).map(([k,v])=>{v.sort((a,b)=>a-b);return [k,{samples:v.length,p95Ms:v[Math.floor(v.length*.95)]??0,maxMs:v.at(-1)??0}];}));return {wallMs:performance.now()-start,simulationSeconds:a.runtime.state.time-sim,results,longTasks,renderer:a.game.renderer.type};
+ });await page.locator('#pause').click();expect(result.results.ui.samples).toBeGreaterThan(80);expect(result.results.webglRender.samples).toBeGreaterThan(1000);await writeFile('docs/evidence/correctness-hitch-attribution.json',JSON.stringify({fixture:true,method:'45-second prepared 200-soldier / 120-infected battle at 2x; wrapper durations include nested work and are not additive.',...result},null,2));
+});

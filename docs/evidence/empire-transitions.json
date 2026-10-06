@@ -1,0 +1,97 @@
+{
+  "fixture": true,
+  "method": "Eight real Travel button presses with one commander and 199 held defenders, paused; replaced active terrain texture count, full scene callback and save cost; GC heap after each switch.",
+  "heaps": [
+    9377460,
+    10884144,
+    9680960,
+    11428620,
+    10005040,
+    11691480,
+    10089740,
+    11696408,
+    10342504
+  ],
+  "transitions": [
+    {
+      "frameMaxMs": 82.39999997615814,
+      "sceneMaxMs": 71.69999998807907,
+      "saveMs": 6.199999988079071,
+      "region": "home",
+      "soldiers": 200,
+      "terrainTextures": 1,
+      "saveError": false,
+      "wallIncluding500msWait": 808
+    },
+    {
+      "frameMaxMs": 43.60000002384186,
+      "sceneMaxMs": 36.60000002384186,
+      "saveMs": 6.400000035762787,
+      "region": "march",
+      "soldiers": 200,
+      "terrainTextures": 1,
+      "saveError": false,
+      "wallIncluding500msWait": 744
+    },
+    {
+      "frameMaxMs": 56.200000047683716,
+      "sceneMaxMs": 48.40000003576279,
+      "saveMs": 4.199999988079071,
+      "region": "home",
+      "soldiers": 200,
+      "terrainTextures": 1,
+      "saveError": false,
+      "wallIncluding500msWait": 791
+    },
+    {
+      "frameMaxMs": 85,
+      "sceneMaxMs": 44.59999996423721,
+      "saveMs": 4.900000035762787,
+      "region": "march",
+      "soldiers": 200,
+      "terrainTextures": 1,
+      "saveError": false,
+      "wallIncluding500msWait": 820
+    },
+    {
+      "frameMaxMs": 40.69999998807907,
+      "sceneMaxMs": 35.89999997615814,
+      "saveMs": 3.900000035762787,
+      "region": "home",
+      "soldiers": 200,
+      "terrainTextures": 1,
+      "saveError": false,
+      "wallIncluding500msWait": 773
+    },
+    {
+      "frameMaxMs": 58.89999997615814,
+      "sceneMaxMs": 51.59999996423721,
+      "saveMs": 4.199999988079071,
+      "region": "march",
+      "soldiers": 200,
+      "terrainTextures": 1,
+      "saveError": false,
+      "wallIncluding500msWait": 781
+    },
+    {
+      "frameMaxMs": 57.60000002384186,
+      "sceneMaxMs": 50.40000003576279,
+      "saveMs": 5.300000011920929,
+      "region": "home",
+      "soldiers": 200,
+      "terrainTextures": 1,
+      "saveError": false,
+      "wallIncluding500msWait": 783
+    },
+    {
+      "frameMaxMs": 55.69999998807907,
+      "sceneMaxMs": 48.60000002384186,
+      "saveMs": 4.900000035762787,
+      "region": "march",
+      "soldiers": 200,
+      "terrainTextures": 1,
+      "saveError": false,
+      "wallIncluding500msWait": 780
+    }
+  ]
+}

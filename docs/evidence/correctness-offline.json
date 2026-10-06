@@ -1,0 +1,24 @@
+{
+  "production": true,
+  "networkOffline": true,
+  "reloads": 2,
+  "bountyTotal": 1,
+  "resources": {
+    "wood": 145.12,
+    "stone": 91,
+    "food": 180.136,
+    "herbs": 18.12
+  },
+  "gate": {
+    "id": 39,
+    "kind": "gate",
+    "x": 19,
+    "y": 15,
+    "hp": 260,
+    "maxHp": 340,
+    "level": 2,
+    "progress": 1,
+    "cooldown": 0,
+    "rotation": 1
+  }
+}

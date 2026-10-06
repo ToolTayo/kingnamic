@@ -1,0 +1,44 @@
+[
+  {
+    "scenarios": 3,
+    "config": "playwright.sustain.config.ts",
+    "grep": "selection|outbreak focus|real touch",
+    "exitCode": 0
+  },
+  {
+    "scenarios": 11,
+    "config": "playwright.config.ts",
+    "grep": null,
+    "exitCode": 0
+  },
+  {
+    "scenarios": 4,
+    "config": "playwright.expedition.config.ts",
+    "grep": null,
+    "exitCode": 0
+  },
+  {
+    "scenarios": 4,
+    "config": "playwright.tactics.config.ts",
+    "grep": null,
+    "exitCode": 0
+  },
+  {
+    "scenarios": 1,
+    "config": "playwright.campaign.config.ts",
+    "grep": null,
+    "exitCode": 0
+  },
+  {
+    "scenarios": 4,
+    "config": "playwright.offline.config.ts",
+    "grep": null,
+    "exitCode": 0
+  },
+  {
+    "scenarios": 8,
+    "config": "playwright.legions.config.ts",
+    "grep": null,
+    "exitCode": 0
+  }
+]

@@ -1,0 +1,36 @@
+{
+  "files": [
+    {
+      "file": "dist/assets/index-ChalTi8n.css",
+      "bytes": 31460,
+      "gzipBytes": 7776
+    },
+    {
+      "file": "dist/assets/index-YqDtpzZv.js",
+      "bytes": 1318877,
+      "gzipBytes": 372192
+    },
+    {
+      "file": "dist/crest.svg",
+      "bytes": 234,
+      "gzipBytes": 185
+    },
+    {
+      "file": "dist/index.html",
+      "bytes": 652,
+      "gzipBytes": 395
+    },
+    {
+      "file": "dist/sw.js",
+      "bytes": 765,
+      "gzipBytes": 456
+    },
+    {
+      "file": "dist/THIRD_PARTY_NOTICES.txt",
+      "bytes": 2236,
+      "gzipBytes": 825
+    }
+  ],
+  "rawBytes": 1354224,
+  "gzipBytes": 381829
+}

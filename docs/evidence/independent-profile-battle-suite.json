@@ -1,0 +1,1221 @@
+{
+  "fixture": true,
+  "method": "45-second prepared 200-soldier / 120-infected battle at 2x; wrapper durations include nested work and are not additive.",
+  "wallMs": 45038.200000047684,
+  "simulationSeconds": 82.69999999999958,
+  "results": {
+    "ui": {
+      "samples": 243,
+      "p95Ms": 31,
+      "maxMs": 46.89999997615814
+    },
+    "simulation": {
+      "samples": 1059,
+      "p95Ms": 33.89999997615814,
+      "maxMs": 251.9000000357628
+    },
+    "save": {
+      "samples": 3,
+      "p95Ms": 48.19999998807907,
+      "maxMs": 48.19999998807907
+    },
+    "sceneInclusive": {
+      "samples": 1059,
+      "p95Ms": 52.59999996423721,
+      "maxMs": 280.69999998807907
+    },
+    "webglRender": {
+      "samples": 1059,
+      "p95Ms": 45.90000003576279,
+      "maxMs": 263.10000002384186
+    },
+    "frames": {
+      "samples": 1058,
+      "p95Ms": 80.20000000000073,
+      "maxMs": 417.2999999999993
+    }
+  },
+  "longTasks": [
+    {
+      "startMs": 8768,
+      "durationMs": 380
+    },
+    {
+      "startMs": 9148.799999952316,
+      "durationMs": 78
+    },
+    {
+      "startMs": 9235.5,
+      "durationMs": 74
+    },
+    {
+      "startMs": 9343.599999964237,
+      "durationMs": 134
+    },
+    {
+      "startMs": 9479.5,
+      "durationMs": 84
+    },
+    {
+      "startMs": 9564.399999976158,
+      "durationMs": 68
+    },
+    {
+      "startMs": 9680.599999964237,
+      "durationMs": 73
+    },
+    {
+      "startMs": 9756.599999964237,
+      "durationMs": 57
+    },
+    {
+      "startMs": 9814.5,
+      "durationMs": 55
+    },
+    {
+      "startMs": 9874.899999976158,
+      "durationMs": 75
+    },
+    {
+      "startMs": 10065.5,
+      "durationMs": 69
+    },
+    {
+      "startMs": 10192.899999976158,
+      "durationMs": 70
+    },
+    {
+      "startMs": 10263.099999964237,
+      "durationMs": 66
+    },
+    {
+      "startMs": 10395.199999988079,
+      "durationMs": 69
+    },
+    {
+      "startMs": 10465.5,
+      "durationMs": 56
+    },
+    {
+      "startMs": 10598.399999976158,
+      "durationMs": 59
+    },
+    {
+      "startMs": 10660.699999988079,
+      "durationMs": 52
+    },
+    {
+      "startMs": 10713.299999952316,
+      "durationMs": 68
+    },
+    {
+      "startMs": 10782.5,
+      "durationMs": 56
+    },
+    {
+      "startMs": 10873.399999976158,
+      "durationMs": 63
+    },
+    {
+      "startMs": 10989.5,
+      "durationMs": 52
+    },
+    {
+      "startMs": 11042.399999976158,
+      "durationMs": 60
+    },
+    {
+      "startMs": 11109.399999976158,
+      "durationMs": 94
+    },
+    {
+      "startMs": 11203.599999964237,
+      "durationMs": 69
+    },
+    {
+      "startMs": 11273.099999964237,
+      "durationMs": 72
+    },
+    {
+      "startMs": 11346,
+      "durationMs": 50
+    },
+    {
+      "startMs": 11460,
+      "durationMs": 74
+    },
+    {
+      "startMs": 11534.299999952316,
+      "durationMs": 56
+    },
+    {
+      "startMs": 11621.599999964237,
+      "durationMs": 107
+    },
+    {
+      "startMs": 11729.599999964237,
+      "durationMs": 59
+    },
+    {
+      "startMs": 11789,
+      "durationMs": 60
+    },
+    {
+      "startMs": 11857.699999988079,
+      "durationMs": 54
+    },
+    {
+      "startMs": 11998.799999952316,
+      "durationMs": 67
+    },
+    {
+      "startMs": 12066.399999976158,
+      "durationMs": 56
+    },
+    {
+      "startMs": 12201.5,
+      "durationMs": 58
+    },
+    {
+      "startMs": 12260.599999964237,
+      "durationMs": 55
+    },
+    {
+      "startMs": 12316.5,
+      "durationMs": 78
+    },
+    {
+      "startMs": 12399.399999976158,
+      "durationMs": 59
+    },
+    {
+      "startMs": 12459.5,
+      "durationMs": 73
+    },
+    {
+      "startMs": 12661.899999976158,
+      "durationMs": 72
+    },
+    {
+      "startMs": 12763.899999976158,
+      "durationMs": 60
+    },
+    {
+      "startMs": 12955.699999988079,
+      "durationMs": 58
+    },
+    {
+      "startMs": 13014.199999988079,
+      "durationMs": 71
+    },
+    {
+      "startMs": 13086,
+      "durationMs": 71
+    },
+    {
+      "startMs": 13162.899999976158,
+      "durationMs": 108
+    },
+    {
+      "startMs": 13271.5,
+      "durationMs": 64
+    },
+    {
+      "startMs": 13336.5,
+      "durationMs": 78
+    },
+    {
+      "startMs": 13423.899999976158,
+      "durationMs": 99
+    },
+    {
+      "startMs": 13523.699999988079,
+      "durationMs": 79
+    },
+    {
+      "startMs": 13602.899999976158,
+      "durationMs": 76
+    },
+    {
+      "startMs": 13711.5,
+      "durationMs": 68
+    },
+    {
+      "startMs": 13780.199999988079,
+      "durationMs": 79
+    },
+    {
+      "startMs": 13859.5,
+      "durationMs": 118
+    },
+    {
+      "startMs": 13979.699999988079,
+      "durationMs": 100
+    },
+    {
+      "startMs": 14080.399999976158,
+      "durationMs": 77
+    },
+    {
+      "startMs": 14162.599999964237,
+      "durationMs": 71
+    },
+    {
+      "startMs": 14234.099999964237,
+      "durationMs": 95
+    },
+    {
+      "startMs": 14329.199999988079,
+      "durationMs": 65
+    },
+    {
+      "startMs": 14400.899999976158,
+      "durationMs": 61
+    },
+    {
+      "startMs": 14463,
+      "durationMs": 123
+    },
+    {
+      "startMs": 14586.299999952316,
+      "durationMs": 51
+    },
+    {
+      "startMs": 14645.099999964237,
+      "durationMs": 73
+    },
+    {
+      "startMs": 15032.199999988079,
+      "durationMs": 76
+    },
+    {
+      "startMs": 15109.099999964237,
+      "durationMs": 53
+    },
+    {
+      "startMs": 15167.699999988079,
+      "durationMs": 63
+    },
+    {
+      "startMs": 15238.899999976158,
+      "durationMs": 114
+    },
+    {
+      "startMs": 15360.699999988079,
+      "durationMs": 63
+    },
+    {
+      "startMs": 15424.699999988079,
+      "durationMs": 114
+    },
+    {
+      "startMs": 15539.099999964237,
+      "durationMs": 82
+    },
+    {
+      "startMs": 15634,
+      "durationMs": 96
+    },
+    {
+      "startMs": 15732,
+      "durationMs": 70
+    },
+    {
+      "startMs": 15802.5,
+      "durationMs": 106
+    },
+    {
+      "startMs": 15968.099999964237,
+      "durationMs": 65
+    },
+    {
+      "startMs": 16034.299999952316,
+      "durationMs": 72
+    },
+    {
+      "startMs": 16215.599999964237,
+      "durationMs": 80
+    },
+    {
+      "startMs": 16296.399999976158,
+      "durationMs": 104
+    },
+    {
+      "startMs": 16408.299999952316,
+      "durationMs": 73
+    },
+    {
+      "startMs": 16483,
+      "durationMs": 56
+    },
+    {
+      "startMs": 16578.899999976158,
+      "durationMs": 64
+    },
+    {
+      "startMs": 16671.899999976158,
+      "durationMs": 92
+    },
+    {
+      "startMs": 16765.099999964237,
+      "durationMs": 62
+    },
+    {
+      "startMs": 16833.899999976158,
+      "durationMs": 76
+    },
+    {
+      "startMs": 16910,
+      "durationMs": 100
+    },
+    {
+      "startMs": 17010.099999964237,
+      "durationMs": 77
+    },
+    {
+      "startMs": 17087.299999952316,
+      "durationMs": 58
+    },
+    {
+      "startMs": 17150.69999998808,
+      "durationMs": 102
+    },
+    {
+      "startMs": 17345.69999998808,
+      "durationMs": 71
+    },
+    {
+      "startMs": 17417.299999952316,
+      "durationMs": 100
+    },
+    {
+      "startMs": 17518.19999998808,
+      "durationMs": 60
+    },
+    {
+      "startMs": 17642.5,
+      "durationMs": 75
+    },
+    {
+      "startMs": 17718.5,
+      "durationMs": 60
+    },
+    {
+      "startMs": 17782,
+      "durationMs": 75
+    },
+    {
+      "startMs": 17895.599999964237,
+      "durationMs": 62
+    },
+    {
+      "startMs": 17958.5,
+      "durationMs": 79
+    },
+    {
+      "startMs": 18038.19999998808,
+      "durationMs": 66
+    },
+    {
+      "startMs": 18111.099999964237,
+      "durationMs": 115
+    },
+    {
+      "startMs": 18226.799999952316,
+      "durationMs": 54
+    },
+    {
+      "startMs": 18281.899999976158,
+      "durationMs": 65
+    },
+    {
+      "startMs": 18351,
+      "durationMs": 67
+    },
+    {
+      "startMs": 18418.69999998808,
+      "durationMs": 105
+    },
+    {
+      "startMs": 18524.69999998808,
+      "durationMs": 78
+    },
+    {
+      "startMs": 18603.299999952316,
+      "durationMs": 57
+    },
+    {
+      "startMs": 18743.599999964237,
+      "durationMs": 103
+    },
+    {
+      "startMs": 18847.399999976158,
+      "durationMs": 53
+    },
+    {
+      "startMs": 18910.099999964237,
+      "durationMs": 111
+    },
+    {
+      "startMs": 19085.599999964237,
+      "durationMs": 65
+    },
+    {
+      "startMs": 19222.099999964237,
+      "durationMs": 65
+    },
+    {
+      "startMs": 19359.399999976158,
+      "durationMs": 61
+    },
+    {
+      "startMs": 19480.099999964237,
+      "durationMs": 136
+    },
+    {
+      "startMs": 19616.5,
+      "durationMs": 55
+    },
+    {
+      "startMs": 19675.099999964237,
+      "durationMs": 58
+    },
+    {
+      "startMs": 19820.599999964237,
+      "durationMs": 50
+    },
+    {
+      "startMs": 19870.69999998808,
+      "durationMs": 67
+    },
+    {
+      "startMs": 19938.19999998808,
+      "durationMs": 65
+    },
+    {
+      "startMs": 20074.399999976158,
+      "durationMs": 63
+    },
+    {
+      "startMs": 20394.69999998808,
+      "durationMs": 58
+    },
+    {
+      "startMs": 20452.899999976158,
+      "durationMs": 64
+    },
+    {
+      "startMs": 20636.399999976158,
+      "durationMs": 53
+    },
+    {
+      "startMs": 20840.799999952316,
+      "durationMs": 56
+    },
+    {
+      "startMs": 20897.5,
+      "durationMs": 61
+    },
+    {
+      "startMs": 20959.399999976158,
+      "durationMs": 55
+    },
+    {
+      "startMs": 21014.69999998808,
+      "durationMs": 53
+    },
+    {
+      "startMs": 21096.599999964237,
+      "durationMs": 51
+    },
+    {
+      "startMs": 21148.599999964237,
+      "durationMs": 52
+    },
+    {
+      "startMs": 21201.799999952316,
+      "durationMs": 55
+    },
+    {
+      "startMs": 21326.899999976158,
+      "durationMs": 61
+    },
+    {
+      "startMs": 21514.399999976158,
+      "durationMs": 55
+    },
+    {
+      "startMs": 21647.19999998808,
+      "durationMs": 52
+    },
+    {
+      "startMs": 21699.599999964237,
+      "durationMs": 63
+    },
+    {
+      "startMs": 21763.799999952316,
+      "durationMs": 53
+    },
+    {
+      "startMs": 21846.799999952316,
+      "durationMs": 51
+    },
+    {
+      "startMs": 21898.399999976158,
+      "durationMs": 54
+    },
+    {
+      "startMs": 21953.5,
+      "durationMs": 67
+    },
+    {
+      "startMs": 22020.799999952316,
+      "durationMs": 106
+    },
+    {
+      "startMs": 22206.299999952316,
+      "durationMs": 55
+    },
+    {
+      "startMs": 22449.599999964237,
+      "durationMs": 53
+    },
+    {
+      "startMs": 22575.599999964237,
+      "durationMs": 51
+    },
+    {
+      "startMs": 22713.5,
+      "durationMs": 52
+    },
+    {
+      "startMs": 22832.69999998808,
+      "durationMs": 57
+    },
+    {
+      "startMs": 23089.899999976158,
+      "durationMs": 63
+    },
+    {
+      "startMs": 23153.299999952316,
+      "durationMs": 76
+    },
+    {
+      "startMs": 23229.899999976158,
+      "durationMs": 64
+    },
+    {
+      "startMs": 23441.099999964237,
+      "durationMs": 60
+    },
+    {
+      "startMs": 23501.899999976158,
+      "durationMs": 62
+    },
+    {
+      "startMs": 23643.799999952316,
+      "durationMs": 53
+    },
+    {
+      "startMs": 23764.19999998808,
+      "durationMs": 50
+    },
+    {
+      "startMs": 23894.69999998808,
+      "durationMs": 66
+    },
+    {
+      "startMs": 24100.399999976158,
+      "durationMs": 51
+    },
+    {
+      "startMs": 24239,
+      "durationMs": 56
+    },
+    {
+      "startMs": 24371.799999952316,
+      "durationMs": 51
+    },
+    {
+      "startMs": 24915.399999976158,
+      "durationMs": 51
+    },
+    {
+      "startMs": 24966.899999976158,
+      "durationMs": 56
+    },
+    {
+      "startMs": 25107.799999952316,
+      "durationMs": 59
+    },
+    {
+      "startMs": 25289.599999964237,
+      "durationMs": 78
+    },
+    {
+      "startMs": 25368.19999998808,
+      "durationMs": 55
+    },
+    {
+      "startMs": 25576.099999964237,
+      "durationMs": 55
+    },
+    {
+      "startMs": 25648.099999964237,
+      "durationMs": 66
+    },
+    {
+      "startMs": 25714.299999952316,
+      "durationMs": 52
+    },
+    {
+      "startMs": 25848.799999952316,
+      "durationMs": 58
+    },
+    {
+      "startMs": 26055.19999998808,
+      "durationMs": 62
+    },
+    {
+      "startMs": 26599.19999998808,
+      "durationMs": 51
+    },
+    {
+      "startMs": 27078,
+      "durationMs": 52
+    },
+    {
+      "startMs": 27144.599999964237,
+      "durationMs": 54
+    },
+    {
+      "startMs": 27401.69999998808,
+      "durationMs": 50
+    },
+    {
+      "startMs": 27877.69999998808,
+      "durationMs": 56
+    },
+    {
+      "startMs": 28227.599999964237,
+      "durationMs": 50
+    },
+    {
+      "startMs": 28621.69999998808,
+      "durationMs": 65
+    },
+    {
+      "startMs": 28830.899999976158,
+      "durationMs": 55
+    },
+    {
+      "startMs": 28974.799999952316,
+      "durationMs": 50
+    },
+    {
+      "startMs": 29093.799999952316,
+      "durationMs": 50
+    },
+    {
+      "startMs": 29416.799999952316,
+      "durationMs": 52
+    },
+    {
+      "startMs": 29679.899999976158,
+      "durationMs": 53
+    },
+    {
+      "startMs": 29871.69999998808,
+      "durationMs": 53
+    },
+    {
+      "startMs": 29985,
+      "durationMs": 59
+    },
+    {
+      "startMs": 30666.799999952316,
+      "durationMs": 55
+    },
+    {
+      "startMs": 30722.099999964237,
+      "durationMs": 57
+    },
+    {
+      "startMs": 31295.599999964237,
+      "durationMs": 60
+    },
+    {
+      "startMs": 31483.099999964237,
+      "durationMs": 55
+    },
+    {
+      "startMs": 31538.599999964237,
+      "durationMs": 59
+    },
+    {
+      "startMs": 31661.69999998808,
+      "durationMs": 59
+    },
+    {
+      "startMs": 31900.299999952316,
+      "durationMs": 51
+    },
+    {
+      "startMs": 31951.69999998808,
+      "durationMs": 61
+    },
+    {
+      "startMs": 32207.69999998808,
+      "durationMs": 60
+    },
+    {
+      "startMs": 32416.099999964237,
+      "durationMs": 53
+    },
+    {
+      "startMs": 32469.69999998808,
+      "durationMs": 57
+    },
+    {
+      "startMs": 32532.19999998808,
+      "durationMs": 67
+    },
+    {
+      "startMs": 32670.799999952316,
+      "durationMs": 56
+    },
+    {
+      "startMs": 32886.299999952316,
+      "durationMs": 52
+    },
+    {
+      "startMs": 32942.89999997616,
+      "durationMs": 56
+    },
+    {
+      "startMs": 33000,
+      "durationMs": 55
+    },
+    {
+      "startMs": 33128.59999996424,
+      "durationMs": 50
+    },
+    {
+      "startMs": 33241.59999996424,
+      "durationMs": 57
+    },
+    {
+      "startMs": 33528.5,
+      "durationMs": 53
+    },
+    {
+      "startMs": 33947.39999997616,
+      "durationMs": 51
+    },
+    {
+      "startMs": 34100.799999952316,
+      "durationMs": 52
+    },
+    {
+      "startMs": 34220,
+      "durationMs": 69
+    },
+    {
+      "startMs": 34501.89999997616,
+      "durationMs": 54
+    },
+    {
+      "startMs": 34574.89999997616,
+      "durationMs": 51
+    },
+    {
+      "startMs": 34707.299999952316,
+      "durationMs": 52
+    },
+    {
+      "startMs": 34846,
+      "durationMs": 53
+    },
+    {
+      "startMs": 34899.69999998808,
+      "durationMs": 52
+    },
+    {
+      "startMs": 35382.89999997616,
+      "durationMs": 56
+    },
+    {
+      "startMs": 35501.799999952316,
+      "durationMs": 58
+    },
+    {
+      "startMs": 35630.299999952316,
+      "durationMs": 64
+    },
+    {
+      "startMs": 35716.39999997616,
+      "durationMs": 56
+    },
+    {
+      "startMs": 35773.19999998808,
+      "durationMs": 53
+    },
+    {
+      "startMs": 35851.69999998808,
+      "durationMs": 55
+    },
+    {
+      "startMs": 35907.89999997616,
+      "durationMs": 54
+    },
+    {
+      "startMs": 36042.19999998808,
+      "durationMs": 56
+    },
+    {
+      "startMs": 36337.69999998808,
+      "durationMs": 57
+    },
+    {
+      "startMs": 36665.69999998808,
+      "durationMs": 55
+    },
+    {
+      "startMs": 36804.89999997616,
+      "durationMs": 52
+    },
+    {
+      "startMs": 36933.5,
+      "durationMs": 55
+    },
+    {
+      "startMs": 37356.69999998808,
+      "durationMs": 54
+    },
+    {
+      "startMs": 37567.19999998808,
+      "durationMs": 53
+    },
+    {
+      "startMs": 37695.799999952316,
+      "durationMs": 53
+    },
+    {
+      "startMs": 37831.299999952316,
+      "durationMs": 53
+    },
+    {
+      "startMs": 37901.5,
+      "durationMs": 54
+    },
+    {
+      "startMs": 38325,
+      "durationMs": 53
+    },
+    {
+      "startMs": 38451.39999997616,
+      "durationMs": 57
+    },
+    {
+      "startMs": 38588.5,
+      "durationMs": 56
+    },
+    {
+      "startMs": 38644.69999998808,
+      "durationMs": 57
+    },
+    {
+      "startMs": 38701.89999997616,
+      "durationMs": 54
+    },
+    {
+      "startMs": 38851.09999996424,
+      "durationMs": 51
+    },
+    {
+      "startMs": 39038.39999997616,
+      "durationMs": 80
+    },
+    {
+      "startMs": 39121.5,
+      "durationMs": 55
+    },
+    {
+      "startMs": 39392.69999998808,
+      "durationMs": 51
+    },
+    {
+      "startMs": 39575.39999997616,
+      "durationMs": 53
+    },
+    {
+      "startMs": 39718.09999996424,
+      "durationMs": 59
+    },
+    {
+      "startMs": 39777.799999952316,
+      "durationMs": 57
+    },
+    {
+      "startMs": 39913.299999952316,
+      "durationMs": 51
+    },
+    {
+      "startMs": 39987.19999998808,
+      "durationMs": 50
+    },
+    {
+      "startMs": 40460,
+      "durationMs": 65
+    },
+    {
+      "startMs": 40526,
+      "durationMs": 52
+    },
+    {
+      "startMs": 40811.59999996424,
+      "durationMs": 60
+    },
+    {
+      "startMs": 41140.799999952316,
+      "durationMs": 58
+    },
+    {
+      "startMs": 41295,
+      "durationMs": 51
+    },
+    {
+      "startMs": 41464.19999998808,
+      "durationMs": 52
+    },
+    {
+      "startMs": 41594.69999998808,
+      "durationMs": 54
+    },
+    {
+      "startMs": 41664.5,
+      "durationMs": 52
+    },
+    {
+      "startMs": 41788.5,
+      "durationMs": 58
+    },
+    {
+      "startMs": 41851.19999998808,
+      "durationMs": 53
+    },
+    {
+      "startMs": 42053.5,
+      "durationMs": 51
+    },
+    {
+      "startMs": 42660.799999952316,
+      "durationMs": 53
+    },
+    {
+      "startMs": 43393.799999952316,
+      "durationMs": 52
+    },
+    {
+      "startMs": 43450.799999952316,
+      "durationMs": 58
+    },
+    {
+      "startMs": 43534.39999997616,
+      "durationMs": 56
+    },
+    {
+      "startMs": 43613.59999996424,
+      "durationMs": 51
+    },
+    {
+      "startMs": 43899.799999952316,
+      "durationMs": 51
+    },
+    {
+      "startMs": 44025.09999996424,
+      "durationMs": 55
+    },
+    {
+      "startMs": 44221.5,
+      "durationMs": 54
+    },
+    {
+      "startMs": 44276.09999996424,
+      "durationMs": 63
+    },
+    {
+      "startMs": 44474.19999998808,
+      "durationMs": 65
+    },
+    {
+      "startMs": 44540.19999998808,
+      "durationMs": 53
+    },
+    {
+      "startMs": 46054.299999952316,
+      "durationMs": 56
+    },
+    {
+      "startMs": 46117.69999998808,
+      "durationMs": 53
+    },
+    {
+      "startMs": 46456.09999996424,
+      "durationMs": 57
+    },
+    {
+      "startMs": 46551.5,
+      "durationMs": 50
+    },
+    {
+      "startMs": 47008,
+      "durationMs": 55
+    },
+    {
+      "startMs": 47338.89999997616,
+      "durationMs": 52
+    },
+    {
+      "startMs": 47458.69999998808,
+      "durationMs": 63
+    },
+    {
+      "startMs": 47522.09999996424,
+      "durationMs": 65
+    },
+    {
+      "startMs": 47655.19999998808,
+      "durationMs": 52
+    },
+    {
+      "startMs": 47842.59999996424,
+      "durationMs": 61
+    },
+    {
+      "startMs": 47904.19999998808,
+      "durationMs": 54
+    },
+    {
+      "startMs": 48432.799999952316,
+      "durationMs": 53
+    },
+    {
+      "startMs": 48486.5,
+      "durationMs": 62
+    },
+    {
+      "startMs": 48578.19999998808,
+      "durationMs": 53
+    },
+    {
+      "startMs": 48632.39999997616,
+      "durationMs": 58
+    },
+    {
+      "startMs": 48691.5,
+      "durationMs": 50
+    },
+    {
+      "startMs": 49086,
+      "durationMs": 62
+    },
+    {
+      "startMs": 49220.59999996424,
+      "durationMs": 62
+    },
+    {
+      "startMs": 49401.799999952316,
+      "durationMs": 52
+    },
+    {
+      "startMs": 49518.299999952316,
+      "durationMs": 65
+    },
+    {
+      "startMs": 49655.19999998808,
+      "durationMs": 57
+    },
+    {
+      "startMs": 49792.89999997616,
+      "durationMs": 56
+    },
+    {
+      "startMs": 49853.89999997616,
+      "durationMs": 51
+    },
+    {
+      "startMs": 50119.89999997616,
+      "durationMs": 58
+    },
+    {
+      "startMs": 50248.19999998808,
+      "durationMs": 53
+    },
+    {
+      "startMs": 50510.89999997616,
+      "durationMs": 59
+    },
+    {
+      "startMs": 50577.89999997616,
+      "durationMs": 63
+    },
+    {
+      "startMs": 50641.89999997616,
+      "durationMs": 62
+    },
+    {
+      "startMs": 50780.39999997616,
+      "durationMs": 50
+    },
+    {
+      "startMs": 51030.89999997616,
+      "durationMs": 53
+    },
+    {
+      "startMs": 51223.799999952316,
+      "durationMs": 59
+    },
+    {
+      "startMs": 51361.5,
+      "durationMs": 272
+    },
+    {
+      "startMs": 51712.89999997616,
+      "durationMs": 59
+    },
+    {
+      "startMs": 51772.09999996424,
+      "durationMs": 60
+    },
+    {
+      "startMs": 51897.39999997616,
+      "durationMs": 62
+    },
+    {
+      "startMs": 52164.799999952316,
+      "durationMs": 52
+    },
+    {
+      "startMs": 52217.59999996424,
+      "durationMs": 53
+    },
+    {
+      "startMs": 52418.39999997616,
+      "durationMs": 50
+    },
+    {
+      "startMs": 53072.799999952316,
+      "durationMs": 50
+    },
+    {
+      "startMs": 53213.799999952316,
+      "durationMs": 54
+    },
+    {
+      "startMs": 53480.299999952316,
+      "durationMs": 106
+    }
+  ],
+  "renderer": 2
+}

@@ -1,0 +1,198 @@
+{
+  "fixture": true,
+  "initialSoldiers": 200,
+  "activeWallSeconds": 180.07369999998807,
+  "simulationSeconds": 359.90000000001436,
+  "windows": [
+    {
+      "wallMs": 60015.69999998808,
+      "simulationSeconds": 120.29999999999742,
+      "samples": 4488,
+      "frameMedianMs": 16.5,
+      "frameP95Ms": 16.900000000001455,
+      "frameP99Ms": 25.099999999998545,
+      "frameMaxMs": 41.80000000000291,
+      "tickP95Ms": 3.4000000059604645,
+      "tickMaxMs": 13.599999994039536,
+      "longTaskCount": 0,
+      "longTaskMaxMs": 0,
+      "peakUnits": 262,
+      "peakCases": 16,
+      "peakCorpses": 13,
+      "risen": [
+        200,
+        212,
+        214,
+        202,
+        204,
+        216,
+        188,
+        226,
+        236,
+        238,
+        224,
+        223,
+        235,
+        237,
+        222,
+        210,
+        198,
+        234
+      ],
+      "riseLogIds": [
+        1055,
+        1053,
+        1113,
+        1175,
+        1173,
+        1171,
+        1278,
+        1288,
+        1286,
+        1388,
+        1408,
+        1480,
+        1546,
+        1589,
+        1620,
+        1629,
+        1627,
+        1654
+      ]
+    },
+    {
+      "wallMs": 60037.80000001192,
+      "simulationSeconds": 119.39999999999323,
+      "samples": 4746,
+      "frameMedianMs": 8.600000000000364,
+      "frameP95Ms": 16.899999999997817,
+      "frameP99Ms": 25,
+      "frameMaxMs": 308.40000000000146,
+      "tickP95Ms": 2.4000000059604645,
+      "tickMaxMs": 12.699999988079071,
+      "longTaskCount": 0,
+      "longTaskMaxMs": 0,
+      "peakUnits": 185,
+      "peakCases": 14,
+      "peakCorpses": 3,
+      "risen": [
+        234,
+        210,
+        198,
+        222,
+        237,
+        235,
+        223,
+        46
+      ],
+      "riseLogIds": [
+        1654,
+        1629,
+        1627,
+        1620,
+        1589,
+        1546,
+        1480,
+        1760
+      ]
+    },
+    {
+      "wallMs": 60020.19999998808,
+      "simulationSeconds": 120.20000000002369,
+      "samples": 5025,
+      "frameMedianMs": 8.400000000001455,
+      "frameP95Ms": 16.80000000000291,
+      "frameP99Ms": 25,
+      "frameMaxMs": 41.599999999999454,
+      "tickP95Ms": 2.5,
+      "tickMaxMs": 27.700000017881393,
+      "longTaskCount": 0,
+      "longTaskMaxMs": 0,
+      "peakUnits": 179,
+      "peakCases": 11,
+      "peakCorpses": 4,
+      "risen": [
+        46,
+        213,
+        225,
+        201,
+        215,
+        187,
+        239,
+        209,
+        233,
+        211,
+        155,
+        153,
+        145,
+        160
+      ],
+      "riseLogIds": [
+        1760,
+        1886,
+        1894,
+        1902,
+        1929,
+        1927,
+        1949,
+        1947,
+        1968,
+        1981,
+        1993,
+        2006,
+        2071,
+        2205
+      ]
+    }
+  ],
+  "postGCHeapBytes": [
+    10707684,
+    10221144,
+    11013124,
+    11319292
+  ],
+  "commandAutomationWallMs": 935,
+  "saves": [
+    {
+      "epoch": 1,
+      "army": 181,
+      "population": 20,
+      "cases": 14,
+      "corpses": 1
+    },
+    {
+      "epoch": 2,
+      "army": 178,
+      "population": 22,
+      "cases": 11,
+      "corpses": 3
+    },
+    {
+      "epoch": 3,
+      "army": 169,
+      "population": 23,
+      "cases": 1,
+      "corpses": 0
+    }
+  ],
+  "terminalId": 46,
+  "final": {
+    "army": 169,
+    "population": 23,
+    "stats": {
+      "slain": 134,
+      "lost": 32,
+      "built": 0,
+      "nights": 3,
+      "cured": 3,
+      "claimed": 0
+    },
+    "resources": {
+      "wood": 4394.40799999867,
+      "stone": 2088,
+      "food": 1754.9159999999638,
+      "herbs": 161.0800000000006
+    }
+  },
+  "errors": []
+}

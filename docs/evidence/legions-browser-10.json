@@ -1,0 +1,19 @@
+{
+  "fixture": true,
+  "soldiers": 10,
+  "hostiles": 10,
+  "wallMs": 12342.300000011921,
+  "simulationSeconds": 11.999999999999973,
+  "samples": 1055,
+  "frameMedianMs": 8.400000000000546,
+  "frameP95Ms": 16.899999999999636,
+  "frameMaxMs": 191.79999999999927,
+  "tickP95Ms": 2,
+  "tickMaxMs": 31.69999998807907,
+  "heapStartBytes": 38228210,
+  "heapEndBytes": 40504166,
+  "units": 16,
+  "slain": 4,
+  "renderer": 2,
+  "errors": []
+}

@@ -1,0 +1,217 @@
+{
+  "samples": [
+    {
+      "time": 1.4000000000000001,
+      "civilians": 0,
+      "troops": 0,
+      "arrived": 0
+    },
+    {
+      "time": 2.0000000000000004,
+      "civilians": 0,
+      "troops": 0,
+      "arrived": 0
+    },
+    {
+      "time": 2.700000000000001,
+      "civilians": 0,
+      "troops": 0,
+      "arrived": 0
+    },
+    {
+      "time": 3.3000000000000016,
+      "civilians": 0,
+      "troops": 0,
+      "arrived": 0
+    },
+    {
+      "time": 3.900000000000002,
+      "civilians": 0,
+      "troops": 0,
+      "arrived": 0
+    },
+    {
+      "time": 4.5,
+      "civilians": 0,
+      "troops": 0,
+      "arrived": 0
+    },
+    {
+      "time": 5.1999999999999975,
+      "civilians": 0,
+      "troops": 0,
+      "arrived": 1
+    },
+    {
+      "time": 5.799999999999995,
+      "civilians": 0,
+      "troops": 0,
+      "arrived": 1
+    },
+    {
+      "time": 6.399999999999993,
+      "civilians": 0,
+      "troops": 0,
+      "arrived": 2
+    },
+    {
+      "time": 6.999999999999991,
+      "civilians": 0,
+      "troops": 0,
+      "arrived": 3
+    },
+    {
+      "time": 7.699999999999989,
+      "civilians": 0,
+      "troops": 0,
+      "arrived": 3
+    },
+    {
+      "time": 8.299999999999986,
+      "civilians": 0,
+      "troops": 0,
+      "arrived": 4
+    },
+    {
+      "time": 8.899999999999984,
+      "civilians": 0,
+      "troops": 0,
+      "arrived": 4
+    },
+    {
+      "time": 9.499999999999982,
+      "civilians": 0,
+      "troops": 0,
+      "arrived": 4
+    },
+    {
+      "time": 10.09999999999998,
+      "civilians": 0,
+      "troops": 0,
+      "arrived": 4
+    },
+    {
+      "time": 10.799999999999978,
+      "civilians": 0,
+      "troops": 0,
+      "arrived": 5
+    },
+    {
+      "time": 11.399999999999975,
+      "civilians": 0,
+      "troops": 0,
+      "arrived": 5
+    },
+    {
+      "time": 12.099999999999973,
+      "civilians": 0,
+      "troops": 0,
+      "arrived": 6
+    },
+    {
+      "time": 12.79999999999997,
+      "civilians": 0,
+      "troops": 0,
+      "arrived": 7
+    },
+    {
+      "time": 13.499999999999968,
+      "civilians": 0,
+      "troops": 0,
+      "arrived": 7
+    },
+    {
+      "time": 14.199999999999966,
+      "civilians": 0,
+      "troops": 0,
+      "arrived": 7
+    },
+    {
+      "time": 14.799999999999963,
+      "civilians": 0,
+      "troops": 0,
+      "arrived": 7
+    },
+    {
+      "time": 15.399999999999961,
+      "civilians": 0,
+      "troops": 0,
+      "arrived": 7
+    },
+    {
+      "time": 15.99999999999996,
+      "civilians": 0,
+      "troops": 0,
+      "arrived": 7
+    },
+    {
+      "time": 16.699999999999967,
+      "civilians": 0,
+      "troops": 0,
+      "arrived": 7
+    },
+    {
+      "time": 17.399999999999977,
+      "civilians": 0,
+      "troops": 0,
+      "arrived": 7
+    },
+    {
+      "time": 17.999999999999986,
+      "civilians": 0,
+      "troops": 0,
+      "arrived": 7
+    },
+    {
+      "time": 18.599999999999994,
+      "civilians": 0,
+      "troops": 0,
+      "arrived": 7
+    },
+    {
+      "time": 19.200000000000003,
+      "civilians": 0,
+      "troops": 0,
+      "arrived": 7
+    },
+    {
+      "time": 19.900000000000013,
+      "civilians": 0,
+      "troops": 0,
+      "arrived": 7
+    },
+    {
+      "time": 20.50000000000002,
+      "civilians": 0,
+      "troops": 0,
+      "arrived": 7
+    },
+    {
+      "time": 21.10000000000003,
+      "civilians": 0,
+      "troops": 0,
+      "arrived": 7
+    },
+    {
+      "time": 21.70000000000004,
+      "civilians": 0,
+      "troops": 0,
+      "arrived": 7
+    },
+    {
+      "time": 22.300000000000047,
+      "civilians": 0,
+      "troops": 0,
+      "arrived": 7
+    },
+    {
+      "time": 23.000000000000057,
+      "civilians": 0,
+      "troops": 0,
+      "arrived": 7
+    }
+  ],
+  "civilianOverlapSamples": 0,
+  "troopOverlapSamples": 0,
+  "arrived": 7
+}

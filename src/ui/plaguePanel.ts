@@ -1,0 +1,14 @@
+import { diseaseStage, illnessDeadline } from '../game/disease';
+import { capacity } from '../game/economy';
+import { enemies } from '../game/state';
+import type { State } from '../game/types';
+export function plagueDetails(s:State):string {
+  const hosts=new Map([...(s.residents??[]),...s.units].map(p=>[p.id,p]));
+  const cases=[...s.infection].sort((a,b)=>illnessDeadline(s,a,hosts.get(a.personId!))-illnessDeadline(s,b,hosts.get(b.personId!))||a.id-b.id);
+  const sources={arrival:'Arriving survivor',ground:'Contaminated ground',supplies:'Tainted supplies',contact:'Close contact',bite:'Infected bite'};
+  const settlerReason=s.region&&!s.march?.secured?'Establish a secure outpost first.':s.phase!=='day'||enemies(s).length?'Wait for peaceful daylight.':capacity(s)-s.population<5?'Build five spare beds.':(s.musterClock??0)>0?Math.ceil(s.musterClock!)+'s before the next invitation.':s.resources.stone<20?'Need '+Math.ceil(20-s.resources.stone)+' more Crowns.':'';
+  return `<div class="section-label">EXPOSURE & RECOVERY</div><p class="fine-print">Exposure builds from bites, tainted ground, contaminated crofts and symptomatic people. At 100% it becomes infection. Symptoms begin at 18s, critical HP loss at 55s, and death by 75s of disease progression. Wounded people can die sooner. Quarantine slows illness by 75% and stops contact spread; treatment grants 35s immunity. Estimates use current HP; further wounds or healing change them. Focus a case to locate them.</p><p class="fine-print">Supplies contamination: <strong>${Math.floor(s.suppliesTaint??0)}%</strong> · ${cases.filter(i=>i.host==='soldier').length} infected soldiers · ${s.corpses?.filter(c=>c.tainted).length??0} tainted remains${s.quarantine?' · Quarantine active: villagers recover at home/refuge; sick soldiers withdraw.':''}</p>
+  ${cases.slice(0,12).map(i=>`<button class="infection-case ${i.age>=55?'critical':''}" data-person-focus="${i.personId}">${i.host==='soldier'?'Soldier':'Resident'} #${i.personId} · ${diseaseStage(i.age)}<small>${sources[i.source??'arrival']} · ${Math.ceil(hosts.get(i.personId!)?.hp??0)} HP · death risk ≈ ${Math.ceil(illnessDeadline(s,i,hosts.get(i.personId!)))}s</small><small>Focus ${s.quarantine?'· isolated':''} →</small></button>`).join('')}
+  ${(s.corpses??[]).filter(c=>c.tainted).slice(0,8).map(c=>`<button class="infection-case critical" data-remains-focus="${c.id}">Remains #${c.personId} · rise in ${Math.ceil(c.remaining)}s<small>Focus → Cleanse now or position soldiers nearby.</small></button>`).join('')}
+  <div class="section-label">SETTLEMENT GROWTH</div><button id="invite-settlers" class="secondary full" ${settlerReason?'disabled':''}>Invite 5 settlers · 20 Crowns</button><p class="fine-print">${settlerReason||'Five spare beds and peaceful daylight required. Available every 20 seconds.'} Unassign fit residents before recruiting them.</p>`;
+}

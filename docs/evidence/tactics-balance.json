@@ -1,0 +1,1190 @@
+[
+  {
+    "approach": "ridge",
+    "seed": 74019,
+    "policy": "mixed",
+    "report": {
+      "outcome": "success",
+      "returned": 3,
+      "recruited": 4,
+      "lost": 0,
+      "stranded": 0
+    },
+    "missionSeconds": 74,
+    "elapsedMs": 452.3,
+    "equipmentCrownsRefunded": 44,
+    "woundedOnReturn": [
+      {
+        "kind": "warden",
+        "hp": 97,
+        "injury": 40
+      },
+      {
+        "kind": "warden",
+        "hp": 141,
+        "injury": 22
+      },
+      {
+        "kind": "ranger",
+        "hp": 53,
+        "injury": 38
+      },
+      {
+        "kind": "warden",
+        "hp": 124,
+        "injury": 29
+      },
+      {
+        "kind": "ranger",
+        "hp": 75,
+        "injury": 20
+      },
+      {
+        "kind": "spearman",
+        "hp": 110,
+        "injury": 20
+      },
+      {
+        "kind": "scout",
+        "hp": 65,
+        "injury": 20
+      }
+    ],
+    "roster": [
+      "brute",
+      "hollow",
+      "runner",
+      "hollow",
+      "hollow",
+      "runner",
+      "brute",
+      "hollow",
+      "hollow",
+      "runner",
+      "hollow",
+      "hollow"
+    ]
+  },
+  {
+    "approach": "ridge",
+    "seed": 74019,
+    "policy": "all-bows",
+    "report": {
+      "outcome": "success",
+      "returned": 3,
+      "recruited": 4,
+      "lost": 0,
+      "stranded": 0
+    },
+    "missionSeconds": 72,
+    "elapsedMs": 611.2,
+    "equipmentCrownsRefunded": 44,
+    "woundedOnReturn": [
+      {
+        "kind": "ranger",
+        "hp": 67,
+        "injury": 27
+      },
+      {
+        "kind": "ranger",
+        "hp": 75,
+        "injury": 20
+      },
+      {
+        "kind": "ranger",
+        "hp": 67,
+        "injury": 27
+      },
+      {
+        "kind": "warden",
+        "hp": 113,
+        "injury": 34
+      },
+      {
+        "kind": "ranger",
+        "hp": 19,
+        "injury": 65
+      },
+      {
+        "kind": "spearman",
+        "hp": 64,
+        "injury": 46
+      },
+      {
+        "kind": "scout",
+        "hp": 65,
+        "injury": 20
+      }
+    ],
+    "roster": [
+      "brute",
+      "hollow",
+      "runner",
+      "hollow",
+      "hollow",
+      "runner",
+      "brute",
+      "hollow",
+      "hollow",
+      "runner",
+      "hollow",
+      "hollow"
+    ]
+  },
+  {
+    "approach": "ridge",
+    "seed": 74019,
+    "policy": "late-relief",
+    "report": {
+      "outcome": "success",
+      "returned": 3,
+      "recruited": 4,
+      "lost": 0,
+      "stranded": 0
+    },
+    "missionSeconds": 74,
+    "elapsedMs": 308.3,
+    "equipmentCrownsRefunded": 44,
+    "woundedOnReturn": [
+      {
+        "kind": "warden",
+        "hp": 97,
+        "injury": 40
+      },
+      {
+        "kind": "warden",
+        "hp": 141,
+        "injury": 22
+      },
+      {
+        "kind": "ranger",
+        "hp": 53,
+        "injury": 38
+      },
+      {
+        "kind": "warden",
+        "hp": 124,
+        "injury": 29
+      },
+      {
+        "kind": "ranger",
+        "hp": 75,
+        "injury": 20
+      },
+      {
+        "kind": "spearman",
+        "hp": 110,
+        "injury": 20
+      },
+      {
+        "kind": "scout",
+        "hp": 65,
+        "injury": 20
+      }
+    ],
+    "roster": [
+      "brute",
+      "hollow",
+      "runner",
+      "hollow",
+      "hollow",
+      "runner",
+      "brute",
+      "hollow",
+      "hollow",
+      "runner",
+      "hollow",
+      "hollow"
+    ]
+  },
+  {
+    "approach": "ridge",
+    "seed": 74020,
+    "policy": "mixed",
+    "report": {
+      "outcome": "success",
+      "returned": 3,
+      "recruited": 4,
+      "lost": 0,
+      "stranded": 0
+    },
+    "missionSeconds": 62,
+    "elapsedMs": 354.7,
+    "equipmentCrownsRefunded": 45,
+    "woundedOnReturn": [
+      {
+        "kind": "warden",
+        "hp": 143,
+        "injury": 21
+      },
+      {
+        "kind": "warden",
+        "hp": 144,
+        "injury": 21
+      },
+      {
+        "kind": "ranger",
+        "hp": 75,
+        "injury": 20
+      },
+      {
+        "kind": "warden",
+        "hp": 128,
+        "injury": 28
+      },
+      {
+        "kind": "ranger",
+        "hp": 75,
+        "injury": 20
+      },
+      {
+        "kind": "spearman",
+        "hp": 106,
+        "injury": 23
+      },
+      {
+        "kind": "scout",
+        "hp": 65,
+        "injury": 20
+      }
+    ],
+    "roster": [
+      "runner",
+      "runner",
+      "hollow",
+      "runner",
+      "hollow",
+      "hollow",
+      "runner",
+      "runner",
+      "hollow",
+      "runner",
+      "hollow",
+      "hollow"
+    ]
+  },
+  {
+    "approach": "ridge",
+    "seed": 74020,
+    "policy": "all-bows",
+    "report": {
+      "outcome": "success",
+      "returned": 3,
+      "recruited": 4,
+      "lost": 0,
+      "stranded": 0
+    },
+    "missionSeconds": 55,
+    "elapsedMs": 242.7,
+    "equipmentCrownsRefunded": 45,
+    "woundedOnReturn": [
+      {
+        "kind": "ranger",
+        "hp": 75,
+        "injury": 20
+      },
+      {
+        "kind": "ranger",
+        "hp": 75,
+        "injury": 20
+      },
+      {
+        "kind": "ranger",
+        "hp": 75,
+        "injury": 20
+      },
+      {
+        "kind": "warden",
+        "hp": 135,
+        "injury": 25
+      },
+      {
+        "kind": "ranger",
+        "hp": 69,
+        "injury": 25
+      },
+      {
+        "kind": "spearman",
+        "hp": 110,
+        "injury": 20
+      },
+      {
+        "kind": "scout",
+        "hp": 65,
+        "injury": 20
+      }
+    ],
+    "roster": [
+      "runner",
+      "runner",
+      "hollow",
+      "runner",
+      "hollow",
+      "hollow",
+      "runner",
+      "runner",
+      "hollow",
+      "runner",
+      "hollow",
+      "hollow"
+    ]
+  },
+  {
+    "approach": "ridge",
+    "seed": 74020,
+    "policy": "late-relief",
+    "report": {
+      "outcome": "success",
+      "returned": 3,
+      "recruited": 4,
+      "lost": 0,
+      "stranded": 0
+    },
+    "missionSeconds": 62,
+    "elapsedMs": 293.7,
+    "equipmentCrownsRefunded": 45,
+    "woundedOnReturn": [
+      {
+        "kind": "warden",
+        "hp": 143,
+        "injury": 21
+      },
+      {
+        "kind": "warden",
+        "hp": 144,
+        "injury": 21
+      },
+      {
+        "kind": "ranger",
+        "hp": 75,
+        "injury": 20
+      },
+      {
+        "kind": "warden",
+        "hp": 128,
+        "injury": 28
+      },
+      {
+        "kind": "ranger",
+        "hp": 75,
+        "injury": 20
+      },
+      {
+        "kind": "spearman",
+        "hp": 106,
+        "injury": 23
+      },
+      {
+        "kind": "scout",
+        "hp": 65,
+        "injury": 20
+      }
+    ],
+    "roster": [
+      "runner",
+      "runner",
+      "hollow",
+      "runner",
+      "hollow",
+      "hollow",
+      "runner",
+      "runner",
+      "hollow",
+      "runner",
+      "hollow",
+      "hollow"
+    ]
+  },
+  {
+    "approach": "ridge",
+    "seed": 74021,
+    "policy": "mixed",
+    "report": {
+      "outcome": "success",
+      "returned": 3,
+      "recruited": 4,
+      "lost": 0,
+      "stranded": 0
+    },
+    "missionSeconds": 73,
+    "elapsedMs": 394.6,
+    "equipmentCrownsRefunded": 45,
+    "woundedOnReturn": [
+      {
+        "kind": "warden",
+        "hp": 113,
+        "injury": 34
+      },
+      {
+        "kind": "warden",
+        "hp": 130,
+        "injury": 27
+      },
+      {
+        "kind": "ranger",
+        "hp": 75,
+        "injury": 20
+      },
+      {
+        "kind": "warden",
+        "hp": 123,
+        "injury": 30
+      },
+      {
+        "kind": "ranger",
+        "hp": 75,
+        "injury": 20
+      },
+      {
+        "kind": "spearman",
+        "hp": 78,
+        "injury": 38
+      },
+      {
+        "kind": "scout",
+        "hp": 65,
+        "injury": 20
+      }
+    ],
+    "roster": [
+      "hollow",
+      "runner",
+      "brute",
+      "hollow",
+      "runner",
+      "hollow",
+      "hollow",
+      "runner",
+      "hollow",
+      "brute",
+      "hollow",
+      "runner"
+    ]
+  },
+  {
+    "approach": "ridge",
+    "seed": 74021,
+    "policy": "all-bows",
+    "report": {
+      "outcome": "success",
+      "returned": 3,
+      "recruited": 4,
+      "lost": 0,
+      "stranded": 0
+    },
+    "missionSeconds": 67,
+    "elapsedMs": 330.7,
+    "equipmentCrownsRefunded": 45,
+    "woundedOnReturn": [
+      {
+        "kind": "ranger",
+        "hp": 75,
+        "injury": 20
+      },
+      {
+        "kind": "ranger",
+        "hp": 75,
+        "injury": 20
+      },
+      {
+        "kind": "ranger",
+        "hp": 75,
+        "injury": 20
+      },
+      {
+        "kind": "warden",
+        "hp": 115,
+        "injury": 33
+      },
+      {
+        "kind": "ranger",
+        "hp": 75,
+        "injury": 20
+      },
+      {
+        "kind": "spearman",
+        "hp": 28,
+        "injury": 65
+      },
+      {
+        "kind": "scout",
+        "hp": 65,
+        "injury": 20
+      }
+    ],
+    "roster": [
+      "hollow",
+      "runner",
+      "brute",
+      "hollow",
+      "runner",
+      "hollow",
+      "hollow",
+      "runner",
+      "hollow",
+      "brute",
+      "hollow",
+      "runner"
+    ]
+  },
+  {
+    "approach": "ridge",
+    "seed": 74021,
+    "policy": "late-relief",
+    "report": {
+      "outcome": "success",
+      "returned": 3,
+      "recruited": 4,
+      "lost": 0,
+      "stranded": 0
+    },
+    "missionSeconds": 73,
+    "elapsedMs": 415.6,
+    "equipmentCrownsRefunded": 45,
+    "woundedOnReturn": [
+      {
+        "kind": "warden",
+        "hp": 113,
+        "injury": 34
+      },
+      {
+        "kind": "warden",
+        "hp": 130,
+        "injury": 27
+      },
+      {
+        "kind": "ranger",
+        "hp": 75,
+        "injury": 20
+      },
+      {
+        "kind": "warden",
+        "hp": 123,
+        "injury": 30
+      },
+      {
+        "kind": "ranger",
+        "hp": 75,
+        "injury": 20
+      },
+      {
+        "kind": "spearman",
+        "hp": 78,
+        "injury": 38
+      },
+      {
+        "kind": "scout",
+        "hp": 65,
+        "injury": 20
+      }
+    ],
+    "roster": [
+      "hollow",
+      "runner",
+      "brute",
+      "hollow",
+      "runner",
+      "hollow",
+      "hollow",
+      "runner",
+      "hollow",
+      "brute",
+      "hollow",
+      "runner"
+    ]
+  },
+  {
+    "approach": "ford",
+    "seed": 74019,
+    "policy": "mixed",
+    "report": {
+      "outcome": "success",
+      "returned": 3,
+      "recruited": 4,
+      "lost": 0,
+      "stranded": 0
+    },
+    "missionSeconds": 68,
+    "elapsedMs": 311,
+    "equipmentCrownsRefunded": 44,
+    "woundedOnReturn": [
+      {
+        "kind": "warden",
+        "hp": 144,
+        "injury": 21
+      },
+      {
+        "kind": "warden",
+        "hp": 52,
+        "injury": 59
+      },
+      {
+        "kind": "ranger",
+        "hp": 67,
+        "injury": 27
+      },
+      {
+        "kind": "warden",
+        "hp": 124,
+        "injury": 29
+      },
+      {
+        "kind": "ranger",
+        "hp": 75,
+        "injury": 20
+      },
+      {
+        "kind": "spearman",
+        "hp": 110,
+        "injury": 20
+      },
+      {
+        "kind": "scout",
+        "hp": 65,
+        "injury": 20
+      }
+    ],
+    "roster": [
+      "brute",
+      "hollow",
+      "runner",
+      "hollow",
+      "hollow",
+      "runner",
+      "brute",
+      "hollow",
+      "hollow",
+      "runner",
+      "hollow",
+      "hollow"
+    ]
+  },
+  {
+    "approach": "ford",
+    "seed": 74019,
+    "policy": "all-bows",
+    "report": {
+      "outcome": "success",
+      "returned": 3,
+      "recruited": 4,
+      "lost": 0,
+      "stranded": 0
+    },
+    "missionSeconds": 66,
+    "elapsedMs": 292.9,
+    "equipmentCrownsRefunded": 44,
+    "woundedOnReturn": [
+      {
+        "kind": "ranger",
+        "hp": 53,
+        "injury": 38
+      },
+      {
+        "kind": "ranger",
+        "hp": 69,
+        "injury": 25
+      },
+      {
+        "kind": "ranger",
+        "hp": 53,
+        "injury": 38
+      },
+      {
+        "kind": "warden",
+        "hp": 107,
+        "injury": 36
+      },
+      {
+        "kind": "ranger",
+        "hp": 75,
+        "injury": 20
+      },
+      {
+        "kind": "spearman",
+        "hp": 70,
+        "injury": 42
+      },
+      {
+        "kind": "scout",
+        "hp": 37,
+        "injury": 46
+      }
+    ],
+    "roster": [
+      "brute",
+      "hollow",
+      "runner",
+      "hollow",
+      "hollow",
+      "runner",
+      "brute",
+      "hollow",
+      "hollow",
+      "runner",
+      "hollow",
+      "hollow"
+    ]
+  },
+  {
+    "approach": "ford",
+    "seed": 74019,
+    "policy": "late-relief",
+    "report": {
+      "outcome": "success",
+      "returned": 3,
+      "recruited": 4,
+      "lost": 0,
+      "stranded": 0
+    },
+    "missionSeconds": 68,
+    "elapsedMs": 265.2,
+    "equipmentCrownsRefunded": 44,
+    "woundedOnReturn": [
+      {
+        "kind": "warden",
+        "hp": 144,
+        "injury": 21
+      },
+      {
+        "kind": "warden",
+        "hp": 52,
+        "injury": 59
+      },
+      {
+        "kind": "ranger",
+        "hp": 67,
+        "injury": 27
+      },
+      {
+        "kind": "warden",
+        "hp": 124,
+        "injury": 29
+      },
+      {
+        "kind": "ranger",
+        "hp": 75,
+        "injury": 20
+      },
+      {
+        "kind": "spearman",
+        "hp": 110,
+        "injury": 20
+      },
+      {
+        "kind": "scout",
+        "hp": 65,
+        "injury": 20
+      }
+    ],
+    "roster": [
+      "brute",
+      "hollow",
+      "runner",
+      "hollow",
+      "hollow",
+      "runner",
+      "brute",
+      "hollow",
+      "hollow",
+      "runner",
+      "hollow",
+      "hollow"
+    ]
+  },
+  {
+    "approach": "ford",
+    "seed": 74020,
+    "policy": "mixed",
+    "report": {
+      "outcome": "success",
+      "returned": 3,
+      "recruited": 4,
+      "lost": 0,
+      "stranded": 0
+    },
+    "missionSeconds": 56,
+    "elapsedMs": 243.8,
+    "equipmentCrownsRefunded": 45,
+    "woundedOnReturn": [
+      {
+        "kind": "warden",
+        "hp": 143,
+        "injury": 21
+      },
+      {
+        "kind": "warden",
+        "hp": 145,
+        "injury": 20
+      },
+      {
+        "kind": "ranger",
+        "hp": 75,
+        "injury": 20
+      },
+      {
+        "kind": "warden",
+        "hp": 132,
+        "injury": 26
+      },
+      {
+        "kind": "ranger",
+        "hp": 75,
+        "injury": 20
+      },
+      {
+        "kind": "spearman",
+        "hp": 104,
+        "injury": 24
+      },
+      {
+        "kind": "scout",
+        "hp": 65,
+        "injury": 20
+      }
+    ],
+    "roster": [
+      "runner",
+      "runner",
+      "hollow",
+      "runner",
+      "hollow",
+      "hollow",
+      "runner",
+      "runner",
+      "hollow",
+      "runner",
+      "hollow",
+      "hollow"
+    ]
+  },
+  {
+    "approach": "ford",
+    "seed": 74020,
+    "policy": "all-bows",
+    "report": {
+      "outcome": "success",
+      "returned": 3,
+      "recruited": 4,
+      "lost": 0,
+      "stranded": 0
+    },
+    "missionSeconds": 51,
+    "elapsedMs": 244.8,
+    "equipmentCrownsRefunded": 45,
+    "woundedOnReturn": [
+      {
+        "kind": "ranger",
+        "hp": 75,
+        "injury": 20
+      },
+      {
+        "kind": "ranger",
+        "hp": 75,
+        "injury": 20
+      },
+      {
+        "kind": "ranger",
+        "hp": 75,
+        "injury": 20
+      },
+      {
+        "kind": "warden",
+        "hp": 137,
+        "injury": 24
+      },
+      {
+        "kind": "ranger",
+        "hp": 75,
+        "injury": 20
+      },
+      {
+        "kind": "spearman",
+        "hp": 110,
+        "injury": 20
+      },
+      {
+        "kind": "scout",
+        "hp": 65,
+        "injury": 20
+      }
+    ],
+    "roster": [
+      "runner",
+      "runner",
+      "hollow",
+      "runner",
+      "hollow",
+      "hollow",
+      "runner",
+      "runner",
+      "hollow",
+      "runner",
+      "hollow",
+      "hollow"
+    ]
+  },
+  {
+    "approach": "ford",
+    "seed": 74020,
+    "policy": "late-relief",
+    "report": {
+      "outcome": "success",
+      "returned": 3,
+      "recruited": 4,
+      "lost": 0,
+      "stranded": 0
+    },
+    "missionSeconds": 56,
+    "elapsedMs": 274.2,
+    "equipmentCrownsRefunded": 45,
+    "woundedOnReturn": [
+      {
+        "kind": "warden",
+        "hp": 143,
+        "injury": 21
+      },
+      {
+        "kind": "warden",
+        "hp": 145,
+        "injury": 20
+      },
+      {
+        "kind": "ranger",
+        "hp": 75,
+        "injury": 20
+      },
+      {
+        "kind": "warden",
+        "hp": 132,
+        "injury": 26
+      },
+      {
+        "kind": "ranger",
+        "hp": 75,
+        "injury": 20
+      },
+      {
+        "kind": "spearman",
+        "hp": 104,
+        "injury": 24
+      },
+      {
+        "kind": "scout",
+        "hp": 65,
+        "injury": 20
+      }
+    ],
+    "roster": [
+      "runner",
+      "runner",
+      "hollow",
+      "runner",
+      "hollow",
+      "hollow",
+      "runner",
+      "runner",
+      "hollow",
+      "runner",
+      "hollow",
+      "hollow"
+    ]
+  },
+  {
+    "approach": "ford",
+    "seed": 74021,
+    "policy": "mixed",
+    "report": {
+      "outcome": "success",
+      "returned": 3,
+      "recruited": 4,
+      "lost": 0,
+      "stranded": 0
+    },
+    "missionSeconds": 70,
+    "elapsedMs": 357.3,
+    "equipmentCrownsRefunded": 45,
+    "woundedOnReturn": [
+      {
+        "kind": "warden",
+        "hp": 99,
+        "injury": 40
+      },
+      {
+        "kind": "warden",
+        "hp": 112,
+        "injury": 34
+      },
+      {
+        "kind": "ranger",
+        "hp": 75,
+        "injury": 20
+      },
+      {
+        "kind": "warden",
+        "hp": 133,
+        "injury": 25
+      },
+      {
+        "kind": "ranger",
+        "hp": 75,
+        "injury": 20
+      },
+      {
+        "kind": "spearman",
+        "hp": 56,
+        "injury": 50
+      },
+      {
+        "kind": "scout",
+        "hp": 65,
+        "injury": 20
+      }
+    ],
+    "roster": [
+      "hollow",
+      "runner",
+      "brute",
+      "hollow",
+      "runner",
+      "hollow",
+      "hollow",
+      "runner",
+      "hollow",
+      "brute",
+      "hollow",
+      "runner"
+    ]
+  },
+  {
+    "approach": "ford",
+    "seed": 74021,
+    "policy": "all-bows",
+    "report": {
+      "outcome": "success",
+      "returned": 3,
+      "recruited": 4,
+      "lost": 0,
+      "stranded": 0
+    },
+    "missionSeconds": 63,
+    "elapsedMs": 281.1,
+    "equipmentCrownsRefunded": 45,
+    "woundedOnReturn": [
+      {
+        "kind": "ranger",
+        "hp": 75,
+        "injury": 20
+      },
+      {
+        "kind": "ranger",
+        "hp": 75,
+        "injury": 20
+      },
+      {
+        "kind": "ranger",
+        "hp": 55,
+        "injury": 36
+      },
+      {
+        "kind": "warden",
+        "hp": 51,
+        "injury": 59
+      },
+      {
+        "kind": "ranger",
+        "hp": 75,
+        "injury": 20
+      },
+      {
+        "kind": "spearman",
+        "hp": 90,
+        "injury": 31
+      },
+      {
+        "kind": "scout",
+        "hp": 57,
+        "injury": 28
+      }
+    ],
+    "roster": [
+      "hollow",
+      "runner",
+      "brute",
+      "hollow",
+      "runner",
+      "hollow",
+      "hollow",
+      "runner",
+      "hollow",
+      "brute",
+      "hollow",
+      "runner"
+    ]
+  },
+  {
+    "approach": "ford",
+    "seed": 74021,
+    "policy": "late-relief",
+    "report": {
+      "outcome": "success",
+      "returned": 3,
+      "recruited": 4,
+      "lost": 0,
+      "stranded": 0
+    },
+    "missionSeconds": 70,
+    "elapsedMs": 249.9,
+    "equipmentCrownsRefunded": 45,
+    "woundedOnReturn": [
+      {
+        "kind": "warden",
+        "hp": 99,
+        "injury": 40
+      },
+      {
+        "kind": "warden",
+        "hp": 112,
+        "injury": 34
+      },
+      {
+        "kind": "ranger",
+        "hp": 75,
+        "injury": 20
+      },
+      {
+        "kind": "warden",
+        "hp": 133,
+        "injury": 25
+      },
+      {
+        "kind": "ranger",
+        "hp": 75,
+        "injury": 20
+      },
+      {
+        "kind": "spearman",
+        "hp": 56,
+        "injury": 50
+      },
+      {
+        "kind": "scout",
+        "hp": 65,
+        "injury": 20
+      }
+    ],
+    "roster": [
+      "hollow",
+      "runner",
+      "brute",
+      "hollow",
+      "runner",
+      "hollow",
+      "hollow",
+      "runner",
+      "hollow",
+      "brute",
+      "hollow",
+      "runner"
+    ]
+  }
+]

@@ -1,0 +1,32 @@
+{
+  "name": "kingnamic",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host 127.0.0.1",
+    "build": "tsc --noEmit && vite build && node scripts/build-offline.mjs",
+    "preview": "vite preview --host 127.0.0.1",
+    "test": "vitest run --configLoader runner",
+    "test:browser": "playwright test",
+    "test:offline": "npm run build && playwright test --config playwright.offline.config.ts",
+    "test:campaign": "playwright test --config playwright.campaign.config.ts",
+    "check": "tsc --noEmit",
+    "test:expedition": "playwright test --config playwright.expedition.config.ts",
+    "test:tactics": "playwright test --config playwright.tactics.config.ts",
+    "test:legions": "playwright test --config playwright.legions.config.ts",
+    "test:sustain": "playwright test --config playwright.sustain.config.ts",
+    "test:renewal": "playwright test --config playwright.renewal.config.ts",
+    "test:empire": "playwright test --config playwright.empire.config.ts",
+    "test:correctness": "playwright test --config playwright.correctness.config.ts"
+  },
+  "dependencies": {
+    "phaser": "3.90.0"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.58.0",
+    "typescript": "~5.9.3",
+    "vite": "^7.1.7",
+    "vitest": "^4.1.11"
+  }
+}

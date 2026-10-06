@@ -1,0 +1,462 @@
+{
+  "milestone": "Empire expansion: Briar March",
+  "verifiedOn": "2026-10-06",
+  "humanFeedbackCollected": false,
+  "method": "Real automated Chromium browser play, focused reruns, unit regressions and production offline checks. Counts are unique passing scenarios across runs, not one uninterrupted clean run. Prepared army/disease fixtures are distinct from normal earned-resource play.",
+  "unit": {
+    "tests": 179,
+    "passed": 179,
+    "failed": 0,
+    "focusedNewTests": 25,
+    "source": "test-results/empire-final-unit.json"
+  },
+  "build": {
+    "typecheckPassed": true,
+    "productionBuildPassed": true,
+    "files": [
+      {
+        "file": "dist/assets/index-BcYnR_Ge.css",
+        "bytes": 38162,
+        "gzipBytes": 9292
+      },
+      {
+        "file": "dist/assets/index-tq-5BLi5.js",
+        "bytes": 1394643,
+        "gzipBytes": 397219
+      },
+      {
+        "file": "dist/crest.svg",
+        "bytes": 234,
+        "gzipBytes": 185
+      },
+      {
+        "file": "dist/index.html",
+        "bytes": 652,
+        "gzipBytes": 398
+      },
+      {
+        "file": "dist/sw.js",
+        "bytes": 870,
+        "gzipBytes": 493
+      },
+      {
+        "file": "dist/THIRD_PARTY_NOTICES.txt",
+        "bytes": 2236,
+        "gzipBytes": 825
+      }
+    ],
+    "rawBytes": 1436797,
+    "gzipBytes": 408412
+  },
+  "browser": {
+    "uniquePassed": 51,
+    "existingRegression": {
+      "passed": 30,
+      "source": "test-results/empire-regression.json",
+      "scope": "Before final isolated recovery and save guards; changed paths covered by final units, focused scenarios and production offline tests.",
+      "cases": [
+        {
+          "file": "browser/experience.spec.ts",
+          "title": "resizing from desktop to phone preserves the viewed world center and zoom",
+          "status": "expected"
+        },
+        {
+          "file": "browser/experience.spec.ts",
+          "title": "two building sites share the displayed crew and resume compatible progress",
+          "status": "expected"
+        },
+        {
+          "file": "browser/game.spec.ts",
+          "title": "desktop: construction, jobs, recruitment, rally, upgrades, pause and save/resume",
+          "status": "expected"
+        },
+        {
+          "file": "browser/game.spec.ts",
+          "title": "live night: combat, first dawn infection, treatment and territory consequences",
+          "status": "expected"
+        },
+        {
+          "file": "browser/game.spec.ts",
+          "title": "phone: touch-sized layout, building, people controls and reset cancellation",
+          "status": "expected"
+        },
+        {
+          "file": "browser/game.spec.ts",
+          "title": "keyboard and camera controls preserve browser layout and pause state",
+          "status": "expected"
+        },
+        {
+          "file": "browser/game.spec.ts",
+          "title": "blocked storage does not prevent play and reports an honest save failure",
+          "status": "expected"
+        },
+        {
+          "file": "browser/game.spec.ts",
+          "title": "records desktop frame timing and renderer metrics",
+          "status": "expected"
+        },
+        {
+          "file": "browser/polish.spec.ts",
+          "title": "living residents keep their positions across jobs and pause; legacy save loads and persists orders",
+          "status": "expected"
+        },
+        {
+          "file": "browser/polish.spec.ts",
+          "title": "wheel zoom stays anchored to the pointer and camera keys respect modal dialogs",
+          "status": "expected"
+        },
+        {
+          "file": "browser/polish.spec.ts",
+          "title": "previews placement, rejects occupied ground, confirms once, and offers 44px controls",
+          "status": "expected"
+        },
+        {
+          "file": "campaign/campaign.spec.ts",
+          "title": "complete five nights and all three marches through the real browser UI",
+          "status": "unexpected"
+        },
+        {
+          "file": "expedition-browser/expedition.spec.ts",
+          "title": "complete the Broken Standard through real controls, reload mid-ambush, enlist and defend with survivors",
+          "status": "expected"
+        },
+        {
+          "file": "expedition-browser/expedition.spec.ts",
+          "title": "withdraws during a real ambush, reloads the retreat and grants no unearned recruits",
+          "status": "expected"
+        },
+        {
+          "file": "expedition-browser/expedition.spec.ts",
+          "title": "an existing victorious save can resume an active expedition without a duplicate ending dialog",
+          "status": "expected"
+        },
+        {
+          "file": "expedition-browser/expedition.spec.ts",
+          "title": "retreats with real touch input without granting allies or losing the home save",
+          "status": "expected"
+        },
+        {
+          "file": "legions-browser/legions.spec.ts",
+          "title": "two independent squads: five defend while five hunt, split, merge, patrol and persist",
+          "status": "expected"
+        },
+        {
+          "file": "legions-browser/legions.spec.ts",
+          "title": "symptoms, quarantine, selected treatment, death countdown and one reanimation survive reload",
+          "status": "expected"
+        },
+        {
+          "file": "legions-browser/legions.spec.ts",
+          "title": "touch roster selection, named squad and separate hold orders at 390px",
+          "status": "expected"
+        },
+        {
+          "file": "legions-browser/legions.spec.ts",
+          "title": "repeated 100-soldier world replacements release old scene and navigation state",
+          "status": "expected"
+        },
+        {
+          "file": "legions-browser/legions.spec.ts",
+          "title": "10 soldiers: live combat frame times, simulation work, memory and save",
+          "status": "expected"
+        },
+        {
+          "file": "legions-browser/legions.spec.ts",
+          "title": "50 soldiers: live combat frame times, simulation work, memory and save",
+          "status": "expected"
+        },
+        {
+          "file": "legions-browser/legions.spec.ts",
+          "title": "100 soldiers: live combat frame times, simulation work, memory and save",
+          "status": "expected"
+        },
+        {
+          "file": "legions-browser/legions.spec.ts",
+          "title": "200 soldiers: live combat frame times, simulation work, memory and save",
+          "status": "expected"
+        },
+        {
+          "file": "renewal-browser/renewal.spec.ts",
+          "title": "legacy zero-stone kingdom builds defenses, shows shortfalls, and migrates without changing wealth",
+          "status": "expected"
+        },
+        {
+          "file": "renewal-browser/renewal.spec.ts",
+          "title": "closed-gate siege damages, persists, breaches and then admits infected",
+          "status": "expected"
+        },
+        {
+          "file": "renewal-browser/renewal.spec.ts",
+          "title": "fresh mobile shop and focused army views work through actual touch controls",
+          "status": "expected"
+        },
+        {
+          "file": "tactics-browser/defeat.spec.ts",
+          "title": "a trusted battalion awards no recruits after a real patrol wipe and the kingdom can rebuild its army",
+          "status": "expected"
+        },
+        {
+          "file": "tactics-browser/tactics.spec.ts",
+          "title": "guided first-time opening staffs production, equips soldiers and survives its first night",
+          "status": "expected"
+        },
+        {
+          "file": "tactics-browser/tactics.spec.ts",
+          "title": "experienced river patrol chooses its terrain, changes formation, reloads in combat and enlists finite survivors",
+          "status": "expected"
+        },
+        {
+          "file": "tactics-browser/tactics.spec.ts",
+          "title": "explicit legacy active-expedition fixture finishes at its original standard without retroactive equipment charges",
+          "status": "expected"
+        }
+      ]
+    },
+    "newRegion": {
+      "passed": 15,
+      "scenarios": [
+        {
+          "file": "journey.spec.ts",
+          "count": 1,
+          "fixture": false,
+          "scope": "Earned-resource explore, combat, discover, found, construct, staff, station defenders, travel and reload",
+          "evidence": "empire-journey.json"
+        },
+        {
+          "file": "controls.spec.ts",
+          "count": 4,
+          "fixture": true,
+          "scope": "Phone commander movement/release/bow; outbreak/quarantine/reanimation; direct sword; direct spear"
+        },
+        {
+          "file": "defense.spec.ts",
+          "count": 4,
+          "fixture": true,
+          "scope": "Persistent incursion warning; commander death; invalid/valid touch building; complete company wipe and paid rebuilding"
+        },
+        {
+          "file": "stress.spec.ts",
+          "count": 4,
+          "fixture": true,
+          "scope": "10/50/100/200 soldiers, live combat, disease, independent orders, autosaves and reload"
+        },
+        {
+          "file": "transitions.spec.ts",
+          "count": 1,
+          "fixture": true,
+          "scope": "Eight actual travel actions preserving 200 identities and releasing old terrain",
+          "evidence": "empire-transitions.json"
+        },
+        {
+          "file": "profile.spec.ts",
+          "count": 1,
+          "fixture": true,
+          "scope": "45-second battle with separate callback timings",
+          "evidence": "empire-hitch-attribution.json"
+        }
+      ]
+    },
+    "offline": {
+      "passed": 5,
+      "production": true,
+      "source": "tests/offline",
+      "scenarios": [
+        "connected settlements and one-time rewards",
+        "individual plague, remains and squads",
+        "cached saved kingdom",
+        "older cached worker update preserving legacy save",
+        "active expedition reload and extraction"
+      ]
+    },
+    "campaign": {
+      "passed": 1,
+      "fixture": false,
+      "actions": "Actual UI controls, no resources or time injected",
+      "evidence": "empire-campaign.json",
+      "outcome": "won",
+      "simulationSeconds": 561.5,
+      "wallSeconds": 301,
+      "stats": {
+        "slain": 112,
+        "lost": 6,
+        "built": 8,
+        "nights": 5,
+        "cured": 21,
+        "claimed": 3
+      },
+      "owned": [
+        "hearthmere",
+        "pinewatch",
+        "greybank",
+        "fen"
+      ],
+      "villagers": 26,
+      "soldiers": 7,
+      "hearthHealth": 2000,
+      "errors": []
+    }
+  },
+  "stress": [
+    {
+      "soldiers": 10,
+      "fixture": true,
+      "evidence": "empire-stress-10.json",
+      "realSeconds": [
+        15.01,
+        15.01
+      ],
+      "simulationSeconds": 60.1,
+      "worstFrameP95Ms": 8.6,
+      "worstFrameMs": 41.7,
+      "maximumSaveMs": 3.3,
+      "heapUsedBytes": [
+        8799372,
+        9222204,
+        8850712
+      ],
+      "final": {
+        "units": 10,
+        "slain": 8,
+        "lost": 0,
+        "food": 4065.7720000001063
+      },
+      "errors": []
+    },
+    {
+      "soldiers": 50,
+      "fixture": true,
+      "evidence": "empire-stress-50.json",
+      "realSeconds": [
+        15.02,
+        15.01
+      ],
+      "simulationSeconds": 60.2,
+      "worstFrameP95Ms": 16.7,
+      "worstFrameMs": 158.3,
+      "maximumSaveMs": 5.3,
+      "heapUsedBytes": [
+        9547964,
+        9974388,
+        10458220
+      ],
+      "final": {
+        "units": 50,
+        "slain": 30,
+        "lost": 0,
+        "food": 3968.2279999999178
+      },
+      "errors": []
+    },
+    {
+      "soldiers": 100,
+      "fixture": true,
+      "evidence": "empire-stress-100.json",
+      "realSeconds": [
+        30.02,
+        30.03
+      ],
+      "simulationSeconds": 120.1,
+      "worstFrameP95Ms": 16.9,
+      "worstFrameMs": 50,
+      "maximumSaveMs": 6.8,
+      "heapUsedBytes": [
+        10325116,
+        9777456,
+        10906348
+      ],
+      "final": {
+        "units": 88,
+        "slain": 78,
+        "lost": 12,
+        "food": 3702.9360000000656
+      },
+      "errors": []
+    },
+    {
+      "soldiers": 200,
+      "fixture": true,
+      "evidence": "empire-stress-200.json",
+      "realSeconds": [
+        30.03,
+        30.02
+      ],
+      "simulationSeconds": 119.6,
+      "worstFrameP95Ms": 17,
+      "worstFrameMs": 275,
+      "maximumSaveMs": 6.7,
+      "heapUsedBytes": [
+        10509364,
+        10328340,
+        11105484
+      ],
+      "final": {
+        "units": 170,
+        "slain": 156,
+        "lost": 30,
+        "food": 3274.1279999999497
+      },
+      "errors": []
+    }
+  ],
+  "transitionEvidence": "empire-transitions.json",
+  "hitchInstrumentationEvidence": "empire-hitch-attribution.json",
+  "preview": {
+    "url": "http://127.0.0.1:4186/",
+    "checkedAt": "2026-10-06T09:28:50.193Z",
+    "htmlStatus": 200,
+    "assetsMatchDist": true,
+    "checked": [
+      {
+        "path": "/assets/index-tq-5BLi5.js",
+        "status": 200,
+        "bytes": 1394643,
+        "sha256": "26a73da659fa641179b0e93a72409021bbe2b96fa7124d88e06e4bb816ce7f10"
+      },
+      {
+        "path": "/assets/index-BcYnR_Ge.css",
+        "status": 200,
+        "bytes": 38162,
+        "sha256": "d94d0654f8ae4f12c02bedcc65237d1b23430266bab3ea97ebd0824c3501dc4a"
+      },
+      {
+        "path": "/sw.js",
+        "status": 200,
+        "bytes": 870,
+        "sha256": "df71722a178f1d7fd5a2abd2fa3bdc3feb6f25aa02959f2d235e84eadc19f3ca"
+      }
+    ]
+  },
+  "recoveredAttempts": [
+    {
+      "check": "Campaign in broad regression",
+      "issue": "Incorrect 180-second test timeout",
+      "resolution": "Retested with original 900-second campaign configuration; victory at 561.5 game seconds in 301 wall seconds"
+    },
+    {
+      "check": "Sword and spear browser checks",
+      "issue": "Asserted a brief visual effect after its lifetime",
+      "resolution": "Persistent commander damage credit assertion; both focused retries passed"
+    },
+    {
+      "check": "Isolated sword startup",
+      "issue": "Start button action timed out",
+      "resolution": "Isolated retry passed in 24.6 seconds"
+    },
+    {
+      "check": "Read-only hardware inventory",
+      "issue": "Automatic approval review usage-limit failure; query did not execute",
+      "resolution": "Not required for gameplay verification; no hardware inventory claim"
+    }
+  ],
+  "limitations": [
+    "One additional connected region only",
+    "Inactive combat, disease, recovery and construction are held; shared production/upkeep still apply",
+    "275 ms frame hitch unresolved; historical 1.29-second hitch did not reproduce",
+    "Short prepared stress runs are not long-term or modest-hardware qualification; older three-minute-per-size suite not rerun",
+    "Heap is post-GC browser JavaScript only, excluding GPU and total process memory",
+    "Touch checked in Chromium emulation, not physical mobile hardware; Safari and Firefox unverified",
+    "No independent human difficulty feedback",
+    "Long-term two-settlement economy and original reused landmark art need further refinement"
+  ],
+  "noPushOrDeployment": true
+}

@@ -1,0 +1,38 @@
+[
+  {
+    "soldiers": 10,
+    "hostiles": 10,
+    "steps": 200,
+    "msPerStep": 1.4775179999999977,
+    "fieldsBuilt": 28,
+    "surviving": 10,
+    "slain": 10
+  },
+  {
+    "soldiers": 50,
+    "hostiles": 25,
+    "steps": 200,
+    "msPerStep": 3.874737500000001,
+    "fieldsBuilt": 64,
+    "surviving": 49,
+    "slain": 26
+  },
+  {
+    "soldiers": 100,
+    "hostiles": 50,
+    "steps": 200,
+    "msPerStep": 6.5007750000000035,
+    "fieldsBuilt": 120,
+    "surviving": 99,
+    "slain": 51
+  },
+  {
+    "soldiers": 200,
+    "hostiles": 100,
+    "steps": 200,
+    "msPerStep": 12.560219499999999,
+    "fieldsBuilt": 244,
+    "surviving": 199,
+    "slain": 86
+  }
+]

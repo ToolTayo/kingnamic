@@ -1,0 +1,11 @@
+{
+  "fixture": true,
+  "viewport": "390x844",
+  "touch": true,
+  "physicalDevice": false,
+  "moved": {
+    "x": 12.790847404170997,
+    "y": 16.790847404170997
+  },
+  "enemyHp": 38.2
+}

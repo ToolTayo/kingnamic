@@ -1,0 +1,128 @@
+{
+  "fixture": true,
+  "initialSoldiers": 50,
+  "activeWallSeconds": 180.03329999998212,
+  "simulationSeconds": 360.20000000001414,
+  "windows": [
+    {
+      "wallMs": 60012.40000000596,
+      "simulationSeconds": 120.09999999999745,
+      "samples": 7019,
+      "frameMedianMs": 8.30000000000291,
+      "frameP95Ms": 8.599999999998545,
+      "frameP99Ms": 16.700000000000728,
+      "frameMaxMs": 142,
+      "tickP95Ms": 1.0999999940395355,
+      "tickMaxMs": 7.799999982118607,
+      "longTaskCount": 1,
+      "longTaskMaxMs": 140,
+      "peakUnits": 66,
+      "peakCases": 4,
+      "peakCorpses": 1,
+      "risen": [
+        65
+      ],
+      "riseLogIds": [
+        311
+      ]
+    },
+    {
+      "wallMs": 60009.29999998212,
+      "simulationSeconds": 119.9999999999932,
+      "samples": 6960,
+      "frameMedianMs": 8.30000000000291,
+      "frameP95Ms": 8.600000000000364,
+      "frameP99Ms": 16.799999999999272,
+      "frameMaxMs": 50,
+      "tickP95Ms": 1,
+      "tickMaxMs": 20.5,
+      "longTaskCount": 0,
+      "longTaskMaxMs": 0,
+      "peakUnits": 49,
+      "peakCases": 2,
+      "peakCorpses": 1,
+      "risen": [
+        65,
+        44
+      ],
+      "riseLogIds": [
+        311,
+        400
+      ]
+    },
+    {
+      "wallMs": 60011.59999999404,
+      "simulationSeconds": 120.10000000002347,
+      "samples": 6910,
+      "frameMedianMs": 8.30000000000291,
+      "frameP95Ms": 8.69999999999709,
+      "frameP99Ms": 16.799999999995634,
+      "frameMaxMs": 58.40000000000009,
+      "tickP95Ms": 1.0999999940395355,
+      "tickMaxMs": 10.900000005960464,
+      "longTaskCount": 1,
+      "longTaskMaxMs": 58,
+      "peakUnits": 51,
+      "peakCases": 3,
+      "peakCorpses": 0,
+      "risen": [
+        44,
+        65
+      ],
+      "riseLogIds": [
+        400,
+        311
+      ]
+    }
+  ],
+  "postGCHeapBytes": [
+    8935584,
+    10021300,
+    9228204,
+    9453340
+  ],
+  "commandAutomationWallMs": 504,
+  "saves": [
+    {
+      "epoch": 1,
+      "army": 48,
+      "population": 20,
+      "cases": 1,
+      "corpses": 1
+    },
+    {
+      "epoch": 2,
+      "army": 48,
+      "population": 22,
+      "cases": 2,
+      "corpses": 0
+    },
+    {
+      "epoch": 3,
+      "army": 49,
+      "population": 23,
+      "cases": 3,
+      "corpses": 0
+    }
+  ],
+  "terminalId": 44,
+  "final": {
+    "army": 49,
+    "population": 23,
+    "stats": {
+      "slain": 54,
+      "lost": 2,
+      "built": 0,
+      "nights": 3,
+      "cured": 3,
+      "claimed": 0
+    },
+    "resources": {
+      "wood": 4393.447999998675,
+      "stone": 2084,
+      "food": 3641.8840000000882,
+      "herbs": 151.48000000000025
+    }
+  },
+  "errors": []
+}

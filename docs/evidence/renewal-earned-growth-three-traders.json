@@ -1,0 +1,112 @@
+{
+  "fixture": false,
+  "automatedPolicy": true,
+  "browser": false,
+  "maximumRequestedSeconds": 1800,
+  "simulationSeconds": 1799.9999999994584,
+  "elapsedMs": 29343.4873,
+  "outcome": "playing",
+  "continueAt": 556.3000000000579,
+  "peakArmy": 51,
+  "first50": 1787.9999999994693,
+  "first100": null,
+  "first200": null,
+  "reloads": 5,
+  "milestones": [
+    {
+      "time": 300,
+      "day": 3,
+      "army": 7,
+      "population": 24,
+      "capacity": 24,
+      "food": 720,
+      "foodRate": 2.0600000000000005,
+      "wood": 63,
+      "slain": 31,
+      "lost": 2,
+      "infected": 0,
+      "hostiles": 7,
+      "hearth": 2000
+    },
+    {
+      "time": 600,
+      "day": 6,
+      "army": 12,
+      "population": 26,
+      "capacity": 48,
+      "food": 1349,
+      "foodRate": 2.3300000000000005,
+      "wood": 120,
+      "slain": 114,
+      "lost": 6,
+      "infected": 0,
+      "hostiles": 0,
+      "hearth": 2000
+    },
+    {
+      "time": 900,
+      "day": 9,
+      "army": 22,
+      "population": 38,
+      "capacity": 48,
+      "food": 1931,
+      "foodRate": 2.0000000000000004,
+      "wood": 1006,
+      "slain": 278,
+      "lost": 20,
+      "infected": 0,
+      "hostiles": 4,
+      "hearth": 2000
+    },
+    {
+      "time": 1200,
+      "day": 11,
+      "army": 32,
+      "population": 59,
+      "capacity": 48,
+      "food": 2543,
+      "foodRate": 2.4100000000000006,
+      "wood": 1805,
+      "slain": 415,
+      "lost": 23,
+      "infected": 0,
+      "hostiles": 13,
+      "hearth": 2000
+    },
+    {
+      "time": 1500,
+      "day": 14,
+      "army": 41,
+      "population": 79,
+      "capacity": 48,
+      "food": 3166,
+      "foodRate": 2.3500000000000005,
+      "wood": 2688,
+      "slain": 583,
+      "lost": 30,
+      "infected": 0,
+      "hostiles": 0,
+      "hearth": 2000
+    }
+  ],
+  "final": {
+    "army": 51,
+    "population": 90,
+    "buildings": 28,
+    "foodRate": 2.0600000000000014,
+    "resources": {
+      "wood": 3409.837500000556,
+      "stone": 12.029999999977365,
+      "food": 3793.549000000037,
+      "herbs": 310.2018000000121
+    },
+    "stats": {
+      "slain": 781,
+      "lost": 35,
+      "built": 13,
+      "nights": 16,
+      "cured": 37,
+      "claimed": 3
+    }
+  }
+}

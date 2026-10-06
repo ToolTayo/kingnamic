@@ -1,0 +1,65 @@
+{
+  "method": "30 seconds at 2x per scale; inclusive scene callback, runtime tick and autosave instrumented separately; prepared armies",
+  "results": [
+    {
+      "fixture": true,
+      "initialSoldiers": 100,
+      "wallMs": 30013.5,
+      "simulationSeconds": 60.100000000000584,
+      "frames": {
+        "samples": 3532,
+        "p95Ms": 8.600000000000364,
+        "maxMs": 24.899999999999636
+      },
+      "simulation": {
+        "samples": 3533,
+        "p95Ms": 2,
+        "maxMs": 13
+      },
+      "sceneInclusive": {
+        "samples": 3533,
+        "p95Ms": 3.5,
+        "maxMs": 19.30000001192093
+      },
+      "persistence": {
+        "samples": 2,
+        "p95Ms": 4.5,
+        "maxMs": 4.5
+      },
+      "longTasks": {
+        "samples": 0
+      },
+      "finalUnits": 100
+    },
+    {
+      "fixture": true,
+      "initialSoldiers": 200,
+      "wallMs": 30016.90000000596,
+      "simulationSeconds": 60.00000000000058,
+      "frames": {
+        "samples": 3356,
+        "p95Ms": 16.59999999999991,
+        "maxMs": 25.100000000000364
+      },
+      "simulation": {
+        "samples": 3357,
+        "p95Ms": 3.2000000178813934,
+        "maxMs": 17.19999998807907
+      },
+      "sceneInclusive": {
+        "samples": 3357,
+        "p95Ms": 5.4000000059604645,
+        "maxMs": 18.799999982118607
+      },
+      "persistence": {
+        "samples": 2,
+        "p95Ms": 3.5,
+        "maxMs": 3.5
+      },
+      "longTasks": {
+        "samples": 0
+      },
+      "finalUnits": 188
+    }
+  ]
+}

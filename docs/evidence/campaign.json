@@ -1,0 +1,23 @@
+{
+  "outcome": "won",
+  "simulationSeconds": 558.6,
+  "wallSeconds": 303,
+  "stats": {
+    "slain": 115,
+    "lost": 8,
+    "built": 8,
+    "nights": 5,
+    "cured": 6,
+    "claimed": 3
+  },
+  "owned": [
+    "hearthmere",
+    "pinewatch",
+    "greybank",
+    "fen"
+  ],
+  "villagers": 25,
+  "soldiers": 7,
+  "hearthHealth": 1500,
+  "errors": []
+}

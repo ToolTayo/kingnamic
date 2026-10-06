@@ -1,0 +1,117 @@
+{
+  "fixture": true,
+  "initial": {
+    "guards": [
+      58,
+      59,
+      60,
+      61,
+      62
+    ],
+    "hunters": [
+      53,
+      54,
+      55,
+      56,
+      57
+    ],
+    "commander": 53,
+    "initialArmy": 10,
+    "initialEnemies": 8
+  },
+  "method": "Two live browser windows at 2x, paused exact save/reload between windows; full scene includes simulation and saves; heap after explicit GC, including reloads.",
+  "windows": [
+    {
+      "wallMs": 15046.399999976158,
+      "simulationSeconds": 30.20000000000017,
+      "frames": {
+        "samples": 653,
+        "p50": 16.700000000000728,
+        "p95": 51.400000000001455,
+        "p99": 58.79999999999927,
+        "max": 66.89999999999964
+      },
+      "tick": {
+        "samples": 654,
+        "p50": 0.10000002384185791,
+        "p95": 4.5,
+        "p99": 31,
+        "max": 46.10000002384186
+      },
+      "sceneInclusive": {
+        "samples": 654,
+        "p50": 1.100000023841858,
+        "p95": 9.700000047683716,
+        "p99": 33.90000003576279,
+        "max": 57.69999998807907
+      },
+      "save": {
+        "samples": 1,
+        "p50": 4.800000011920929,
+        "p95": 4.800000011920929,
+        "p99": 4.800000011920929,
+        "max": 4.800000011920929
+      },
+      "longTasks": {
+        "samples": 26,
+        "p50": 54,
+        "p95": 66,
+        "p99": 70,
+        "max": 70
+      },
+      "peakUnits": 18
+    },
+    {
+      "wallMs": 15017.699999988079,
+      "simulationSeconds": 28.80000000000041,
+      "frames": {
+        "samples": 744,
+        "p50": 16.399999999999636,
+        "p95": 44.899999999999636,
+        "p99": 52.30000000000109,
+        "max": 59
+      },
+      "tick": {
+        "samples": 745,
+        "p50": 0.09999996423721313,
+        "p95": 1.899999976158142,
+        "p99": 17.599999964237213,
+        "max": 32.30000001192093
+      },
+      "sceneInclusive": {
+        "samples": 745,
+        "p50": 0.699999988079071,
+        "p95": 7,
+        "p99": 28.899999976158142,
+        "max": 33.10000002384186
+      },
+      "save": {
+        "samples": 1,
+        "p50": 9,
+        "p95": 9,
+        "p99": 9,
+        "max": 9
+      },
+      "longTasks": {
+        "samples": 6,
+        "p50": 52,
+        "p95": 55,
+        "p99": 55,
+        "max": 55
+      },
+      "peakUnits": 10
+    }
+  ],
+  "heapUsedBytes": [
+    10557164,
+    8382492,
+    8811056
+  ],
+  "final": {
+    "units": 10,
+    "slain": 8,
+    "lost": 0,
+    "food": 4066.852000000108
+  },
+  "errors": []
+}

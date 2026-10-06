@@ -1,0 +1,23 @@
+{
+  "fixture": true,
+  "building": {
+    "id": 39,
+    "kind": "quarry",
+    "x": 19,
+    "y": 15,
+    "hp": 167,
+    "maxHp": 230,
+    "level": 2,
+    "progress": 1,
+    "cooldown": 0
+  },
+  "jobs": {
+    "farmers": 4,
+    "woodcutters": 4,
+    "miners": 3,
+    "healers": 0,
+    "builders": 2
+  },
+  "productionEarned": 2.0460000000000775,
+  "errors": []
+}

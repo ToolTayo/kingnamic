@@ -1,0 +1,6 @@
+[
+  {
+    "config": "playwright.expedition.config.ts",
+    "exitCode": 1
+  }
+]

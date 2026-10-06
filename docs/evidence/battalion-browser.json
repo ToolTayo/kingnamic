@@ -1,0 +1,33 @@
+{
+  "report": {
+    "outcome": "success",
+    "returned": 3,
+    "recruited": 4,
+    "lost": 0,
+    "stranded": 0
+  },
+  "missionSeconds": 66.20000000000051,
+  "missionWallSeconds": 35.376,
+  "recoveredKinds": [
+    "warden",
+    "ranger",
+    "warden",
+    "ranger",
+    "warden",
+    "warden",
+    "ranger",
+    "spearman",
+    "scout"
+  ],
+  "specialistsFoughtAtHome": true,
+  "performanceMetrics": {
+    "scenario": "second ambush, real combat",
+    "medianFrameMs": 8.30000000000291,
+    "p95FrameMs": 8.5,
+    "engineFps": 118.61539279227145,
+    "units": 11,
+    "peakUnits": 11,
+    "heapMB": 42.1339168548584
+  },
+  "errors": []
+}

@@ -1,0 +1,53 @@
+import {empireArmy} from '../game/empire';
+import { armyCapacity, available, ORDER_NAMES, SQUAD_COLORS } from '../game/army';
+import { UNITS } from '../game/config';
+import { shortage } from '../game/commands';
+import { diseaseStage, illnessFor } from '../game/disease';
+import { idle, rates } from '../game/economy';
+import type { Runtime } from '../game/runtime';
+import { army } from '../game/state';
+import { price } from './shopPanel';
+const escape=(s:string)=>s.replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]!));
+export function armyPanel(rt: Runtime): string {
+  const s=rt.world,troops=army(s).filter(u=>u.origin!=='battalion'),chosen=new Set(rt.selectedIds),fit=troops.filter(u=>available(s,u));
+  const selected=troops.filter(u=>chosen.has(u.id)),ready=selected.filter(u=>available(s,u)).length;
+  const view=rt.armyView??'orders',pages=Math.max(1,Math.ceil(troops.length/12));rt.rosterPage=Math.max(0,Math.min(rt.rosterPage,pages-1));
+  const locked=!s.buildings.some(b=>b.kind==='barracks'&&b.level>=2&&b.progress===1)&&!s.lostBattalions?.recruited;
+  const names=selected.length?[...new Set(selected.map(u=>u.order?ORDER_NAMES[u.order]:'Guard'))].join(', '):'Select soldiers on the map or in Roster';
+  const tabs=s.theatre?[['orders','Orders'],['squads','Squads'],['roster','Roster']]:[['orders','Orders'],['recruit','Recruit'],['squads','Squads'],['roster','Roster']];
+  const quick=`<div class="quick-squads" aria-label="Recall squads">${(s.squads??[]).map((q,i)=>`<button id="squad-${q.id}" data-squad="${q.id}" class="${selected.length&&selected.every(u=>u.squadId===q.id)?'active':''}" title="${i<9?'Press '+(i+1)+' to recall. ':''}${escape(q.name)}">${i<9?'<kbd>'+(i+1)+'</kbd> ':''}${escape(q.name)} · ${troops.filter(u=>u.squadId===q.id).length}</button>`).join('')}</div>`;
+  let content='';
+  if(view==='orders'||s.theatre&&view==='recruit')content=`${quick}<div class="army-command-deck">
+    <div class="segmented"><button id="select-all">Select available</button><button id="select-none">Clear</button><button id="multi-select" aria-pressed="${rt.multiSelect}" class="${rt.multiSelect?'active':''}">Multi-select</button></div>
+    <div class="order-grid">${Object.entries(ORDER_NAMES).map(([id,name])=>`<button id="order-${id}" data-order="${id}" aria-pressed="${rt.orderMode===id}" class="secondary ${rt.orderMode===id?'selected':''}" ${!ready?'disabled':''}>${name}</button>`).join('')}</div>
+    <p class="selection-summary" id="selection-summary">${ready} ready${chosen.size-ready?' · '+(chosen.size-ready)+' recovering or isolated':''} · ${names}</p></div>
+    <p class="army-help">${rt.orderMode?escape(ORDER_NAMES[rt.orderMode])+': choose a map target.':'Shift-click or Shift-drag to select. Touch: Multi-select or Roster.'} Other squads keep their orders.</p>
+    ${s.theatre?'':`<div class="segmented formations"><button id="formation-line" data-formation="line" aria-pressed="${(selected.length?selected:troops).every(u=>(u.formation??s.formation)==='line')}">Shield line</button><button id="formation-loose" data-formation="loose" aria-pressed="${(selected.length?selected:troops).every(u=>(u.formation??s.formation)==='loose')}">Loose order</button></div>
+    <p class="army-help">Line: nearby wardens +3 armor. Loose: bowmen +0.6 range.</p>`}
+    ${s.theatre?'':`<div class="army-shortcuts"><button id="rally" class="primary">Set rally point</button><button id="rally-gate" class="secondary">Defend south gate</button></div>`}
+    <details class="army-help"><summary>How orders work</summary><p>Hunt pursues within 12 tiles of its destination. Defend protects a 4-tile melee screen; Hold never pursues. Patrol travels out and back. Retreat avoids fighting. Escort follows an allied soldier. Orders address selected available members only.</p></details>`;
+  if(view==='squads')content=`${quick}<p class="army-help">Select soldiers, then name a squad. Reassign a selection to split or merge groups; existing orders stay with each soldier.</p>
+    <label class="squad-label" for="squad-name">Squad name</label><input id="squad-name" maxlength="24" placeholder="e.g. Gate Watch" value="${escape(rt.squadName)}"/>
+    <button id="create-squad" class="primary full" ${!chosen.size?'disabled':''}>Name ${chosen.size||'selected'} soldiers</button>
+    <div class="section-label">YOUR SQUADS <span>${s.squads?.length??0} / 20</span></div>
+    ${(s.squads??[]).map(q=>`<div class="squad-card" style="border-color:#${SQUAD_COLORS[q.color].toString(16).padStart(6,'0')}"><button data-squad="${q.id}" class="secondary full">${escape(q.name)} · ${troops.filter(u=>u.squadId===q.id).length}</button><div class="segmented"><button data-squad-assign="${q.id}" ${!chosen.size?'disabled':''}>Assign selected</button><button data-squad-rename="${q.id}">Rename</button><button data-squad-delete="${q.id}">Dissolve</button></div></div>`).join('')}
+    <p class="army-help">Rename uses the name above. Keys 1–9 recall squads. Double-click a squad to center the camera.</p>`;
+  if(view==='roster')content=`<div class="section-label">SOLDIERS <span>${rt.rosterPage+1} / ${pages}</span></div>
+    <div class="unit-roster">${troops.slice(rt.rosterPage*12,rt.rosterPage*12+12).map(u=>{const i=illnessFor(s,u.id);return `<button id="unit-${u.id}" data-unit="${u.id}" aria-pressed="${chosen.has(u.id)}" class="unit-row ${chosen.has(u.id)?'selected':''}"><span>${chosen.has(u.id)?'☑':'☐'} ${UNITS[u.kind].name} #${u.id}</span><small>${Math.ceil(u.hp)} / ${u.maxHp} HP · ${i?diseaseStage(i.age):u.injury?'Rest '+Math.ceil(u.injury)+'s':u.order?ORDER_NAMES[u.order]:'Guard'}${u.exposure&&u.exposure>=20?' · exposure '+Math.floor(u.exposure)+'%':''}</small></button>`;}).join('')}</div>
+    ${pages>1?`<div class="segmented"><button id="roster-prev" ${!rt.rosterPage?'disabled':''}>Previous</button><button id="roster-next" ${rt.rosterPage>=pages-1?'disabled':''}>Next</button></div>`:''}
+    <button id="treat-selected" class="secondary full" ${!s.infection.some(i=>chosen.has(i.personId!))?'disabled':''}>Treat selected${s.theatre?' · 1 packed herb':' · 5 herbs + 8 provisions'}</button>
+    ${s.theatre?'':`<button id="demobilize" class="secondary full" ${!chosen.size?'disabled':''}>Return selected to civilian work</button><p class="army-help">Requires spare beds, fit uninfected soldiers and peaceful daylight. Equipment is not refunded.</p>`}`;
+  if(view==='recruit'&&!s.theatre){
+    const foodRate=rates(s).food;
+    content=`<p class="food-forecast ${foodRate<0?'warning-text':''}">${foodRate<0?'Provisions falling '+(-foodRate).toFixed(2)+'/s · about '+Math.floor(s.resources.food/-foodRate)+'s remain. Add farmers.':'Provisions +'+foodRate.toFixed(2)+'/s after upkeep.'}</p><p class="army-help">${idle(s)} idle residents · ${Math.max(0,armyCapacity(s)-empireArmy(s))} army places. Garrison levels add 24 places. Each soldier eats 0.04 provisions/s.</p>
+    ${(['warden','ranger','spearman','scout'] as const).map(kind=>{
+      const reason=(n:number)=>!s.buildings.some(b=>b.kind==='barracks'&&b.progress===1)?'Build a garrison first':locked&&(kind==='spearman'||kind==='scout')?'Needs level 2 garrison or an enlisted battalion':idle(s)<n?'Unassign '+n+' fit residents in People':empireArmy(s)+n>armyCapacity(s)?'Upgrade or build a garrison':shortage(s,Object.fromEntries(Object.entries(UNITS[kind].cost).map(([k,v])=>[k,v*n])))?'Need '+shortage(s,Object.fromEntries(Object.entries(UNITS[kind].cost).map(([k,v])=>[k,v*n])))+' more':'';
+      return `<article class="recruit-card compact-recruit"><div><h3>${UNITS[kind].name}</h3><p>${kind==='warden'?'Armored sword infantry; holds gates.':kind==='ranger'?'Long range; vulnerable at close quarters.':kind==='spearman'?'Long thrusts; counters fast runners.':'Fast bow support; light armor, shorter reach.'}</p>${price(s,UNITS[kind].cost)}<div class="segmented">${[1,5].map(n=>`<button id="recruit-${kind}${n===1?'':'-5'}" data-recruit="${kind}" data-count="${n}" ${reason(n)?'disabled':''} title="${reason(n)||'Equip '+n+' soldiers'}">Recruit ${n}</button>`).join('')}</div><p class="recruit-reason">${reason(1)||reason(5)&&'Five at once: '+reason(5)||'Ready to recruit'}</p></div></article>`;
+    }).join('')}`;
+  }
+  return `<div class="panel-heading compact-heading"><h2>${s.theatre?'Patrol orders':'The Hearthguard'}</h2></div>
+    ${s.outcome==='won'?'<button id="continue-watch" class="primary full">Continue the watch</button>':''}
+    <div class="army-status"><span><strong>${troops.length}${s.theatre?'':' / '+armyCapacity(s)}</strong> local soldiers${s.empire?' · '+empireArmy(s)+' across empire':''}</span><span>${fit.length} ready</span><span><strong id="selected-count">${chosen.size}</strong> selected</span>${troops.some(u=>u.injury)?`<span>${troops.filter(u=>u.injury).length} recovering</span>`:''}</div>
+    <nav class="segmented army-views" aria-label="Army management">${tabs.map(([id,name])=>`<button id="army-${id}" data-army-view="${id}" aria-pressed="${view===id}" class="${view===id?'active':''}">${name}</button>`).join('')}</nav>${content}
+    ${s.theatre?'':'<button id="open-expedition" class="secondary full expedition-entry">Lost Battalions →</button>'}`;
+}

@@ -1,0 +1,340 @@
+{
+  "date": "2026-10-05",
+  "unit": {
+    "tests": 144,
+    "passed": 144,
+    "failed": 0,
+    "files": 9,
+    "success": true,
+    "evidence": "../../test-results/sustain-final-unit.json"
+  },
+  "browser": {
+    "kind": "Automated real Chromium playtests; no human feedback claimed",
+    "distinctScenarios": 39,
+    "original": 32,
+    "newControls": 3,
+    "newSustained": 4,
+    "broadRuns": [
+      {
+        "scenarios": 3,
+        "config": "playwright.sustain.config.ts",
+        "grep": "selection|outbreak focus|real touch",
+        "exitCode": 0
+      },
+      {
+        "scenarios": 11,
+        "config": "playwright.config.ts",
+        "grep": null,
+        "exitCode": 0
+      },
+      {
+        "scenarios": 4,
+        "config": "playwright.expedition.config.ts",
+        "grep": null,
+        "exitCode": 0
+      },
+      {
+        "scenarios": 4,
+        "config": "playwright.tactics.config.ts",
+        "grep": null,
+        "exitCode": 0
+      },
+      {
+        "scenarios": 1,
+        "config": "playwright.campaign.config.ts",
+        "grep": null,
+        "exitCode": 0
+      },
+      {
+        "scenarios": 4,
+        "config": "playwright.offline.config.ts",
+        "grep": null,
+        "exitCode": 0
+      },
+      {
+        "scenarios": 8,
+        "config": "playwright.legions.config.ts",
+        "grep": null,
+        "exitCode": 0
+      }
+    ],
+    "finalRechecks": [
+      {
+        "config": "playwright.sustain.config.ts",
+        "grep": "selection|outbreak focus|real touch",
+        "scenarios": 3,
+        "exitCode": 0,
+        "includes": "Body-click Escort of a holding ally, final source"
+      },
+      {
+        "config": "playwright.offline.config.ts",
+        "scenarios": 4,
+        "exitCode": 0,
+        "cache": "kingnamic-5d6128472aeb"
+      }
+    ],
+    "sourceScope": "Broad suites passed before the final coordinate-only Escort correction. Affected control scenarios and production offline checks were repeated after that correction. Scale sessions use Defend, Hunt, Patrol and Hold; they predate the final tab-cancel/mobile-scroll polish and Escort correction."
+  },
+  "scale": {
+    "sessions": [
+      {
+        "initialSoldiers": 10,
+        "fixture": true,
+        "activeWallSeconds": 180.03930000001193,
+        "simulationSeconds": 360.4000000000143,
+        "frameP95Ms": [
+          25.099999999998545,
+          17,
+          16.799999999999272
+        ],
+        "frameMaxMs": 75.10000000000218,
+        "tickP95MaxMs": 1.5,
+        "postGCHeapBytes": [
+          8464752,
+          8857264,
+          9317824,
+          10287084
+        ],
+        "saveReloadCycles": 3,
+        "final": {
+          "army": 9,
+          "population": 23,
+          "stats": {
+            "slain": 44,
+            "lost": 2,
+            "built": 0,
+            "nights": 3,
+            "cured": 2,
+            "claimed": 0
+          },
+          "resources": {
+            "wood": 4382.503999998669,
+            "stone": 2000,
+            "food": 4215.931999999821,
+            "herbs": 150.2800000000002
+          }
+        },
+        "errors": [],
+        "evidence": "sustain-10.json"
+      },
+      {
+        "initialSoldiers": 50,
+        "fixture": true,
+        "activeWallSeconds": 180.06209999999405,
+        "simulationSeconds": 360.3000000000143,
+        "frameP95Ms": [
+          16.900000000001455,
+          16.800000000000182,
+          16.599999999998545
+        ],
+        "frameMaxMs": 109.19999999999709,
+        "tickP95MaxMs": 1.7000000178813934,
+        "postGCHeapBytes": [
+          8877056,
+          8718648,
+          10028856,
+          9393292
+        ],
+        "saveReloadCycles": 3,
+        "final": {
+          "army": 49,
+          "population": 23,
+          "stats": {
+            "slain": 54,
+            "lost": 2,
+            "built": 0,
+            "nights": 3,
+            "cured": 3,
+            "claimed": 0
+          },
+          "resources": {
+            "wood": 4382.215999998672,
+            "stone": 2000,
+            "food": 3635.083999999987,
+            "herbs": 151.48000000000025
+          }
+        },
+        "errors": [],
+        "evidence": "sustain-50.json"
+      },
+      {
+        "initialSoldiers": 100,
+        "fixture": true,
+        "activeWallSeconds": 180.05589999997616,
+        "simulationSeconds": 359.9000000000142,
+        "frameP95Ms": [
+          16.89999999999418,
+          16.80000000000291,
+          16.89999999999418
+        ],
+        "frameMaxMs": 266.5,
+        "tickP95MaxMs": 2,
+        "postGCHeapBytes": [
+          10215480,
+          9291936,
+          11140168,
+          10333332
+        ],
+        "saveReloadCycles": 3,
+        "final": {
+          "army": 97,
+          "population": 23,
+          "stats": {
+            "slain": 73,
+            "lost": 4,
+            "built": 0,
+            "nights": 3,
+            "cured": 3,
+            "claimed": 0
+          },
+          "resources": {
+            "wood": 4381.807999998674,
+            "stone": 2000,
+            "food": 2926.1720000002097,
+            "herbs": 153.76000000000033
+          }
+        },
+        "errors": [],
+        "evidence": "sustain-100.json"
+      },
+      {
+        "initialSoldiers": 200,
+        "fixture": true,
+        "activeWallSeconds": 180.08470000001788,
+        "simulationSeconds": 360.60000000001446,
+        "frameP95Ms": [
+          24.899999999999636,
+          16.900000000001455,
+          16.900000000001455
+        ],
+        "frameMaxMs": 133.29999999999927,
+        "tickP95MaxMs": 2.9000000059604645,
+        "postGCHeapBytes": [
+          9873460,
+          10136732,
+          10275564,
+          9731576
+        ],
+        "saveReloadCycles": 3,
+        "final": {
+          "army": 170,
+          "population": 23,
+          "stats": {
+            "slain": 133,
+            "lost": 31,
+            "built": 0,
+            "nights": 3,
+            "cured": 3,
+            "claimed": 0
+          },
+          "resources": {
+            "wood": 4383.079999998667,
+            "stone": 2000,
+            "food": 1761.0520000002834,
+            "herbs": 160.9600000000006
+          }
+        },
+        "errors": [],
+        "evidence": "sustain-200.json"
+      }
+    ],
+    "activeWallSeconds": 720.242,
+    "simulationSeconds": 1441.2000000000571,
+    "limits": "Prepared starting armies and supplies. Normal waves and seeded outbreaks, with one explicit terminal case per size. Casualties reduce armies. Three sixty-second windows per size at 2x with reloads between windows. Post-GC JS heap excludes GPU memory; this is not multi-hour uninterrupted stability or physical-device performance."
+  },
+  "selection": {
+    "selected": 198,
+    "held": 198,
+    "message": "198 soldiers hold their ground.",
+    "orderLatency": {
+      "inputToApplyMs": 12.099999994039536,
+      "applyMs": 10.400000005960464
+    }
+  },
+  "earnedGrowth": {
+    "browser": false,
+    "fixture": false,
+    "peakArmy": 96,
+    "first50": 1140.0000000000587,
+    "first100": null,
+    "first200": null,
+    "simulationSeconds": 1799.9999999994584,
+    "decodeCheckpoints": 5,
+    "evidence": "sustain-earned-growth.json",
+    "limits": "One legal-command pure-simulation policy; earned 100 and 200 remain unverified. No human enjoyment or balance feedback."
+  },
+  "campaign": {
+    "outcome": "won",
+    "simulationSeconds": 558.6,
+    "wallSeconds": 303,
+    "stats": {
+      "slain": 115,
+      "lost": 8,
+      "built": 8,
+      "nights": 5,
+      "cured": 6,
+      "claimed": 3
+    },
+    "owned": [
+      "hearthmere",
+      "pinewatch",
+      "greybank",
+      "fen"
+    ],
+    "villagers": 25,
+    "soldiers": 7,
+    "hearthHealth": 1500,
+    "errors": []
+  },
+  "build": {
+    "files": [
+      {
+        "file": "dist/assets/index-B34vTTNg.js",
+        "bytes": 1363723,
+        "gzipBytes": 387227
+      },
+      {
+        "file": "dist/assets/index-BM3aCqbT.css",
+        "bytes": 34254,
+        "gzipBytes": 8434
+      },
+      {
+        "file": "dist/crest.svg",
+        "bytes": 234,
+        "gzipBytes": 185
+      },
+      {
+        "file": "dist/index.html",
+        "bytes": 652,
+        "gzipBytes": 396
+      },
+      {
+        "file": "dist/sw.js",
+        "bytes": 870,
+        "gzipBytes": 494
+      },
+      {
+        "file": "dist/THIRD_PARTY_NOTICES.txt",
+        "bytes": 2236,
+        "gzipBytes": 825
+      }
+    ],
+    "rawBytes": 1401969,
+    "gzipBytes": 397561,
+    "cache": "kingnamic-5d6128472aeb",
+    "gzipDeltaFromPrior": 2913,
+    "priorGzipBytes": 394648,
+    "typescriptPassed": true,
+    "offlineBuildPassed": true
+  },
+  "remaining": [
+    "Human balance feedback and earned 100-200 browser progression",
+    "Dense 200-soldier geography, soft separation and limited tactical prediction",
+    "Occasional display hitches; maximum observed 266.5 ms",
+    "Physical mobile, other browsers and lower-end hardware",
+    "Multi-hour memory and storage behavior",
+    "Formation stance changes do not re-form existing destinations"
+  ],
+  "pushed": false,
+  "deployed": false
+}
