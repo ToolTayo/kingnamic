@@ -19,6 +19,7 @@ export class WorldScene extends Phaser.Scene {
   private buildings = new Map<number, Phaser.GameObjects.Image>();
   private units = new Map<number, Phaser.GameObjects.Image>();
   private workers = new Map<number, Phaser.GameObjects.Image>();
+  private actorDensity = new Map<number, number>();
   readonly civilians = new CivilianSystem();
   private health = new Map<number, { hp: number; until: number }>();
   private renderedState?: State;
@@ -240,6 +241,9 @@ export class WorldScene extends Phaser.Scene {
         if (b.kind === 'tower') this.overlay.lineStyle(1, 0xf0db9b, 0.3).strokeEllipse(p.x, p.y, (6 + (b.level - 1) * 0.7) * 128, (6 + (b.level - 1) * 0.7) * 64);
       }
     }
+    this.actorDensity.clear();
+    for (const u of s.units) this.addActorDensity(u.x, u.y);
+    for (const c of this.civilians.people) this.addActorDensity(c.x, c.y);
     const uIds = new Set(s.units.map(u => u.id)); for (const [id, sprite] of this.units) if (!uIds.has(id)) { sprite.destroy(); this.units.delete(id); this.health.delete(id); }
     for (const u of s.units) {
       const p = iso(u.x, u.y), moving = flowing && u.path.length > 0 && u.attackFlash === 0, frame = u.attackFlash > 0 ? u.attackFlash > .15 ? 3 : 4 : moving ? [1,5,2,6][Math.floor(s.time / (u.kind==='brute'?.18:.12) + u.id) % 4] : 0;
@@ -254,10 +258,14 @@ export class WorldScene extends Phaser.Scene {
       const recoil = hurt ? Math.sin((this.health.get(u.id)!.until - s.time) / .24 * Math.PI) * 3 : 0;
       const illness=illnesses.get(u.id),sickColor=illness?(illness.age>=55?0xe8a37c:illness.age>=18?0xb4cb77:0xe0d6a0):0xffffff;
       const bob=moving?Math.sin(s.time*(u.kind==='brute'?9:13)+u.id)*.6:0;
+      let bodyScale = 1;
+      if (isFriendly(u) && u.id !== s.commander?.id) { const density = this.localActorDensity(u.x, u.y); bodyScale = density >= 28 ? .72 : density >= 18 ? .84 : 1; }
+      if (sprite.scaleX !== bodyScale || sprite.scaleY !== bodyScale) sprite.setScale(bodyScale);
       sprite.setTexture(`unit-${u.kind}-${frame}`).setPosition(x + (sprite.flipX ? -1 : 1) * (strike * 2 - recoil), y+bob).setDepth(y + 1).setRotation((sprite.flipX?-1:1)*(strike*.055-recoil*.018)).setTint(hurt ? 0xff967d : u.attackFlash > 0 ? 0xffe5ad : sickColor);
       const view=this.cameras.main.worldView,visible=p.x>view.x-55&&p.x<view.right+55&&p.y>view.y-55&&p.y<view.bottom+55;sprite.setVisible(visible);if(!visible)continue;
       const selectedUnit=selected.has(u.id),color=selectedUnit?0xffe29a:isFriendly(u)?squadColors.get(u.squadId!)??0xb5d5d8:u.kind==='brute'?0xf1ba72:0xe6a37d;
-      this.ground.lineStyle(selectedUnit?1.8:isFriendly(u)?.7:1.8,color,selectedUnit?.9:isFriendly(u)?.45:.95).strokeEllipse(p.x,p.y,u.kind==='brute'?23:17,u.kind==='brute'?11:8);
+      const massSelection=selectedUnit&&selected.size>24,markScale=massSelection?.8:1;
+      this.ground.lineStyle(selectedUnit?(massSelection?1.2:1.8):isFriendly(u)?.7:1.8,color,selectedUnit?(massSelection?.6:.9):isFriendly(u)?.45:.95).strokeEllipse(p.x,p.y,(u.kind==='brute'?23:17)*markScale,(u.kind==='brute'?11:8)*markScale);
       if (u.hp < u.maxHp*.65 || hurt || selectedUnit&&selected.size<=24 || illness) {
         this.overlay.fillStyle(0x18332b, 0.8).fillRect(p.x - 10, p.y - 42, 20, 3); this.overlay.fillStyle(isFriendly(u) ? 0xbbd7ac : 0xd29179).fillRect(p.x - 10, p.y - 42, 20 * u.hp / u.maxHp, 3);
       }
@@ -335,6 +343,15 @@ export class WorldScene extends Phaser.Scene {
   private damageTint(id: number, hp: number, time: number): boolean {
     const old = this.health.get(id), until = old && hp < old.hp ? time + .24 : old?.until ?? 0;
     this.health.set(id, { hp, until }); return until > time;
+  }
+  private addActorDensity(x: number, y: number): void {
+    const key = Math.floor(x / 3) + Math.floor(y / 3) * 32;
+    this.actorDensity.set(key, (this.actorDensity.get(key) ?? 0) + 1);
+  }
+  private localActorDensity(x: number, y: number): number {
+    const bx = Math.floor(x / 3), by = Math.floor(y / 3); let count = 0;
+    for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) count += this.actorDensity.get(bx + dx + (by + dy) * 32) ?? 0;
+    return count;
   }
   private drawWorkers(flowing: boolean, blend: number): void {
     const s = this.rt.world;
