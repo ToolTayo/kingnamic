@@ -40,6 +40,15 @@ export function assignResidentJobs(s: State): void {
   }
 }
 export function removeResident(s: State, id: number): void {
-  s.residents = (s.residents ?? []).filter(r => r.id !== id); s.population = s.residents.length;
-  s.infection = s.infection.filter(i => i.personId !== id);
+  removeResidents(s, [id]);
+}
+export function removeResidents(s: State, ids: Iterable<number>): void {
+  const leaving = new Set(ids);
+  if (!leaving.size) return;
+  s.residents = (s.residents ?? []).filter(r => !leaving.has(r.id));
+  s.population = s.residents.length;
+  // Keep legacy infection records whose host has not been identified. A
+  // recruited resident cannot be infected, but retaining unknown legacy
+  // records prevents a batch move from deleting unrelated migration data.
+  s.infection = s.infection.filter(i => i.personId === undefined || !leaving.has(i.personId));
 }

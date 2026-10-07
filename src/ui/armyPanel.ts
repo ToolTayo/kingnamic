@@ -1,18 +1,17 @@
 import {empireArmy} from '../game/empire';
 import { armyCapacity, available, ORDER_NAMES, SQUAD_COLORS } from '../game/army';
-import { UNITS } from '../game/config';
-import { shortage } from '../game/commands';
+import { MAX_UNITS, UNITS } from '../game/config';
 import { diseaseStage, illnessDeadline, illnessFor } from '../game/disease';
 import { idle, rates } from '../game/economy';
 import type { Runtime } from '../game/runtime';
 import { army } from '../game/state';
+import { recruitmentBlocker, recruitmentCost, recruitmentPlan } from '../game/recruitment';
 import { price } from './shopPanel';
 const escape=(s:string)=>s.replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]!));
 export function armyPanel(rt: Runtime): string {
   const s=rt.world,troops=army(s).filter(u=>u.origin!=='battalion'),chosen=new Set(rt.selectedIds),fit=troops.filter(u=>available(s,u));
   const selected=troops.filter(u=>chosen.has(u.id)),ready=selected.filter(u=>available(s,u)).length;
   const view=rt.armyView??'orders',pages=Math.max(1,Math.ceil(troops.length/12));rt.rosterPage=Math.max(0,Math.min(rt.rosterPage,pages-1));
-  const locked=!s.buildings.some(b=>b.kind==='barracks'&&b.level>=2&&b.progress===1)&&!s.lostBattalions?.recruited;
   const names=selected.length?[...new Set(selected.map(u=>u.order?ORDER_NAMES[u.order]:'Guard'))].join(', '):'Select soldiers on the map or in Roster';
   const tabs=s.theatre?[['orders','Orders'],['squads','Squads'],['roster','Roster']]:[['orders','Orders'],['recruit','Recruit'],['squads','Squads'],['roster','Roster']];
   const quick=`<div class="quick-squads" aria-label="Recall squads">${(s.squads??[]).map((q,i)=>`<button id="squad-${q.id}" data-squad="${q.id}" class="${selected.length&&selected.every(u=>u.squadId===q.id)?'active':''}" title="${i<9?'Press '+(i+1)+' to recall. ':''}${escape(q.name)}">${i<9?'<kbd>'+(i+1)+'</kbd> ':''}${escape(q.name)} · ${troops.filter(u=>u.squadId===q.id).length}</button>`).join('')}</div>`;
@@ -38,11 +37,13 @@ export function armyPanel(rt: Runtime): string {
     <button id="treat-selected" class="secondary full" ${!s.infection.some(i=>chosen.has(i.personId!))?'disabled':''}>Treat selected${s.theatre?' · 1 packed herb':' · 5 herbs + 8 provisions'}</button>
     ${s.theatre?'':`<button id="demobilize" class="secondary full" ${!chosen.size?'disabled':''}>Return selected to civilian work</button><p class="army-help">Requires spare beds, fit uninfected soldiers and peaceful daylight. Equipment is not refunded.</p>`}`;
   if(view==='recruit'&&!s.theatre){
-    const foodRate=rates(s).food;
-    content=`<p class="food-forecast ${foodRate<0?'warning-text':''}">${foodRate<0?'Provisions falling '+(-foodRate).toFixed(2)+'/s · about '+Math.floor(s.resources.food/-foodRate)+'s remain. Add farmers.':'Provisions +'+foodRate.toFixed(2)+'/s after upkeep.'}</p><p class="army-help">${idle(s)} idle residents · ${Math.max(0,armyCapacity(s)-empireArmy(s))} army places. Garrison levels add 24 places. Each soldier eats 0.04 provisions/s.</p>
+    const foodRate=rates(s).food,armyPlaces=Math.max(0,Math.min(armyCapacity(s)-empireArmy(s),MAX_UNITS-s.units.length));
+    content=`<p class="food-forecast ${foodRate<0?'warning-text':''}">${foodRate<0?'Provisions falling '+(-foodRate).toFixed(2)+'/s · about '+Math.floor(s.resources.food/-foodRate)+'s remain. Add farmers.':'Provisions +'+foodRate.toFixed(2)+'/s after upkeep.'}</p><p class="army-help">${idle(s)} idle residents · ${armyPlaces} army places. Garrison levels add 24 places. Each soldier eats 0.04 provisions/s.</p>
     ${(['warden','ranger','spearman','scout'] as const).map(kind=>{
-      const reason=(n:number)=>!s.buildings.some(b=>b.kind==='barracks'&&b.progress===1)?'Build a garrison first':locked&&(kind==='spearman'||kind==='scout')?'Needs level 2 garrison or an enlisted battalion':idle(s)<n?'Unassign '+n+' fit residents in People':empireArmy(s)+n>armyCapacity(s)?'Upgrade or build a garrison':shortage(s,Object.fromEntries(Object.entries(UNITS[kind].cost).map(([k,v])=>[k,v*n])))?'Need '+shortage(s,Object.fromEntries(Object.entries(UNITS[kind].cost).map(([k,v])=>[k,v*n])))+' more':'';
-      return `<article class="recruit-card compact-recruit"><div><h3>${UNITS[kind].name}</h3><p>${kind==='warden'?'Armored sword infantry; holds gates.':kind==='ranger'?'Long range; vulnerable at close quarters.':kind==='spearman'?'Long thrusts; counters fast runners.':'Fast bow support; light armor, shorter reach.'}</p>${price(s,UNITS[kind].cost)}<div class="segmented">${[1,5].map(n=>`<button id="recruit-${kind}${n===1?'':'-5'}" data-recruit="${kind}" data-count="${n}" ${reason(n)?'disabled':''} title="${reason(n)||'Equip '+n+' soldiers'}">Recruit ${n}</button>`).join('')}</div><p class="recruit-reason">${reason(1)||reason(5)&&'Five at once: '+reason(5)||'Ready to recruit'}</p></div></article>`;
+      const plan=recruitmentPlan(s,kind),actions=[1,5,10,50,100].map(n=>({n,label:String(n)})).concat([{n:plan.max,label:`Max · ${plan.max}`}]);
+      const status=`${plan.residents} fit eligible · ${plan.affordable} affordable · ${plan.capacity} places`;
+      const blockedBatch=[1,5,10,50,100].find(n=>n>plan.max),blocker=plan.reason|| (blockedBatch?recruitmentBlocker(s,kind,blockedBatch,plan):'');
+      return `<article class="recruit-card compact-recruit"><div><h3>${UNITS[kind].name}</h3><p>${kind==='warden'?'Armored sword infantry; holds gates.':kind==='ranger'?'Long range; vulnerable at close quarters.':kind==='spearman'?'Long thrusts; counters fast runners.':'Fast bow support; light armor, shorter reach.'}</p>${price(s,UNITS[kind].cost)}<p class="recruit-batch-cost">Max batch cost: ${plan.max?price(s,recruitmentCost(kind,plan.max)):'unavailable'}</p><div class="segmented recruit-actions">${actions.map(({n,label},i)=>{const amount=i===5?plan.max:n,reason=amount?recruitmentBlocker(s,kind,amount,plan):plan.reason;return `<button id="recruit-${kind}${i===0?'':i===5?'-max':'-'+n}" data-recruit="${kind}" data-count="${amount}" ${reason?'disabled':''} title="${reason||`Equip ${amount} ${UNITS[kind].name.toLowerCase()}${amount===1?'':'s'}`}" ${i===5?'class="primary"':''}>Recruit ${label}</button>`;}).join('')}</div><p class="recruit-reason" aria-live="polite">${status} · ${plan.max?`Up to ${plan.max} ready`:''}${blocker?`${plan.max?' · Larger batches blocked: ':' '}${blocker}`:''}</p></div></article>`;
     }).join('')}`;
   }
   return `<div class="panel-heading compact-heading"><h2>${s.theatre?'Patrol orders':'The Hearthguard'}</h2></div>

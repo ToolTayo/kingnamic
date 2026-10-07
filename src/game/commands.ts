@@ -1,15 +1,16 @@
 import {relocationError,relocate,placementAccessError} from './relocation';
-import {returnToHomeWatch,gatherCompany,travel,empireArmy,outpostError,foundOutpost,accessError} from './empire';
-import { BUILDINGS, MAX_BUILDINGS, MAX_UNITS, TERRITORIES, UNITS } from './config';
+import {returnToHomeWatch,gatherCompany,travel,outpostError,foundOutpost,accessError} from './empire';
+import { BUILDINGS, MAX_BUILDINGS, TERRITORIES, UNITS } from './config';
 import { canAfford, capacity, idle, jobCapacity, rebalanceJobs, spend } from './economy';
 import { distance, key, tileAt } from './map';
 import { nearestOpen } from './navigation';
 import { army, enemies, log, makeBuilding, makeUnit } from './state';
 import { expeditionAction, launchExpedition } from './expedition';
-import { armyCapacity, assignDestinations, available, orderArmy } from './army';
-import { addResidents, ensureResidents, removeResident, assignResidentJobs } from './population';
+import { assignDestinations, available, orderArmy } from './army';
+import { addResidents, ensureResidents, removeResidents, assignResidentJobs } from './population';
 import { cure, illnessFor } from './disease';
 import { RESOURCE_NAMES } from './treasury';
+import { recruitmentBlocker, recruitmentCost, recruitmentPlan, selectRecruitResidents } from './recruitment';
 import type { Building, BuildingKind, Command, CommandResult, Resources, State } from './types';
 const result = (ok: boolean, message: string): CommandResult => ({ ok, message });
 export function shortage(s:State,cost:Partial<Resources>):string {return Object.entries(cost).filter(([r,n])=>s.resources[r as keyof Resources]<n).map(([r,n])=>`${Math.ceil(n-s.resources[r as keyof Resources])} ${RESOURCE_NAMES[r as keyof Resources]}`).join(' + ');}
@@ -143,18 +144,31 @@ function applyCommand(s: State, c: Command): CommandResult {
       s.jobs[c.job] = Math.max(0, s.jobs[c.job] + c.delta); return result(true, 'Work assignment updated.');
     }
     case 'recruit': {
-      const barracks = s.buildings.find(b => b.kind === 'barracks' && b.progress >= 1);
+      const barracks = s.buildings.find(b => b.kind === 'barracks' && b.progress >= 1 && b.hp > 0);
       if (!barracks) return result(false, 'Build a garrison first.');
-      const count=c.count??1;if(!Number.isInteger(count)||count<1||count>5)return result(false,'Recruit one to five soldiers at a time.');
-      if((c.kind==='spearman'||c.kind==='scout')&&!s.lostBattalions?.recruited&&!s.buildings.some(b=>b.kind==='barracks'&&b.progress===1&&b.level>=2))return result(false,'Upgrade a garrison or enlist the Lost Battalion to train specialists.');
-      if (idle(s) < count) return result(false, 'Unassign healthy villagers before recruiting.');
-      if (empireArmy(s)+count > armyCapacity(s) || s.units.length+count > MAX_UNITS) return result(false, 'Build or upgrade a garrison: each level supports 24 soldiers, up to 200.');
-      const cost=Object.fromEntries(Object.entries(UNITS[c.kind].cost).map(([k,v])=>[k,v*count]));
-      if (!canAfford(s,cost)) return result(false, `Need ${shortage(s,cost)} more to equip this group.`);
-      const recruits=s.residents!.filter(r=>r.job==='idle'&&!illnessFor(s,r.id)&&r.hp>=r.maxHp*.7).sort((a,b)=>Number(a.job!=='idle')-Number(b.job!=='idle')).slice(0,count);
-      if(recruits.length<count)return result(false,'Recruitment needs fit residents. Treat the sick first.');
-      spend(s,cost);const reserved=new Set(s.units.map(key));
-      for(const person of recruits){removeResident(s,person.id);const p=nearestOpen(s,{x:barracks.x,y:barracks.y+1},reserved);reserved.add(key(p));const u=makeUnit(s,c.kind,p.x,p.y);u.id=person.id;u.hp=u.maxHp*person.hp/person.maxHp;u.exposure=person.exposure;u.immune=person.immune;u.target=nearestOpen(s,{x:12+army(s).length%5,y:c.kind==='warden'?17:16});}
+      const count = c.count ?? 1, plan = recruitmentPlan(s, c.kind);
+      const blocker = recruitmentBlocker(s, c.kind, count, plan);
+      if (blocker) return result(false, blocker);
+      const cost = recruitmentCost(c.kind, count);
+      const recruits = selectRecruitResidents(s, count);
+      if (recruits.length !== count) return result(false, 'Not enough fit residents are available to enlist.');
+      spend(s, cost);
+      const reserved = new Set(s.units.map(key));
+      for (const person of recruits) if (person.job !== 'idle') s.jobs[person.job] = Math.max(0, s.jobs[person.job] - 1);
+      removeResidents(s, recruits.map(person => person.id));
+      let armySize = army(s).length;
+      for (const person of recruits) {
+        const p = nearestOpen(s, { x: barracks.x, y: barracks.y + 1 }, reserved);
+        reserved.add(key(p));
+        const u = makeUnit(s, c.kind, p.x, p.y);
+        u.id = person.id;
+        u.hp = u.maxHp * person.hp / person.maxHp;
+        u.exposure = person.exposure;
+        u.exposureSourceId = person.exposureSourceId;
+        u.immune = person.immune;
+        u.target = nearestOpen(s, { x: 12 + armySize % 5, y: c.kind === 'warden' ? 17 : 16 });
+        armySize++;
+      }
       log(s, `${count} ${UNITS[c.kind].name.toLowerCase()}${count>1?'s':''} joined the defense.`, 'good'); return result(true, 'New soldiers answer your call.');
     }
     case 'rally': {
