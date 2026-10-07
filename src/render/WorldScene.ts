@@ -112,7 +112,7 @@ export class WorldScene extends Phaser.Scene {
       const tree = t.terrain === 'forest', scale = tree ? .75 + t.variant * .5 : 1;
       return { tile:t, height:tree?60*scale:26, width:tree?22*scale:18, texture:`scenery-${t.terrain}-${tree&&t.variant>.8?1:0}`, scale };
     });
-    this.siteProps=LANDMARKS.map(site=>({site}));
+    this.siteProps=region==='march'?LANDMARKS.map(site=>({site})):[];
 
     this.renderedState=undefined;this.labelSignature='';
   }
