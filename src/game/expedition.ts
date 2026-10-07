@@ -4,7 +4,7 @@ import { APPROACHES, ambushFronts, ambushRoster } from './encounters';
 import { UNITS } from './config';
 import { command } from './commands';
 import { armyCapacity } from './army';
-import { illnessFor, infect, plagueStep, cure } from './disease';
+import { illnessFor, restoreInfection, plagueStep, cure } from './disease';
 import { distance, key } from './map';
 import { nearestOpen } from './navigation';
 import { army, enemies, log, makeBuilding, makeUnit, newGame } from './state';
@@ -62,7 +62,7 @@ export function launchExpedition(s: State, ids = defaultPatrol(s), approach: Exp
   for (let i = 0; i < party.length; i++) {
     const veteran = party[i], u = makeUnit(world, veteran.kind, 9 + i, 16);
     u.id = veteran.id; u.homeId = veteran.id; u.hp = veteran.hp; u.maxHp = veteran.maxHp; u.origin = 'party';
-    u.squadId = veteran.squadId; u.formation = veteran.formation; u.exposure = veteran.exposure; u.immune = veteran.immune;
+    u.squadId = veteran.squadId; u.formation = veteran.formation; u.exposure = veteran.exposure; u.exposureSourceId = veteran.exposureSourceId; u.immune = veteran.immune;
   }
   makeUnit(world, 'hollow', 15, 15).bountyKey='scout-0'; makeUnit(world, 'runner', 15, 13).bountyKey='scout-1';
   s.expedition = { world, stage: 'search', discovered: false, shared: false, held: false, standard: false, wave: 0, warning: 0, holdTime: 0, deployed: party.length, initialAllies: [...record.remaining], supplies: 12, medicine: 4, approach, variant: (s.seed + record.attempts - 1) % 3, equipment, equipmentCurrency:'crowns', pending: [] };
@@ -102,8 +102,8 @@ function finish(s: State, outcome: 'success' | 'retreated' | 'defeat'): void {
     const u = makeUnit(s, veteran.kind, p.x, p.y); u.hp = veteran.hp; u.maxHp = veteran.maxHp;
     if (veteran.homeId) u.id = veteran.homeId;
     else if (e.world.units.some(v=>v.homeId) && !s.units.some(v=>v!==u&&v.id===veteran.id) && !s.buildings.some(b=>b.id===veteran.id) && !s.residents?.some(r=>r.id===veteran.id)) u.id=veteran.id;
-    u.squadId = veteran.squadId; u.formation = veteran.formation; u.exposure = veteran.exposure; u.immune = veteran.immune;
-    const illness = illnessFor(e.world,veteran.id); if (illness) infect(s,u,illness.source,illness.age);
+    u.squadId = veteran.squadId; u.formation = veteran.formation; u.exposure = veteran.exposure; u.exposureSourceId = veteran.exposureSourceId; u.immune = veteran.immune;
+    const illness = illnessFor(e.world,veteran.id); if (illness) restoreInfection(s,u,illness);
     // All returned soldiers rest briefly; severe wounds take longer. They remain
     // visible at home but cannot fight or depart again until recovery completes.
     u.injury = Math.ceil(20 + (1 - u.hp / u.maxHp) * 60);
@@ -118,6 +118,7 @@ function finish(s: State, outcome: 'success' | 'retreated' | 'defeat'): void {
   if (e.discovered) {
     record.wounds = Object.fromEntries(battalion(e).filter(u => !joined.includes(u)).map(u => [u.kind, u.hp]));
     record.sickness = Object.fromEntries(battalion(e).filter(u => !joined.includes(u) && illnessFor(e.world,u.id)).map(u => [u.kind,illnessFor(e.world,u.id)!.age]));
+    record.sicknessSources = Object.fromEntries(battalion(e).filter(u => !joined.includes(u) && illnessFor(e.world,u.id)?.sourceId).map(u => [u.kind,illnessFor(e.world,u.id)!.sourceId!]));
   }
   record.remaining = remaining; record.recruited += joined.length; record.cooldown = e.approach ? 20 : 45;
   record.report = { outcome, returned: returning.length, recruited: joined.length, lost: casualties, stranded: remaining.length };
@@ -159,7 +160,10 @@ export function expeditionStep(s: State, dt: number): void {
     for (let i = 0; i < e.initialAllies.length; i++) {
       const kind = e.initialAllies[i], p = nearestOpen(w, { x: 13 + i % 2, y: 10 + Math.floor(i / 2) });
       const u = makeUnit(w, kind, p.x, p.y); u.hp = Math.min(UNITS[kind].hp, s.lostBattalions?.wounds?.[kind] ?? u.hp * .8); u.origin = 'battalion';
-      const age = s.lostBattalions?.sickness?.[kind]; if (age !== undefined) infect(w,u,'bite',age);
+      const age = s.lostBattalions?.sickness?.[kind]; if (age !== undefined) {
+        const sourceId=s.lostBattalions?.sicknessSources?.[kind];
+        restoreInfection(w,u,{id:0,age,host:'soldier',personId:u.id,source:sourceId?'bite':'legacy',sourceId,legacyCause:'bite'});
+      }
     }
     log(w, 'The Grey Pennants are alive. Infected approach from two fronts in 5 seconds!', 'warn');
   }

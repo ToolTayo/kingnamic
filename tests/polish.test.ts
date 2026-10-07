@@ -69,7 +69,7 @@ describe('individual civilian routines', () => {
 describe('battle orders and legacy save compatibility', () => {
   it('reads an actual pre-polish v2 fixture without losing any progress or adding required fields', () => {
     const raw = readFileSync(new URL('./fixtures/milestone-v2.json', import.meta.url), 'utf8');
-    const migrated=decode(raw)!;const legacy=JSON.parse(raw);expect({...migrated,residents:undefined,nextId:legacy.nextId}).toEqual({...legacy,economyRevision:1,residents:undefined});
+    const migrated=decode(raw)!;const legacy=JSON.parse(raw);expect(migrated.biteRulesRevision).toBe(1);const {biteRulesRevision:_,...compatible}=migrated;expect({...compatible,residents:undefined,nextId:legacy.nextId}).toEqual({...legacy,economyRevision:1,residents:undefined});
     const s = decode(raw)!; command(s, { type: 'rally', x: 16, y: 16 });
     expect(decode(JSON.stringify(s))).toEqual(s);
     s.units[0].order = 'invalid' as 'move'; expect(decode(JSON.stringify(s))).toBeNull();

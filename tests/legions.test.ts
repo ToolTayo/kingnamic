@@ -19,23 +19,24 @@ import type { State } from '../src/game/types';
 function empty(){const s=newGame();s.units=[];s.residents=[];s.population=0;s.jobs={farmers:0,miners:0,woodcutters:0,healers:0,builders:0};s.buildings=s.buildings.filter(b=>b.kind==='hearth');return s;}
 const ticks=(s:State,n:number)=>{for(let j=0;j<n;j++){plagueStep(s,.1);combatStep(s,.1);}};
 describe('individual plague lifecycle',()=>{
-  it('incubates without contact spread, then exposes neighbours and gives immunity on treatment',()=>{
-    const s=empty();addResidents(s,2);const [a,b]=s.residents!;a.x=b.x=10;a.y=b.y=10;infect(s,a,'arrival');
-    for(let i=0;i<170;i++)plagueStep(s,.1);expect(b.exposure).toBe(0);
-    for(let i=0;i<400;i++)plagueStep(s,.1);expect(s.infection.some(i=>i.personId===b.id&&i.source==='contact')).toBe(true);
-    expect(cure(s,1,[b.id])).toBe(1);expose(s,b,100,'bite');expect(s.infection.some(i=>i.personId===b.id)).toBe(false);expect(b.immune).toBe(35);
+  it('keeps proximity harmless and requires a living zombie bite before treatment applies',()=>{
+    const s=empty();addResidents(s,2);const [a,b]=s.residents!;a.x=b.x=10;a.y=b.y=10;infect(s,a,'bite');
+    for(let i=0;i<570;i++)plagueStep(s,.1);expect(b.exposure).toBe(0);expect(s.infection.some(i=>i.personId===b.id)).toBe(false);
+    const zombie=makeUnit(s,'hollow',11,10);expose(s,b,100,'contact',zombie.id);expect(b.exposure??0).toBe(0);
+    expose(s,b,35,'bite',zombie.id);expect(s.infection.some(i=>i.personId===b.id)).toBe(false);
+    expose(s,b,35,'bite',zombie.id);expose(s,b,35,'bite',zombie.id);expect(s.infection.find(i=>i.personId===b.id)?.sourceId).toBe(zombie.id);
+    expect(cure(s,1,[b.id])).toBe(1);expect(s.infection.some(i=>i.personId===b.id)).toBe(false);expect(b.immune).toBe(35);
   });
   it('quarantine stops close-contact transmission and withdraws infected soldiers',()=>{
     const s=empty();const a=makeUnit(s,'warden',10,10),b=makeUnit(s,'warden',10,11);infect(s,a,'bite',20);s.quarantine=true;
     const p={x:a.x,y:a.y};ticks(s,100);expect(s.infection[0].age).toBeCloseTo(22.5);expect(b.exposure).toBe(0);expect(distance(a,p)).toBeGreaterThan(1);
     expect(command(s,{type:'order',order:'hunt',ids:[a.id],x:10,y:15}).ok).toBe(false);
   });
-  it('exposes residents through contaminated ground and croft supplies without bites',()=>{
+  it('does not infect residents from contaminated ground or supplies',()=>{
     const s=empty();const farm=makeBuilding(s,'farm',12,12,true);addResidents(s,2);const [a,b]=s.residents!;a.x=10;a.y=10;b.x=18;b.y=10;s.suppliesTaint=100;
     for(let n=0;n<950;n++){s.contamination[key(a)]=100;s.contamination[key(farm)]=100;plagueStep(s,.1);}
-    expect(s.infection.some(i=>i.personId===b.id&&i.source==='supplies')).toBe(true);
-    expect(s.logs.some(l=>l.text.includes('crofts'))).toBe(false); // already tainted at scenario start
-    expect(s.stats.lost).toBeGreaterThanOrEqual(0);expect(s.infection.some(i=>i.source==='ground')||s.corpses?.length||enemies(s).length).toBeTruthy();
+    expect(s.infection.some(i=>i.personId===b.id)).toBe(false);expect(b.exposure??0).toBe(0);
+    expect(s.stats.lost).toBeGreaterThanOrEqual(0);expect(enemies(s)).toHaveLength(0);
   });
   it('removes a dead soldier once and reanimates once across reloads',()=>{
     let s=empty();const u=makeUnit(s,'warden',10,10);infect(s,u,'bite',74.95);ticks(s,1);
@@ -45,7 +46,7 @@ describe('individual plague lifecycle',()=>{
     s=decode(JSON.stringify(s))!;ticks(s,20);expect(enemies(s).filter(z=>z.reanimatedFrom===u.id)).toHaveLength(1);
   });
   it('takes sick residents out of the workforce and preserves census loss',()=>{
-    const s=newGame();assignResidentJobs(s);const r=s.residents!.find(r=>r.job==='farmers')!;infect(s,r,'ground',74.95);rebalanceJobs(s);expect(healthy(s)).toBe(17);
+    const s=newGame();assignResidentJobs(s);const r=s.residents!.find(r=>r.job==='farmers')!;infect(s,r,'bite',74.95);rebalanceJobs(s);expect(healthy(s)).toBe(17);
     plagueStep(s,.1);expect(s.population).toBe(17);expect(s.residents!.some(v=>v.id===r.id)).toBe(false);expect(s.jobs.farmers).toBe(3);
     expect(decode(JSON.stringify(s))?.population).toBe(17);s.population++;expect(decode(JSON.stringify(s))).toBeNull();
   });
@@ -55,7 +56,7 @@ describe('individual plague lifecycle',()=>{
     expect(command(s,{type:'cleanse'}).ok).toBe(true);ticks(s,90);expect(enemies(s)).toHaveLength(0);
   });
   it('clean deaths stay dead, while untreated residents leave timed infected remains',()=>{
-    const s=empty();addResidents(s,2);const [clean,ill]=s.residents!;infect(s,ill,'arrival',74.95);clean.hp=0;resolveResidentDeaths(s);plagueStep(s,.1);
+    const s=empty();addResidents(s,2);const [clean,ill]=s.residents!;infect(s,ill,'bite',74.95);clean.hp=0;resolveResidentDeaths(s);plagueStep(s,.1);
     expect(s.population).toBe(0);expect(s.stats.lost).toBe(2);expect(s.corpses!.filter(c=>c.tainted)).toHaveLength(1);ticks(s,82);expect(enemies(s)).toHaveLength(1);
   });
 });

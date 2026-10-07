@@ -67,7 +67,7 @@ export function outpostError(s:State,x:number,y:number):string|null{
   if(!s.region||!s.march||s.march.secured)return 'The Last Hearth cannot be replaced.';
   const hero=army(s).find(u=>u.id===s.commander?.id);
   if(!hero||distance(hero,{x,y})>5)return 'Bring the commander within five tiles of this site.';
-  if(enemies(s).length||s.corpses?.some(c=>c.tainted))return 'Clear the region and its tainted remains before founding.';
+  if(enemies(s).length||s.corpses?.some(c=>c.tainted))return 'Clear the region and its infected remains before founding.';
   if(army(s).filter(u=>!u.injury&&!illnessFor(s,u.id)).length<2)return 'Two fit soldiers must establish the defensive presence.';
   const home=s.empire?.reserve;
   if(!home)return 'The home settlement must supply the founding crew.';

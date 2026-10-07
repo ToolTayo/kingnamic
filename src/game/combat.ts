@@ -31,7 +31,7 @@ function hit(s: State, attacker: Unit | Building, target: Unit | Building | Resi
   if (attacker.cooldown > 0) return;
   let armor = 'kind' in target && target.kind in UNITS ? UNITS[target.kind as UnitKind].armor : 0;
   if ('kind' in target && target.kind === 'warden' && ((target as Unit).formation??s.formation) === 'line' && friends.nearest(target,2.5,u=>u.id!==target.id&&u.hp>0&&u.kind==='warden')) armor += 3;
-  if('attackFlash' in attacker&&!isFriendly(attacker)&&('job' in target||'attackFlash' in target&&isFriendly(target)))expose(s,target as Unit|Resident,attacker.kind==='brute'?22:attacker.kind==='runner'?10:14,'bite');
+  if(target.hp>0&&'attackFlash' in attacker&&!isFriendly(attacker)&&('job' in target||'attackFlash' in target&&isFriendly(target)))expose(s,target as Unit|Resident,35,'bite',attacker.id);
   target.hp -= Math.max(1, damage - armor);
   if('attackFlash' in target&&!isFriendly(target)&&(attacker.kind==='tower'||'attackFlash' in attacker&&isFriendly(attacker))){target.bountyEligible=true;if(attacker.id===s.commander?.id)target.commanderCredit=true;}
   attacker.cooldown = attacker.kind === 'tower' ? 1.5 : UNITS[attacker.kind as UnitKind].cooldown;

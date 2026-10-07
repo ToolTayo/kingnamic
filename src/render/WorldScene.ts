@@ -260,13 +260,13 @@ export class WorldScene extends Phaser.Scene {
       sprite.setData('footX', x).setData('footY', y);
       const hurt = this.damageTint(u.id, u.hp, s.time), strike = u.attackFlash / .3;
       const recoil = hurt ? Math.sin((this.health.get(u.id)!.until - s.time) / .24 * Math.PI) * 3 : 0;
-      const illness=illnesses.get(u.id),sickColor=illness?(illness.age>=55?0xe8a37c:illness.age>=18?0xb4cb77:0xe0d6a0):0xffffff;
+      const illness=illnesses.get(u.id),sickColor=u.reanimatedFrom!==undefined?0x9fbe6a:illness?(illness.age>=55?0xe8a37c:illness.age>=18?0xb4cb77:0xe0d6a0):0xffffff;
       const bob=moving?Math.sin(s.time*(u.kind==='brute'?9:13)+u.id)*.6:0;
       let bodyScale = 1;
       if (isFriendly(u) && u.id !== s.commander?.id) { const density = this.localActorDensity(u.x, u.y); bodyScale = density >= 28 ? .72 : density >= 18 ? .84 : 1; }
       if (sprite.scaleX !== bodyScale || sprite.scaleY !== bodyScale) sprite.setScale(bodyScale);
       sprite.setTexture(`unit-${u.kind}-${frame}`).setPosition(x + (sprite.flipX ? -1 : 1) * (strike * 2 - recoil), y+bob).setDepth(y + 1).setRotation((sprite.flipX?-1:1)*(strike*.055-recoil*.018)).setTint(hurt ? 0xff967d : u.attackFlash > 0 ? 0xffe5ad : sickColor);
-      const selectedUnit=selected.has(u.id),color=selectedUnit?0xffe29a:isFriendly(u)?squadColors.get(u.squadId!)??0xb5d5d8:u.kind==='brute'?0xf1ba72:0xe6a37d;
+      const selectedUnit=selected.has(u.id),color=selectedUnit?0xffe29a:u.reanimatedFrom!==undefined?0xb6d773:isFriendly(u)?squadColors.get(u.squadId!)??0xb5d5d8:u.kind==='brute'?0xf1ba72:0xe6a37d;
       const massSelection=selectedUnit&&selected.size>24,markScale=massSelection?.8:1;
       const view=this.cameras.main.worldView,visible=p.x>view.x-55&&p.x<view.right+55&&p.y>view.y-55&&p.y<view.bottom+55;sprite.setVisible(visible);
       let marker=this.markers.get(u.id);if(!marker){marker=this.add.image(p.x,p.y,'unit-marker').setOrigin(.5);this.markerLayer.add(marker);this.markers.set(u.id,marker);}
@@ -280,6 +280,8 @@ export class WorldScene extends Phaser.Scene {
       else if (isFriendly(u) && u.hp < u.maxHp * .3) this.overlay.lineStyle(2, 0xf7a88a, .75 + Math.sin(s.time * 7) * .2).strokeTriangle(p.x, p.y - 56, p.x - 4, p.y - 49, p.x + 4, p.y - 49);
       if (u.origin === 'battalion') this.overlay.lineStyle(2, 0xf0cd8d, .9).strokeEllipse(p.x, p.y, 23, 11);
       if(illness)this.overlay.lineStyle(2,illness.age>=55?0xff967d:illness.age>=18?0xc7d975:0xf1d695).strokeCircle(p.x,p.y-48,4);
+      else if(u.exposureSourceId)this.overlay.lineStyle(2,0xe7bb64,.9).strokeCircle(p.x,p.y-48,4);
+      if(u.reanimatedFrom!==undefined){this.overlay.lineStyle(2,0xb4d66e,.95).strokeCircle(p.x,p.y-49,6);this.overlay.lineStyle(1.5,0xb4d66e,.95).lineBetween(p.x+3,p.y-53,p.x+6,p.y-53).lineBetween(p.x+6,p.y-53,p.x+5,p.y-50);}
       if(illness&&s.quarantine)this.overlay.lineStyle(1.5,0xc4e2da).strokeRect(p.x-6,p.y-54,12,12);
       if(this.rt.inspectedPersonId===u.id)this.overlay.lineStyle(2,0xffffff).strokeEllipse(p.x,p.y,28,15);
       if (selectedUnit && u.order && selected.size<=12) { const destination = iso(u.target.x, u.target.y); this.ground.lineStyle(1, squadColors.get(u.squadId!)??0xc9dfd2, .3).lineBetween(p.x, p.y, destination.x, destination.y).strokeEllipse(destination.x, destination.y, 14, 7); }
@@ -291,7 +293,7 @@ export class WorldScene extends Phaser.Scene {
     }
     const corpseIds=new Set((s.corpses??[]).map(c=>c.id));for(const[id,sprite]of this.remains)if(!corpseIds.has(id)){sprite.destroy();this.remains.delete(id);}
     for(const corpse of s.corpses??[]){const p=iso(corpse.x,corpse.y);let sprite=this.remains.get(corpse.id);if(!sprite){sprite=this.add.image(p.x,p.y,`unit-${corpse.kind==='resident'?'idle':corpse.kind}-0`).setOrigin(.5,43/52);this.remains.set(corpse.id,sprite);}const stirring=corpse.tainted?Math.max(0,1-corpse.remaining/2):0;sprite.setPosition(p.x,p.y-2).setDepth(p.y+.2).setRotation(-1.45+stirring*.35).setAlpha(corpse.tainted?.8:.4).setTint(corpse.tainted?0xb9bb7a:0x9c9e88);this.ground.lineStyle(2,corpse.tainted?0xeab081:0xb4b7a5,.85).strokeEllipse(p.x,p.y,25,12);if(corpse.tainted){this.overlay.lineStyle(2,0xf0ad78,.9).beginPath().arc(p.x,p.y-7,12,-Math.PI/2,-Math.PI/2+Math.PI*2*Math.min(1,corpse.remaining/8)).strokePath();if(stirring)this.overlay.lineStyle(1,0xffb587,.65).strokeEllipse(p.x,p.y,28+stirring*8,14+stirring*4);}}
-    this.drawWorkers(flowing, blend);
+    this.drawWorkers(flowing, blend, illnesses);
     if (s.theatre) {
       const e = this.rt.state.expedition;
       const route = missionRoute(e!);
@@ -359,7 +361,7 @@ export class WorldScene extends Phaser.Scene {
     for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) count += this.actorDensity.get(bx + dx + (by + dy) * 32) ?? 0;
     return count;
   }
-  private drawWorkers(flowing: boolean, blend: number): void {
+  private drawWorkers(flowing: boolean, blend: number, illnesses: Map<number | undefined, State['infection'][number]>): void {
     const s = this.rt.world;
     const ids = new Set(this.civilians.people.map(c => c.id));
     for (const [id, sprite] of this.workers) if (!ids.has(id)) { sprite.destroy(); this.workers.delete(id); }
@@ -371,9 +373,11 @@ export class WorldScene extends Phaser.Scene {
       const targetX = p.x;
       if (Math.abs(targetX - sprite.x) > .15) sprite.setFlipX(targetX < sprite.x);
       const x = flowing ? Phaser.Math.Linear(sprite.x, targetX, blend) : targetX, y = flowing ? Phaser.Math.Linear(sprite.y, p.y, blend) : p.y;
-      sprite.setTexture(`unit-${c.job}-${frame}`).setPosition(x, y).setDepth(y + .5).setTint(c.sick ? 0xa2b76b : 0xffffff);
+      const illness=illnesses.get(c.id);
+      sprite.setTexture(`unit-${c.job}-${frame}`).setPosition(x, y).setDepth(y + .5).setTint(c.sick ? illness&&illness.age>=55?0xe8a37c:0xa2b76b : 0xffffff);
       if (c.carrying) this.overlay.fillStyle(c.job === 'farmers' ? 0xe3c275 : c.job === 'miners' ? 0xc4c6b6 : 0x9f8159).fillRoundedRect(p.x + 4, p.y - 13, 6, 6, 1);
-      if (c.sick) this.overlay.lineStyle(1.5, 0xe7bf79, .85).strokeCircle(p.x, p.y - 36, 3);
+      if (c.sick) this.overlay.lineStyle(1.5, illness&&illness.age>=55?0xff967d:0xc7d975, .85).strokeCircle(p.x, p.y - 36, 3);
+      else if(c.exposureSourceId)this.overlay.lineStyle(1.5,0xe7bb64,.9).strokeCircle(p.x,p.y-36,3);
       if(c.sick&&s.quarantine)this.overlay.lineStyle(1.5,0xc4e2da).strokeRect(p.x-5,p.y-42,10,10);
       if(this.rt.inspectedPersonId===c.id)this.overlay.lineStyle(2,0xffffff).strokeEllipse(p.x,p.y,26,14);
     }

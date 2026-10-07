@@ -28,7 +28,7 @@ export function newGame(seed = 74019): State {
     jobs: { farmers: 4, woodcutters: 4, miners: 0, healers: 0, builders: 2 },
     buildings: [], units: [], owned: ['hearthmere'], infection: [], contamination: Array(MAP_W * MAP_H).fill(0),
     plagueClock: 0, economyClock: 0, waveClock: 0, waveRemaining: 0, waveNumber: 0, nextId: 1,
-    formation: 'line', quarantine: false, logs: [], effects: [], stats: { slain: 0, lost: 0, built: 0, nights: 0, cured: 0, claimed: 0 },
+    formation: 'line', quarantine: false, biteRulesRevision: 1, logs: [], effects: [], stats: { slain: 0, lost: 0, built: 0, nights: 0, cured: 0, claimed: 0 },
     completed: [], outcome: 'playing', tutorialSeen: false,
   };
   makeBuilding(s, 'hearth', 14, 11, true);

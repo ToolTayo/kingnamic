@@ -10,12 +10,12 @@ import { combatStep } from '../../src/game/combat';
 test('production offline save preserves individual plague, timed remains and separate squads',async({page,context})=>{
   const s=newGame();s.resources={wood:1000,stone:1000,food:1000,herbs:100};command(s,{type:'recruit',kind:'warden',count:5});command(s,{type:'recruit',kind:'ranger',count:2});const ids=army(s).map(u=>u.id);
   command(s,{type:'squad-create',ids:ids.slice(0,5),name:'Gate Watch'});command(s,{type:'squad-create',ids:ids.slice(5),name:'Outriders'});command(s,{type:'order',order:'defend',ids:ids.slice(0,5),x:14,y:17});command(s,{type:'order',order:'hunt',ids:ids.slice(5),x:14,y:23});
-  infect(s,s.units[0],'bite',74.95);infect(s,s.units[1],'contact',20);plagueStep(s,.1);combatStep(s,.1);s.speed=0;
+  infect(s,s.units[0],'bite',74.95);infect(s,s.units[1],'bite',20);plagueStep(s,.1);combatStep(s,.1);s.speed=0;
   await page.addInitScript(raw=>{if(!localStorage.getItem('kingnamic.save.v2'))localStorage.setItem('kingnamic.save.v2',raw);},JSON.stringify(s));
   await page.goto('/');await page.locator('#start').click();await page.locator('#save').click();await expect(page.locator('#save-status')).toHaveText('Saved on this device');await page.evaluate(()=>navigator.serviceWorker.ready);await page.waitForFunction(()=>!!navigator.serviceWorker.controller);
   await context.setOffline(true);await page.reload();await page.locator('#start').click();const restored=await page.evaluate(()=>JSON.parse(localStorage.getItem('kingnamic.save.v2')!));
   expect(restored.units).toEqual(s.units);expect(restored.residents).toEqual(s.residents);expect(restored.infection).toEqual(s.infection);expect(restored.corpses).toEqual(s.corpses);expect(restored.squads).toEqual(s.squads);
-  await page.locator('#tab-people').click();await expect(page.locator('#panel')).toContainText('Symptomatic');await expect(page.locator('#panel')).toContainText('Remains #');await page.locator('#treat').click();await page.locator('#save').click();await expect(page.locator('#save-status')).toHaveText('Saved on this device');
+  await page.locator('#tab-people').click();await expect(page.locator('#panel')).toContainText('Symptomatic');await expect(page.locator('#panel')).toContainText('Infected dead · #');await page.locator('#treat').click();await page.locator('#save').click();await expect(page.locator('#save-status')).toHaveText('Saved on this device');
   const treated=await page.evaluate(()=>JSON.parse(localStorage.getItem('kingnamic.save.v2')!));expect(treated.infection).toHaveLength(0);expect(treated.corpses).toHaveLength(1);expect(treated.units.some((u:any)=>u.id===ids[0])).toBe(false);await context.setOffline(false);
 });
 test('production build resumes saved progress with the network completely offline', async ({ page, context, baseURL }) => {

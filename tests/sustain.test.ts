@@ -2,7 +2,7 @@ import {describe,it,expect} from 'vitest';
 import {army,enemies,makeBuilding,makeUnit,newGame} from '../src/game/state';
 import {command} from '../src/game/commands';
 import {commandableIds} from '../src/game/army';
-import {cure,infect,illnessDeadline,nextIllnessDeadline} from '../src/game/disease';
+import {cure,infect,illnessDeadline,nextIllnessDeadline,plagueStep} from '../src/game/disease';
 import {combatStep} from '../src/game/combat';
 import {CivilianSystem} from '../src/game/civilians';
 import {decode} from '../src/game/persistence';
@@ -26,7 +26,7 @@ describe('battlefield polish regressions',()=>{
   });
   it('prioritizes an urgently wounded patient over an older but healthier case',()=>{
     const s=empty(),older=makeUnit(s,'warden',10,10),urgent=makeUnit(s,'ranger',12,10);older.hp=100;urgent.hp=2;infect(s,older,'bite',63);infect(s,urgent,'ground',56);
-    expect(cure(s,1)).toBe(1);expect(s.infection.map(i=>i.personId)).toEqual([older.id]);expect(urgent.immune).toBe(35);
+    infect(s,urgent,'bite',56);expect(cure(s,1)).toBe(1);expect(s.infection.map(i=>i.personId)).toEqual([older.id]);expect(urgent.immune).toBe(35);
   });
   it('finds available members without changing the assignments of wounded or isolated squadmates',()=>{
     const s=empty();for(let i=0;i<10;i++)makeUnit(s,'warden',10+i%5,10+Math.floor(i/5));const ids=army(s).map(u=>u.id);s.units[0].injury=20;infect(s,s.units[1],'bite',20);s.quarantine=true;
@@ -60,9 +60,10 @@ describe('battlefield polish regressions',()=>{
     const s=newGame();const first=s.residents![0];for(let i=0;i<70;i++)s.residents!.push({...structuredClone(first),id:s.nextId++,sick:false});s.population=s.residents!.length;const last=s.residents!.at(-1)!;last.sick=true;
     const system=new CivilianSystem();system.observe(s);expect(system.people).toHaveLength(64);expect(system.people.some(r=>r.id===last.id)).toBe(true);
   });
-  it('counts ration deaths and single reanimations exactly across repeated reloads',()=>{
-    let s=empty();s.resources.food=0;s.completed=['build','recruit','night','claim','survive'];const ids:number[]=[];for(let i=0;i<10;i++){const u=makeUnit(s,'warden',8+i,15);u.hp=12;u.exposure=80;ids.push(u.id);}
-    advance(s,25);expect(army(s)).toHaveLength(0);expect(s.stats.lost).toBe(10);s=decode(JSON.stringify(s))!;expect(s).not.toBeNull();advance(s,9);
-    expect(enemies(s).filter(u=>ids.includes(u.reanimatedFrom!))).toHaveLength(10);s=decode(JSON.stringify(s))!;advance(s,4);expect(s.stats.lost).toBe(10);expect(new Set(enemies(s).map(u=>u.reanimatedFrom)).size).toBe(10);
+  it('keeps uninfected ration deaths dead and reanimates confirmed infections once across reloads',()=>{
+    let s=empty();s.resources.food=0;const ids:number[]=[];for(let i=0;i<10;i++){const u=makeUnit(s,'warden',8+i,15);u.hp=12;u.exposure=80;ids.push(u.id);}
+    advance(s,25);expect(army(s)).toHaveLength(0);expect(s.stats.lost).toBe(10);expect(s.corpses?.every(c=>!c.tainted)).toBe(true);s=decode(JSON.stringify(s))!;expect(s).not.toBeNull();advance(s,20);
+    expect(enemies(s).filter(u=>ids.includes(u.reanimatedFrom!))).toHaveLength(0);s=empty();const infected=makeUnit(s,'warden',10,10);infect(s,infected,'bite',74.95);plagueStep(s,.1);combatStep(s,.1);expect(s.corpses?.some(c=>c.personId===infected.id&&c.tainted)).toBe(true);s=decode(JSON.stringify(s))!;advance(s,9);
+    expect(enemies(s).filter(u=>u.reanimatedFrom===infected.id)).toHaveLength(1);s=decode(JSON.stringify(s))!;advance(s,4);expect(s.stats.lost).toBe(1);expect(new Set(enemies(s).map(u=>u.reanimatedFrom)).size).toBe(1);
   });
 });

@@ -5,7 +5,7 @@ import { capacity, economyStep, rebalanceJobs, recoverSoldiers } from './economy
 import { army, enemies, log } from './state';
 import type { CommanderInput, State } from './types';
 import { expeditionStep } from './expedition';
-import { plagueStep, infect } from './disease';
+import { plagueStep } from './disease';
 import { addResidents, ensureResidents } from './population';
 import { CivilianSystem } from './civilians';
 import { credit } from './treasury';
@@ -16,9 +16,8 @@ function dawn(s: State): void {
   // Sunlight weakens remaining infected; dawn is not an instant enemy deletion.
   for (const u of enemies(s)) u.hp *= 0.65;
   const arrivals = s.resources.food >= 25 ? Math.min(2, Math.max(0, capacity(s) - s.population)) : 0;
-  const newcomers = addResidents(s, arrivals);
+  addResidents(s, arrivals);
   log(s, `Dawn breaks. ${arrivals ? `${arrivals} survivors found the beacon.` : 'The kingdom has endured another night.'}`, 'good');
-  if (s.day === 2 && newcomers.length) { infect(s,newcomers[0],'arrival'); log(s, 'One arriving survivor carries the Hollowing. Treat them with herbs before it spreads.', 'warn'); }
 }
 function objectives(s: State): void {
   const done = (id: string, condition: boolean) => { if (condition && !s.completed.includes(id)) { s.completed.push(id); credit(s,'wood',20);credit(s,'stone',15);log(s, 'Milestone reached. +20 timber, +15 crowns.', 'good'); } };

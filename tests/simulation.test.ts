@@ -66,7 +66,7 @@ describe('integrated kingdom rules', () => {
     expect(command(s, { type: 'claim', territory: 'greybank' }).ok).toBe(false); const timberRate = rates(s).wood;
     expect(command(s, { type: 'claim', territory: 'pinewatch' }).ok).toBe(true); expect(rates(s).wood).toBeCloseTo(timberRate * 1.35);
     s.phase = 'night'; expect(command(s, { type: 'claim', territory: 'greybank' }).ok).toBe(false); s.phase = 'day';
-    expect(command(s, { type: 'claim', territory: 'greybank' }).ok).toBe(true); command(s, { type: 'claim', territory: 'fen' }); expect(s.owned).toHaveLength(4); expect(s.infection.length).toBeGreaterThan(0);
+    expect(command(s, { type: 'claim', territory: 'greybank' }).ok).toBe(true); command(s, { type: 'claim', territory: 'fen' }); expect(s.owned).toHaveLength(4); expect(s.infection).toHaveLength(0);expect(s.residents?.every(r=>!r.sick)).toBe(true);
   });
   it('loses when the Hearth falls and does not continue the simulation', () => { const s = newGame(); s.buildings.find(b => b.kind === 'hearth')!.hp = 0; step(s); expect(s.outcome).toBe('lost'); const time = s.time; step(s); expect(s.time).toBe(time); });
   it('victory requires all four banners, five nights, and no surviving attackers', () => { const s = newGame(); s.owned = ['hearthmere', 'pinewatch', 'greybank', 'fen']; s.stats.nights = 5; const u = makeUnit(s, 'hollow', 1, 1); step(s); expect(s.outcome).toBe('playing'); u.hp = 0; step(s); expect(s.outcome).toBe('won'); expect(s.speed).toBe(0); });

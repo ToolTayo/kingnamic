@@ -32,7 +32,26 @@ test('desktop: construction, jobs, recruitment, rally, upgrades, pause and save/
   expect(errors).toEqual([]);
 });
 
-test('live night: combat, first dawn infection, treatment and territory consequences', async ({ page }) => {
+test('live zombie combat infects only bitten soldiers and keeps treatment/source through reload', async ({ page }) => {
+  test.setTimeout(180000);
+  const errors:string[]=[];page.on('pageerror',e=>errors.push(e.message));await start(page);await page.locator('#pause').click();
+  const ids=await page.evaluate(async()=>{
+    const {makeUnit}=await import('/src/game/state.ts' as string),{combatStep}=await import('/src/game/combat.ts' as string),{plagueStep}=await import('/src/game/disease.ts' as string),rt=(window as any).__KINGNAMIC__.runtime,s=rt.state;
+    const guards=s.units.filter((u:any)=>['warden','ranger','spearman','scout'].includes(u.kind)).slice(0,2);if(guards.length<2)throw Error('Fresh kingdom needs two defenders');
+    s.units=guards;const [target,bystander]=guards;Object.assign(target,{x:14,y:14,hp:target.maxHp,injury:80,order:'hold',target:{x:14,y:14},path:[],repath:0});Object.assign(bystander,{x:8,y:8,hp:bystander.maxHp,injury:80,order:'hold',target:{x:8,y:8},path:[],repath:0});
+    s.residents=[];s.population=0;s.jobs={farmers:0,woodcutters:0,miners:0,healers:0,builders:0};s.buildings=s.buildings.filter((b:any)=>b.kind==='hearth');s.contamination.fill(100);s.suppliesTaint=100;
+    const zombie=makeUnit(s,'hollow',14,13);rt.onChange();
+    for(let n=0;n<180&&!s.infection.some((i:any)=>i.personId===target.id);n++){combatStep(s,.1,false);plagueStep(s,.1);}
+    rt.onChange();return {target:target.id,bystander:bystander.id,zombie:zombie.id,exposure:target.exposure};
+  });
+  let s=await state(page);const illness=s.infection.find((i:any)=>i.personId===ids.target);
+  expect(illness).toMatchObject({source:'bite',sourceId:ids.zombie});expect(s.units.find((u:any)=>u.id===ids.target).hp).toBeGreaterThan(0);expect(s.infection.some((i:any)=>i.personId===ids.bystander)).toBe(false);expect(s.units.find((u:any)=>u.id===ids.bystander).exposure??0).toBe(0);
+  await page.locator('#tab-people').click();await expect(page.locator('#panel')).toContainText(`Zombie bite · attacker #${ids.zombie}`);await expect(page.locator('#panel')).toContainText('Living and treatable');await page.screenshot({path:'test-results/infection-bite-ui.png'});
+  await page.locator('#save').click();await expect(page.locator('#save-status')).toHaveText('Saved on this device');await page.reload();await page.locator('#start').click();s=await state(page);expect(s.infection.find((i:any)=>i.personId===ids.target)).toMatchObject({source:'bite',sourceId:ids.zombie});
+  await page.locator('#tab-people').click();await page.locator('#treat').click();s=await state(page);expect(s.infection.some((i:any)=>i.personId===ids.target)).toBe(false);expect(s.units.find((u:any)=>u.id===ids.target).hp).toBeGreaterThan(0);expect(s.suppliesTaint).toBeGreaterThan(35);await expect(page.locator('#alert-people')).toHaveCount(0);expect(errors).toEqual([]);
+});
+
+test('live night: combat, bite-only infection, treatment and territory consequences', async ({ page }) => {
   test.setTimeout(100000);
   const errors: string[] = []; page.on('pageerror', e => errors.push(e.message));
   await start(page); await page.locator('#tab-army').click();
@@ -54,11 +73,13 @@ test('live night: combat, first dawn infection, treatment and territory conseque
   expect(metrics.medianFrameMs).toBeLessThan(50);
   await expect.poll(async () => (await state(page)).day, { timeout: 28000, intervals: [1000] }).toBe(2);
   await page.locator('#pause').click();
-  expect((await state(page)).infection.length).toBeGreaterThan(0);
-  await page.locator('#tab-people').click(); await page.locator('#quarantine').click(); expect((await state(page)).quarantine).toBe(true);
-  await page.screenshot({ path: 'docs/evidence/plague.png' });
-  await page.locator('#treat').click(); expect((await state(page)).infection).toHaveLength(0);
-  await page.locator('#quarantine').click();
+  expect((await state(page)).infection.every((i: any) => i.source === 'bite' && Number.isInteger(i.sourceId))).toBe(true);
+  if ((await state(page)).infection.length) {
+    await page.locator('#tab-people').click(); await page.locator('#quarantine').click(); expect((await state(page)).quarantine).toBe(true);
+    await page.screenshot({ path: 'docs/evidence/plague.png' });
+    await page.locator('#treat').click(); expect((await state(page)).infection).toHaveLength(0);
+    await page.locator('#quarantine').click();
+  }
   if ((await state(page)).units.some((u: any) => !['warden', 'ranger'].includes(u.kind))) {
     await page.locator('#speed-2').click();
     await expect.poll(async () => (await state(page)).units.filter((u: any) => !['warden', 'ranger'].includes(u.kind)).length, { timeout: 18000, intervals: [500] }).toBe(0);

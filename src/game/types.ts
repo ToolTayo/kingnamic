@@ -16,18 +16,18 @@ export interface Unit extends Point {
   id: number; kind: UnitKind; hp: number; maxHp: number; cooldown: number;
   target: Point; path: Point[]; repath: number; attackFlash: number; order?: ArmyOrder;
   injury?: number; origin?: 'party' | 'battalion';
-  exposure?: number; immune?: number; squadId?: number; formation?: 'line' | 'loose';
+  exposure?: number; exposureSourceId?: number; immune?: number; squadId?: number; formation?: 'line' | 'loose';
   anchor?: Point; patrol?: { a: Point; b: Point; leg: 0 | 1 }; focus?: number;
-  homeId?: number; reanimatedFrom?: number;
+  homeId?: number; reanimatedFrom?: number; reanimatedBy?: number;
   bountyEligible?: boolean; bountySettled?: boolean; bountyKey?: string; commanderCredit?: boolean; muster?: boolean;
 }
-export interface Infection { id: number; age: number; personId?: number; host?: 'resident' | 'soldier'; source?: 'arrival' | 'ground' | 'supplies' | 'contact' | 'bite' }
+export interface Infection { id: number; age: number; personId?: number; host?: 'resident' | 'soldier'; source?: 'bite' | 'legacy'; sourceId?: number; legacyCause?: 'bite' | 'unknown' }
 export interface Resident extends Point {
-  id: number; hp: number; maxHp: number; exposure?: number; immune?: number;
+  id: number; hp: number; maxHp: number; exposure?: number; exposureSourceId?: number; immune?: number;
   job: Job | 'idle'; sick: boolean; activity: 'work' | 'home' | 'rest' | 'shelter' | 'recover' | 'flee';
   path: Point[]; goal: Point; wait: number; retry: number; trip: number; carrying: boolean;
 }
-export interface Corpse extends Point { id: number; personId: number; kind: SoldierKind | 'resident'; remaining: number; tainted: boolean }
+export interface Corpse extends Point { id: number; personId: number; kind: SoldierKind | 'resident'; remaining: number; tainted: boolean; sourceId?: number }
 export interface Squad { id: number; name: string; color: number }
 export interface LogEntry { id: number; time: number; text: string; tone: 'info' | 'good' | 'warn' | 'danger' }
 export interface Effect extends Point { id: number; kind: 'hit' | 'arrow' | 'heal' | 'build' | 'death' | 'reward'; ttl: number; to?: Point; unit?: UnitKind; source?: number; armored?: boolean; amount?: number; note?: 'reanimated' | 'claimed' }
@@ -48,7 +48,7 @@ export interface State {
   theatre?: 'expedition'; expedition?: Expedition; lostBattalions?: BattalionRecord;
   residents?: Resident[]; corpses?: Corpse[]; squads?: Squad[]; suppliesTaint?: number;
   musterClock?: number; endless?: boolean; frontierClock?: number;
-  economyRevision?: 1; bountyPaid?: number; bountyTotal?: number;
+  economyRevision?: 1; biteRulesRevision?: 1; bountyPaid?: number; bountyTotal?: number;
   region?: 'march'; march?: March; empire?: Empire; commander?: Commander;
 }
 export interface BuildingDef { name: string; subtitle: string; description: string; cost: Partial<Resources>; hp: number; time: number; category: 'settlement' | 'production' | 'defense'; job?: Job; capacity?: number; icon: string }
@@ -85,6 +85,7 @@ export interface BattalionRecord {
   attempts: number; remaining: SoldierKind[]; recruited: number; cooldown: number;
   wounds?: Partial<Record<SoldierKind, number>>;
   sickness?: Partial<Record<SoldierKind, number>>;
+  sicknessSources?: Partial<Record<SoldierKind, number>>;
   report?: { outcome: 'success' | 'retreated' | 'defeat'; returned: number; recruited: number; lost: number; stranded: number };
 }
 export interface Expedition {

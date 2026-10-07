@@ -22,7 +22,7 @@ export function ensureResidents(s: State): void {
   const claimed = new Set(s.infection.map(i => i.personId));
   for (const illness of s.infection) if (illness.personId === undefined) {
     const r = s.residents.find(r => !claimed.has(r.id));
-    if (r) { illness.personId = r.id; illness.host = 'resident'; illness.source ??= 'arrival'; claimed.add(r.id); }
+    if (r) { illness.personId = r.id; illness.host = 'resident'; illness.source ??= 'legacy'; illness.legacyCause ??= 'unknown'; claimed.add(r.id); }
   }
 }
 export const civilianCases = (s: State) => s.infection.filter(i => i.host !== 'soldier');

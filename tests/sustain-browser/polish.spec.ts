@@ -99,7 +99,7 @@ for(const count of [10,50,100,200])test(`${count} soldiers: three-minute live sq
     const rt=(window as any).__KINGNAMIC__.runtime,s=rt.world,cut=Math.max(10,Math.floor(ids.length*.6));
     command(s,{type:'squad-create',ids:ids.slice(0,5),name:'Gate Watch'});command(s,{type:'squad-create',ids:ids.slice(5,cut),name:'Hunters'});if(cut<ids.length)command(s,{type:'squad-create',ids:ids.slice(cut),name:'Patrol'});
     for(let n=0;n<Math.max(6,Math.floor(ids.length/3));n++)makeUnit(s,n%7===0?'brute':n%3===0?'runner':'hollow',12+n%5,23+n%2);
-    infect(s,s.units.find((u:any)=>u.id===ids.at(-1)),'bite');infect(s,s.residents[0],'arrival');rt.onChange();return s.squads.map((q:any)=>q.id);
+    infect(s,s.units.find((u:any)=>u.id===ids.at(-1)),'bite');infect(s,s.residents[0],'bite');rt.onChange();return s.squads.map((q:any)=>q.id);
   },ids);
   await page.locator('#tab-army').click();await page.locator(`#squad-${groups[0]}`).click();await page.locator('#army-orders').click();await page.locator('#order-defend').click();await tile(page,14,17);
   const guardTargets=(await state(page)).units.filter((u:any)=>ids.slice(0,5).includes(u.id)).map((u:any)=>({id:u.id,target:u.target}));

@@ -2,7 +2,7 @@ import {empireArmy} from '../game/empire';
 import { armyCapacity, available, ORDER_NAMES, SQUAD_COLORS } from '../game/army';
 import { UNITS } from '../game/config';
 import { shortage } from '../game/commands';
-import { diseaseStage, illnessFor } from '../game/disease';
+import { diseaseStage, illnessDeadline, illnessFor } from '../game/disease';
 import { idle, rates } from '../game/economy';
 import type { Runtime } from '../game/runtime';
 import { army } from '../game/state';
@@ -33,7 +33,7 @@ export function armyPanel(rt: Runtime): string {
     ${(s.squads??[]).map(q=>`<div class="squad-card" style="border-color:#${SQUAD_COLORS[q.color].toString(16).padStart(6,'0')}"><button data-squad="${q.id}" class="secondary full">${escape(q.name)} · ${troops.filter(u=>u.squadId===q.id).length}</button><div class="segmented"><button data-squad-assign="${q.id}" ${!chosen.size?'disabled':''}>Assign selected</button><button data-squad-rename="${q.id}">Rename</button><button data-squad-delete="${q.id}">Dissolve</button></div></div>`).join('')}
     <p class="army-help">Rename uses the name above. Keys 1–9 recall squads. Double-click a squad to center the camera.</p>`;
   if(view==='roster')content=`<div class="section-label">SOLDIERS <span>${rt.rosterPage+1} / ${pages}</span></div>
-    <div class="unit-roster">${troops.slice(rt.rosterPage*12,rt.rosterPage*12+12).map(u=>{const i=illnessFor(s,u.id);return `<button id="unit-${u.id}" data-unit="${u.id}" aria-pressed="${chosen.has(u.id)}" class="unit-row ${chosen.has(u.id)?'selected':''}"><span>${chosen.has(u.id)?'☑':'☐'} ${UNITS[u.kind].name} #${u.id}</span><small>${Math.ceil(u.hp)} / ${u.maxHp} HP · ${i?diseaseStage(i.age):u.injury?'Rest '+Math.ceil(u.injury)+'s':u.order?ORDER_NAMES[u.order]:'Guard'}${u.exposure&&u.exposure>=20?' · exposure '+Math.floor(u.exposure)+'%':''}</small></button>`;}).join('')}</div>
+    <div class="unit-roster">${troops.slice(rt.rosterPage*12,rt.rosterPage*12+12).map(u=>{const i=illnessFor(s,u.id),deadline=i?illnessDeadline(s,i,u):Infinity,status=i?deadline<=8?'Dying · infected':diseaseStage(i.age):u.exposureSourceId?`Bitten by zombie #${u.exposureSourceId} · ${Math.floor(u.exposure??0)}% exposure`:u.hp<u.maxHp*.98?'Wounded':u.injury?'Recovering':'Fit';return `<button id="unit-${u.id}" data-unit="${u.id}" aria-pressed="${chosen.has(u.id)}" class="unit-row ${chosen.has(u.id)?'selected':''}"><span>${chosen.has(u.id)?'☑':'☐'} ${UNITS[u.kind].name} #${u.id}</span><small>${Math.ceil(u.hp)} / ${u.maxHp} HP · ${status}${u.injury&&!i?' · rest '+Math.ceil(u.injury)+'s':u.order?' · '+ORDER_NAMES[u.order]:''}</small></button>`;}).join('')}</div>
     ${pages>1?`<div class="segmented"><button id="roster-prev" ${!rt.rosterPage?'disabled':''}>Previous</button><button id="roster-next" ${rt.rosterPage>=pages-1?'disabled':''}>Next</button></div>`:''}
     <button id="treat-selected" class="secondary full" ${!s.infection.some(i=>chosen.has(i.personId!))?'disabled':''}>Treat selected${s.theatre?' · 1 packed herb':' · 5 herbs + 8 provisions'}</button>
     ${s.theatre?'':`<button id="demobilize" class="secondary full" ${!chosen.size?'disabled':''}>Return selected to civilian work</button><p class="army-help">Requires spare beds, fit uninfected soldiers and peaceful daylight. Equipment is not refunded.</p>`}`;

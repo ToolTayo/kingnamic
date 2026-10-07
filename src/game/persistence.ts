@@ -13,17 +13,29 @@ export function decode(raw: string, battlefield = false,parked=false): State | n
     if (raw.length > 4_000_000) return null;
     let s = JSON.parse(raw);
     if (!object(s)) return null;
+    const migrateBiteRules=s.biteRulesRevision!==1;
     if(s.region!==undefined&&s.region!=='march'||battlefield&&(s.region||s.empire||s.commander)||parked&&(s.empire||s.expedition||s.commander)||s.region&&!s.empire&&!parked)return null;
     if(s.region){const m=s.march;if(!object(m)||!Array.isArray(m.seen)||m.seen.length>3||new Set(m.seen).size!==m.seen.length||m.seen.some((id:any)=>!['village','grove','ruins'].includes(id))||typeof m.secured!=='boolean'||typeof m.rewarded!=='boolean'||!finite(m.incursion,0,1e9)||!finite(m.warning,0,8))return null;}else if(s.march!==undefined)return null;
     if(s.commander!==undefined&&(!object(s.commander)||!integer(s.commander.id,1,1e9)||!['sword','spear','bow'].includes(s.commander.weapon)||!integer(s.commander.xp,0,100)))return null;
     if (battlefield ? s.theatre !== 'expedition' || s.expedition !== undefined || s.lostBattalions !== undefined : s.theatre !== undefined) return null;
     // v1 was the pre-release shape; missing new fields receive explicit defaults.
     if (s.version === 1) s = { ...newGame(), ...s, residents: s.residents, version: 2, formation: s.formation ?? 'line', quarantine: s.quarantine ?? false, effects: [], lastSpeed: s.lastSpeed ?? 1 };
+    if(migrateBiteRules){
+      // Pre-bite saves accumulated exposure from several routes and did not
+      // retain zombie attacker IDs. Keep already bitten cases as explicitly
+      // legacy records; discard cases whose old source was not a bite.
+      if(Array.isArray(s.infection))s.infection=s.infection.filter((i:any)=>i&&typeof i==='object'&&(i.source==='bite'||i.source===undefined)).map((i:any)=>i.sourceId?i:{...i,source:'legacy',legacyCause:i.source==='bite'?'bite':'unknown'});
+      for(const p of [...(Array.isArray(s.units)?s.units:[]),...(Array.isArray(s.residents)?s.residents:[])]){delete p.exposure;delete p.exposureSourceId;}
+      // Old corpse flags also included ground exposure; without a host infection
+      // record it is impossible to prove that these remains were ever infected.
+      for(const c of Array.isArray(s.corpses)?s.corpses:[])c.tainted=false;
+      s.biteRulesRevision=1;
+    }
     if (s.version !== 2 || !integer(s.seed, 0, 0xffffffff) || !integer(s.rng, 0, 0xffffffff)) return null;
     if (!finite(s.time, 0, 1e9) || !integer(s.day, 1, 100000) || !finite(s.phaseTime, 0, 72.2) || !['day', 'night'].includes(s.phase)) return null;
     if (![0, 1, 2].includes(s.speed) || ![1, 2].includes(s.lastSpeed) || !['line', 'loose'].includes(s.formation) || typeof s.quarantine !== 'boolean' || typeof s.tutorialSeen !== 'boolean') return null;
     if (!object(s.resources) || !['wood', 'stone', 'food', 'herbs'].every(k => finite(s.resources[k], 0, k==='stone'?1e9:10100))) return null;
-    if(s.economyRevision!==undefined&&s.economyRevision!==1||s.bountyPaid!==undefined&&!finite(s.bountyPaid,0,40))return null;
+    if(s.economyRevision!==undefined&&s.economyRevision!==1||s.biteRulesRevision!==1||s.bountyPaid!==undefined&&!finite(s.bountyPaid,0,40))return null;
     if(s.bountyTotal!==undefined&&!finite(s.bountyTotal,0,1e9))return null;
     if (!integer(s.population, 0, 1000) || !object(s.jobs) || !['farmers', 'woodcutters', 'miners', 'healers', 'builders'].every(k => integer(s.jobs[k], 0, 1000))) return null;
     if (!Array.isArray(s.buildings) || s.buildings.length > MAX_BUILDINGS || !s.buildings.every((b: any) => point(b) && integer(b.x, 0, MAP_W - 1) && integer(b.y, 0, MAP_H - 1) && Object.hasOwn(BUILDINGS, b.kind) && integer(b.id, 1, 1e9) && finite(b.hp, 0.001, 100000) && finite(b.maxHp, b.hp, 100000) && integer(b.level, 1, 3) && finite(b.progress, 0, 1) && finite(b.cooldown, 0, 10) && (b.rotation===undefined||[0,1].includes(b.rotation)&&['wall','gate'].includes(b.kind)))) return null;
@@ -33,15 +45,15 @@ export function decode(raw: string, battlefield = false,parked=false): State | n
     if(!s.units.every((u:any)=>u.commanderCredit===undefined||!isFriendly(u)&&typeof u.commanderCredit==='boolean'))return null;
     if(!s.units.every((u:any)=>u.bountyEligible===undefined||!isFriendly(u)&&typeof u.bountyEligible==='boolean'))return null;
     if(!s.units.every((u:any)=>(u.bountySettled===undefined||typeof u.bountySettled==='boolean'&&!isFriendly(u))&&(u.bountyKey===undefined||typeof u.bountyKey==='string'&&/^(scout-[01]|wave-[12]-\d{1,2}|legacy-\d{1,9})$/.test(u.bountyKey))))return null;
-    const wellness = (p: any) => (p.exposure === undefined || finite(p.exposure,0,100)) && (p.immune === undefined || finite(p.immune,0,35));
-    if (!s.units.every((u:any)=>wellness(u) && (u.anchor===undefined||point(u.anchor)) && (u.formation===undefined||['line','loose'].includes(u.formation)) && (u.focus===undefined||integer(u.focus,1,1e9)) && (u.homeId===undefined||battlefield&&u.origin==='party'&&u.homeId===u.id) && (u.patrol===undefined||object(u.patrol)&&point(u.patrol.a)&&point(u.patrol.b)&&[0,1].includes(u.patrol.leg)) && (u.reanimatedFrom===undefined||!isFriendly(u)&&integer(u.reanimatedFrom,1,s.nextId-1)))) return null;
+    const wellness = (p: any) => (p.exposure === undefined || finite(p.exposure,0,100)) && (p.exposureSourceId===undefined||integer(p.exposureSourceId,1,1e9)) && (p.immune === undefined || finite(p.immune,0,35));
+    if (!s.units.every((u:any)=>wellness(u) && (u.anchor===undefined||point(u.anchor)) && (u.formation===undefined||['line','loose'].includes(u.formation)) && (u.focus===undefined||integer(u.focus,1,1e9)) && (u.homeId===undefined||battlefield&&u.origin==='party'&&u.homeId===u.id) && (u.patrol===undefined||object(u.patrol)&&point(u.patrol.a)&&point(u.patrol.b)&&[0,1].includes(u.patrol.leg)) && (u.reanimatedFrom===undefined||!isFriendly(u)&&integer(u.reanimatedFrom,1,s.nextId-1)) && (u.reanimatedBy===undefined||!isFriendly(u)&&integer(u.reanimatedBy,1,1e9)))) return null;
     if (s.units.filter(isFriendly).length > MAX_ARMY) return null;
     if (!s.units.every((u: any) => (u.injury === undefined || isFriendly(u) && finite(u.injury, 0, 80)) && (battlefield ? isFriendly(u) ? ['party', 'battalion'].includes(u.origin) : u.origin === undefined : u.origin === undefined))) return null;
     if (!Array.isArray(s.owned) || s.owned.length < 1 || s.owned.length > 4 || !s.owned.includes('hearthmere') || !s.owned.every((t: string) => Object.hasOwn(TERRITORIES, t)) || new Set(s.owned).size !== s.owned.length) return null;
-    if (!Array.isArray(s.infection) || s.infection.length > s.population + s.units.filter(isFriendly).length || !s.infection.every((i: any) => object(i) && integer(i.id, 1, 1e9) && finite(i.age, 0, 75.2) && (i.source===undefined||['arrival','ground','supplies','contact','bite'].includes(i.source)))) return null;
+    if (!Array.isArray(s.infection) || s.infection.length > s.population + s.units.filter(isFriendly).length || !s.infection.every((i: any) => object(i) && integer(i.id, 1, 1e9) && finite(i.age, 0, 75.2) && ['bite','legacy'].includes(i.source) && (i.source==='bite'?integer(i.sourceId,1,1e9):i.sourceId===undefined&&(i.legacyCause===undefined||['bite','unknown'].includes(i.legacyCause))))) return null;
     const modern = s.residents !== undefined;
     if (modern && (!Array.isArray(s.residents) || s.residents.length > MAX_RESIDENTS || s.residents.length !== s.population || !s.residents.every((r:any)=>point(r)&&integer(r.id,1,1e9)&&finite(r.hp,.001,100000)&&finite(r.maxHp,r.hp,100000)&&wellness(r)&&['idle','farmers','woodcutters','miners','healers','builders'].includes(r.job)&&typeof r.sick==='boolean'&&['work','home','rest','shelter','recover','flee'].includes(r.activity)&&point(r.goal)&&Array.isArray(r.path)&&r.path.length<=MAP_W*MAP_H+2&&r.path.every(point)&&finite(r.wait,0,20)&&finite(r.retry,0,5)&&integer(r.trip,0,1e9)&&typeof r.carrying==='boolean'))) return null;
-    if (s.corpses!==undefined&&(!Array.isArray(s.corpses)||s.corpses.length>MAX_RESIDENTS+MAX_UNITS||!s.corpses.every((c:any)=>point(c)&&integer(c.id,1,1e9)&&integer(c.personId,1,s.nextId-1)&&['resident','warden','ranger','spearman','scout'].includes(c.kind)&&finite(c.remaining,0,12)&&typeof c.tainted==='boolean'))) return null;
+    if (s.corpses!==undefined&&(!Array.isArray(s.corpses)||s.corpses.length>MAX_RESIDENTS+MAX_UNITS||!s.corpses.every((c:any)=>point(c)&&integer(c.id,1,1e9)&&integer(c.personId,1,s.nextId-1)&&['resident','warden','ranger','spearman','scout'].includes(c.kind)&&finite(c.remaining,0,12)&&typeof c.tainted==='boolean'&&(c.sourceId===undefined||integer(c.sourceId,1,1e9))))) return null;
     if (s.squads!==undefined&&(!Array.isArray(s.squads)||s.squads.length>20||!s.squads.every((q:any)=>object(q)&&integer(q.id,1,1e9)&&typeof q.name==='string'&&q.name.trim().length>0&&q.name.length<=24&&integer(q.color,0,5)))) return null;
     if (!s.units.every((u:any)=>u.squadId===undefined||isFriendly(u)&&s.squads?.some((q:any)=>q.id===u.squadId))) return null;
     if (s.suppliesTaint!==undefined&&!finite(s.suppliesTaint,0,100)||s.musterClock!==undefined&&!finite(s.musterClock,0,20)||s.endless!==undefined&&typeof s.endless!=='boolean') return null;
@@ -58,6 +70,7 @@ export function decode(raw: string, battlefield = false,parked=false): State | n
     // Legacy saves contain aggregate cases. Link them once, after validating
     // the legacy census; modern saves must retain exact host identities.
     if (!modern) { if(s.infection.length>s.population)return null;ensureResidents(s as State);assignResidentJobs(s as State); }
+    else if(migrateBiteRules) assignResidentJobs(s as State);
     const hosts=new Map([...s.residents,...s.units.filter(isFriendly)].map((p:any)=>[p.id,p]));
     if(new Set(s.infection.map((i:any)=>i.personId)).size!==s.infection.length||!s.infection.every((i:any)=>{const p:any=hosts.get(i.personId);return p&&i.host===('kind'in p?'soldier':'resident');}))return null;
     if (Object.values(s.jobs).reduce((a: number, b: any) => a + b, 0) > s.population - civilianCases(s as State).length) return null;
@@ -71,6 +84,7 @@ export function decode(raw: string, battlefield = false,parked=false): State | n
       if (r.report !== undefined && (!object(r.report) || !['success', 'retreated', 'defeat'].includes(r.report.outcome) || !integer(r.report.returned, 0, 3) || !integer(r.report.recruited, 0, 4) || !integer(r.report.lost, 0, 7) || !integer(r.report.stranded, 0, 4))) return null;
       if (r.wounds !== undefined && (!object(r.wounds) || Object.entries(r.wounds).some(([kind, hp]) => !r.remaining.includes(kind) || !finite(hp, .001, UNITS[kind as keyof typeof UNITS]?.hp ?? 0)))) return null;
       if (r.sickness !== undefined && (!object(r.sickness)||Object.entries(r.sickness).some(([kind,age])=>!r.remaining.includes(kind)||!finite(age,0,75.2)))) return null;
+      if (r.sicknessSources !== undefined && (!object(r.sicknessSources)||Object.entries(r.sicknessSources).some(([kind,id])=>!r.remaining.includes(kind)||r.sickness?.[kind]===undefined||!integer(id,1,1e9)))) return null;
     }
     if (s.expedition !== undefined) {
       const e = s.expedition;

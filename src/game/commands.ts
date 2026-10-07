@@ -8,7 +8,7 @@ import { army, enemies, log, makeBuilding, makeUnit } from './state';
 import { expeditionAction, launchExpedition } from './expedition';
 import { armyCapacity, assignDestinations, available, orderArmy } from './army';
 import { addResidents, ensureResidents, removeResident, assignResidentJobs } from './population';
-import { cure, illnessFor, infect } from './disease';
+import { cure, illnessFor } from './disease';
 import { RESOURCE_NAMES } from './treasury';
 import type { Building, BuildingKind, Command, CommandResult, Resources, State } from './types';
 const result = (ok: boolean, message: string): CommandResult => ({ ok, message });
@@ -168,9 +168,8 @@ function applyCommand(s: State, c: Command): CommandResult {
       if (army(s).length < 4) return result(false, 'You need at least 4 soldiers to secure a new frontier.');
       if (!canAfford(s, t.cost)) return result(false, 'Gather the required supplies before reclaiming this march.');
       spend(s, t.cost); s.owned.push(c.territory); s.stats.claimed++;
-      const arrivals = Math.min(3, Math.max(0, capacity(s) - s.population)); const newcomers=addResidents(s,arrivals);
-      if (c.territory === 'fen') for (const person of newcomers.slice(0,2)) infect(s,person,'arrival');
-      rebalanceJobs(s); log(s, `${t.name} reclaimed. ${arrivals} survivors join you. A new invasion route is open.`, 'warn');
+      const arrivals = Math.min(3, Math.max(0, capacity(s) - s.population)); addResidents(s,arrivals);
+      rebalanceJobs(s); log(s, `${t.name} reclaimed. ${arrivals} survivors join you. A new invasion route is open. New infections require a confirmed zombie bite.`, 'warn');
       return result(true, `${t.name} now flies the Hearthmere banner.`);
     }
     case 'treat': {
@@ -180,12 +179,12 @@ function applyCommand(s: State, c: Command): CommandResult {
       spend(s, { herbs: 5, food: 8 }); const n = cure(s,3,c.ids);
       log(s, `${n} ${n === 1 ? 'villager has' : 'villagers have'} recovered. Assign their jobs again.`, 'good'); return result(true, 'The fever has broken.');
     }
-    case 'quarantine': s.quarantine = !s.quarantine; log(s, s.quarantine ? 'Quarantine declared. Production falls 20%; household spread stops and sickness slows.' : 'Quarantine lifted. The village returns to work.', 'warn'); return result(true, 'Quarantine order updated.');
+    case 'quarantine': s.quarantine = !s.quarantine; log(s, s.quarantine ? 'Quarantine declared. Production falls 20%; the sick are isolated and their illness slows.' : 'Quarantine lifted. The village returns to work.', 'warn'); return result(true, 'Quarantine order updated.');
     case 'cleanse': {
       if (!s.buildings.some(b => b.kind === 'infirmary' && b.progress >= 1)) return result(false, 'Build an herbalist’s refuge first.');
       if (!canAfford(s, { herbs: 8, wood: 10 })) return result(false, 'Cleansing needs 8 herbs and 10 wood.');
       spend(s, { herbs: 8, wood: 10 }); s.contamination = s.contamination.map(v => Math.max(0, v - 70));s.suppliesTaint=0;for(const c of s.corpses??[])c.tainted=false;
-      log(s, 'Cleansing fires burn away contaminated ground.', 'good'); return result(true, 'The valley breathes again.');
+      log(s, 'Cleansing fires remove ground contamination and prevent infected remains from reanimating.', 'good'); return result(true, 'The valley breathes again.');
     }
   }
 }
