@@ -1,12 +1,12 @@
-import {army,enemies,log,makeBuilding,makeUnit,newGame} from './state';
+import {army,enemies,hostiles,log,makeBuilding,makeUnit,newGame,rivals} from './state';
 import {distance,key,tileAt} from './map';
 import {nearestOpen} from './navigation';
 import {illnessFor,recordDeath,resolveResidentDeaths} from './disease';
 import {addResidents,assignResidentJobs,removeResident} from './population';
 import {rebalanceJobs} from './economy';
 import {credit} from './treasury';
-import {MAP_W} from './config';
-import type {BuildingKind,CommandResult,Resource,Resources,State,UnitKind} from './types';
+import {MAP_W,MAX_UNITS} from './config';
+import type {BuildingKind,CommandResult,Resource,Resources,RivalStronghold,State,UnitKind} from './types';
 export const ROAD_EXIT={x:14,y:24};
 export interface Landmark {id:string;name:string;x:number;y:number;art:'village'|'grove'|'ruin'|'ford'|'shrine'|'homestead'|'camp'|'watch';reward:Partial<Resources>;hostiles?:UnitKind[];survivors?:number}
 export const LANDMARKS:Landmark[]=[
@@ -22,7 +22,7 @@ export const LANDMARKS:Landmark[]=[
 ];
 export const empireArmy=(s:State)=>army(s).length+(s.empire?army(s.empire.reserve).length:0);
 export function createMarch(s:State):State{
-  const w=newGame(s.seed);w.region='march';w.march={seen:[],rescued:[],secured:false,rewarded:false,incursion:0,warning:0};
+  const w=newGame(s.seed);w.region='march';w.march={seen:[],rescued:[],secured:false,rewarded:false,incursion:0,warning:0,rival:{id:'mossgate',name:'Mossgate',faction:'The Gloamward',status:'unseen',remaining:100,reserve:80,casualties:0,warning:0}};
   w.units=[];w.buildings=[];w.residents=[];w.population=0;w.infection=[];w.corpses=[];w.logs=[];w.effects=[];w.completed=[];
   w.jobs={farmers:0,woodcutters:0,miners:0,builders:0,healers:0};w.nextId=s.nextId;w.resources=s.resources;w.squads=s.squads;w.speed=0;
   for(const [x,y]of [[12,10],[16,10],[21,7]]){const b=makeBuilding(w,'cottage',x,y,true);b.hp=60;}
@@ -50,7 +50,7 @@ export function travelError(s:State,ids:number[]):string|null{
   if(party.length!==chosen.size)return 'Choose living soldiers in this region.';
   if(party.some(u=>u.injury||illnessFor(s,u.id)))return 'Travellers must be fit and uninfected.';
   if(party.some(u=>distance(u,ROAD_EXIT)>6&&!(u.muster&&distance(u,u.target)<.8&&distance(u.target,ROAD_EXIT)<20)))return 'Gather every selected traveller at the road; large companies must reach their assigned convoy positions.';
-  if(s.waveRemaining||(s.march?.warning??0)>0||enemies(s).some(z=>party.some(u=>distance(u,z)<5)))return 'Clear nearby threats and incoming reinforcements before travelling.';
+  if(s.waveRemaining||(s.march?.warning??0)>0||hostiles(s).some(z=>party.some(u=>distance(u,z)<5)))return 'Clear nearby threats and incoming reinforcements before travelling.';
   return null;
 }
 export function travel(s:State,ids:number[]):CommandResult{
@@ -81,8 +81,8 @@ export function outpostError(s:State,x:number,y:number):string|null{
   if(!hero||distance(hero,{x,y})>5)return 'Bring the commander within five tiles of this site.';
   const established=s.march.secured&&s.buildings.some(b=>b.kind==='hearth');
   if(s.buildings.some(b=>b.kind==='hearth'&&distance(b,{x,y})<12))return 'Choose open ground at least twelve tiles from another settlement.';
-  if(!established&&(enemies(s).some(z=>distance(z,{x,y})<7)||s.corpses?.some(c=>c.tainted&&distance(c,{x,y})<7)))return 'Clear infected and tainted remains within seven tiles of this settlement site.';
-  if(established&&(enemies(s).some(z=>distance(z,{x,y})<7)||s.corpses?.some(c=>c.tainted&&distance(c,{x,y})<7)))return 'Clear the infected around this site before founding.';
+  if(!established&&(hostiles(s).some(z=>distance(z,{x,y})<7)||s.corpses?.some(c=>c.tainted&&distance(c,{x,y})<7)))return 'Clear infected and tainted remains within seven tiles of this settlement site.';
+  if(established&&(hostiles(s).some(z=>distance(z,{x,y})<7)||s.corpses?.some(c=>c.tainted&&distance(c,{x,y})<7)))return 'Clear the infected around this site before founding.';
   const fit=army(s).filter(u=>!u.injury&&!illnessFor(s,u.id));
   if(established?fit.filter(u=>distance(u,{x,y})<7).length<2:fit.length<2)return 'Bring two fit soldiers to establish the defensive presence.';
   const home=s.empire?.reserve;
@@ -108,6 +108,42 @@ export function accessError(s:State,x:number,y:number,kind:BuildingKind):string|
   for(let n=0;n<queue.length;n++){const p=queue[n];for(const q of [{x:p.x+1,y:p.y},{x:p.x-1,y:p.y},{x:p.x,y:p.y+1},{x:p.x,y:p.y-1}]){const t=tileAt(q.x,q.y,s),k=key(q);if(t&&t.terrain!=='water'&&!blocked.has(k)&&!seen.has(k)){seen.add(k);queue.push(q);}}}
   return buildings.filter(b=>!['wall','gate'].includes(b.kind)).every(b=>[{x:b.x+1,y:b.y},{x:b.x-1,y:b.y},{x:b.x,y:b.y+1},{x:b.x,y:b.y-1}].some(p=>seen.has(key(p))))?null:'Keep a passable doorway from each building to the southern road; include gates in enclosed walls.';
 }
+function stronghold(s:State):RivalStronghold {return s.march!.rival??=(s.march!.rival={id:'mossgate',name:'Mossgate',faction:'The Gloamward',status:'unseen',remaining:100,reserve:80,casualties:0,warning:0});}
+const MOSS={x:47,y:29};
+function deployRivals(s:State,count:number):number{
+  const roster:UnitKind[]=['warden','warden','warden','warden','spearman','spearman','ranger','ranger','scout'],slots=[{x:46,y:28},{x:47,y:28},{x:48,y:28},{x:46,y:29},{x:48,y:29},{x:46,y:30},{x:47,y:30},{x:48,y:30},{x:50,y:27},{x:50,y:28},{x:50,y:29},{x:50,y:30}],reserved=new Set(s.units.map(key));
+  let deployed=0;
+  for(;deployed<count&&s.units.length<MAX_UNITS;deployed++){const slot=slots[(s.march!.rival!.casualties+deployed)%slots.length],p=nearestOpen(s,slot,reserved);reserved.add(key(p));const u=makeUnit(s,roster[(s.march!.rival!.casualties+deployed)%roster.length],p.x,p.y);u.faction='rival';u.formation='line';u.anchor={...MOSS};u.order='defend';if(!s.march!.rival!.leaderId){s.march!.rival!.leaderId=u.id;u.maxHp=Math.round(u.maxHp*1.7);u.hp=u.maxHp;}if(deployed%7===3){u.order='patrol';u.patrol={a:{x:46,y:28},b:{x:48,y:30},leg:0};u.target={...u.patrol.a};}}
+  return deployed;
+}
+function raiseMossgate(s:State):void{
+ const w=stronghold(s);if(w.status!=='unseen')return;w.status='occupied';
+ const own=(kind:BuildingKind,x:number,y:number,name?:string)=>{const b=makeBuilding(s,kind,x,y,true);b.owner='rival';if(name)b.name=name;return b;};
+ own('wall',45,26);own('wall',46,26);own('wall',47,26);own('wall',48,26);own('wall',49,26);
+ own('wall',45,27);own('wall',45,28);own('wall',45,29);own('wall',45,30);own('wall',45,31);
+ own('wall',46,31);own('wall',47,31);own('wall',48,31);own('wall',49,31);
+ own('wall',49,27);own('gate',49,28);own('wall',49,29);own('wall',49,30);
+ own('tower',46,27,'Gloamward Lookout');own('barracks',48,27,'Gloamward Muster Hall');own('cottage',46,30);own('cottage',48,30);own('hearth',47,29,'Mossgate Hall');
+ const deployed=deployRivals(s,20);w.reserve=100-deployed;w.remaining=100;log(s,`The Gloamward have fortified Mossgate. Scouts count one hundred defenders; ${deployed} hold the walls while their relief companies muster behind the gate.`,'danger');
+}
+export function strongholdCaptureError(s:State):string|null{
+ if(!s.region||!s.march)return 'Mossgate can only be secured from the Briar March.';const w=stronghold(s),hero=army(s).find(u=>u.id===s.commander?.id);
+ if(s.outcome!=='playing')return 'Continue the watch before capturing Mossgate.';
+ if(w.status!=='occupied')return w.status==='captured'?'Mossgate already flies your banner.':'Find Mossgate and draw out its defenders first.';
+ if(!hero||distance(hero,MOSS)>6)return 'Bring the commander within six tiles of Mossgate Hall.';
+ if(w.remaining||w.reserve||rivals(s).length)return 'Defeat the remaining '+w.remaining+' Gloamward defenders before securing Mossgate.';
+ if(enemies(s).some(u=>distance(u,MOSS)<7)||s.corpses?.some(c=>c.tainted&&distance(c,MOSS)<7))return 'Clear the infected and tainted remains around Mossgate first.';
+ return null;
+}
+export function captureStronghold(s:State):CommandResult{
+ const error=strongholdCaptureError(s);if(error)return{ok:false,message:error};const w=stronghold(s);
+ w.status='captured';w.warning=0;w.leaderId=undefined;s.march!.secured=true;
+ for(const b of s.buildings)if(b.owner==='rival')b.owner='player';
+ const hearth=s.buildings.find(b=>b.kind==='hearth'&&b.name==='Mossgate Hall');if(hearth)hearth.hp=Math.max(1,Math.floor(hearth.maxHp*.72));
+ for(const [kind,x,y]of [['farm',44,32],['cottage',47,32]] as const)if(!s.buildings.some(b=>b.x===x&&b.y===y)){const b=makeBuilding(s,kind,x,y,true);b.owner='player';}
+ addResidents(s,4);s.jobs.farmers=2;s.jobs.builders=2;assignResidentJobs(s);s.resources.wood+=45;s.resources.stone+=25;
+ log(s,'Mossgate is secured. Four survivors begin repairs and tend the new croft. +45 Timber · +25 Crowns.','good');return{ok:true,message:'Mossgate secured. Repair the damaged hall, develop its croft and station a garrison.'};
+}
 export function empireStep(s:State,dt:number):void{
   if(s.empire){
     const e=s.empire,old=e.elapsed;e.elapsed+=dt;e.reserve.resources=s.resources;e.reserve.squads=s.squads;
@@ -121,7 +157,13 @@ export function empireStep(s:State,dt:number):void{
     e.reserve.nextId=s.nextId;
   }
   const m=s.march;if(!s.region||!m)return;
-  const hero=army(s).find(u=>u.id===s.commander?.id);
+  const hero=army(s).find(u=>u.id===s.commander?.id),war=stronghold(s);
+  if(hero&&war.status==='unseen'&&distance(hero,MOSS)<4)raiseMossgate(s);
+  if(war.status==='occupied'){
+    const active=rivals(s).length,pressure=[...army(s),...enemies(s)].some(u=>distance(u,MOSS)<12);
+    if(war.warning>0){war.warning=Math.max(0,war.warning-dt);if(!war.warning&&war.reserve){const n=Math.min(12,war.reserve),deployed=deployRivals(s,n);war.reserve-=deployed;log(s,`Gloamward relief reaches Mossgate. ${war.remaining} defenders still stand${deployed<n?' · remaining relief is delayed by battlefield capacity':''}.`,'danger');}}
+    else if(war.reserve>0&&active<=8&&pressure){war.warning=5;log(s,'A Gloamward relief company is forming behind the gate. Five seconds.','warn');}
+  }
   if(hero)for(const site of LANDMARKS)if(!m.seen.includes(site.id)&&distance(hero,site)<4){
     m.seen.push(site.id);const found=Object.entries(site.reward).filter((entry):entry is [Resource,number]=>typeof entry[1]==='number');
     for(const [resource,amount]of found)credit(s,resource,amount);
@@ -133,7 +175,7 @@ export function empireStep(s:State,dt:number):void{
     }
   }
   m.rescued??=[];
-  for(const site of LANDMARKS)if(site.survivors&&!m.rescued.includes(site.id)&&m.seen.includes(site.id)&&!enemies(s).some(z=>distance(z,site)<6)){
+  for(const site of LANDMARKS)if(site.survivors&&!m.rescued.includes(site.id)&&m.seen.includes(site.id)&&!hostiles(s).some(z=>distance(z,site)<6)){
     const home=s.empire?.reserve;if(!home)continue;home.nextId=Math.max(home.nextId,s.nextId);const joined=addResidents(home,site.survivors).length;s.nextId=home.nextId;m.rescued.push(site.id);
     log(s,`${joined} survivors from ${site.name} join your people${joined?' at Hearthmere':''}.`,'good');
   }

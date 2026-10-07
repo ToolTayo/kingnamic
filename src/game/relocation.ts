@@ -1,6 +1,6 @@
 import {MAP_W} from './config';
 import {key,tileAt,distance} from './map';
-import {enemies} from './state';
+import {hostiles} from './state';
 import {barrierIndex,barrierRotation,gateEdge,isBarrier} from './barriers';
 import type {Building,BuildingKind,Point,State} from './types';
 const DIRS=[[1,0],[-1,0],[0,1],[0,-1]] as const;
@@ -14,7 +14,7 @@ export function relocationError(s:State,id:number,x:number,y:number,rotation?:0|
  const b=s.buildings.find(b=>b.id===id);if(!b||b.hp<=0)return 'That building no longer exists.';
  if(s.theatre||s.expedition)return 'Return from the expedition before editing buildings.';
  if(s.outcome!=='playing')return 'Continue the watch before editing the settlement.';
- if(enemies(s).length||s.waveRemaining||s.march?.warning)return 'Clear the current attack before rearranging buildings.';
+ if(hostiles(s).length||s.waveRemaining||s.march?.warning)return 'Clear the current attack before rearranging buildings.';
  if(rotation!==undefined&&(![0,1].includes(rotation)||!isBarrier(b)))return 'Only palisades and gates support the two grid orientations.';
  const t=tileAt(x,y,s);if(!t||!Number.isInteger(x)||!Number.isInteger(y))return 'Choose a tile inside this region.';
  if(x===b.x&&y===b.y&&(rotation===undefined||rotation===b.rotation))return null;

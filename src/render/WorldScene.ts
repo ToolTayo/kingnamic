@@ -2,9 +2,9 @@ import {barrierIndex,barrierMask,isBarrier} from '../game/barriers';
 import Phaser from 'phaser';
 import { BUILDINGS, JOBS, MAP_H, MAP_W, TERRITORIES } from '../game/config';
 import { CivilianSystem } from '../game/civilians';
-import { distance, tileAt, tilesFor } from '../game/map';
+import { distance, hash, tileAt, tilesFor } from '../game/map';
 import type { Runtime } from '../game/runtime';
-import { isFriendly } from '../game/state';
+import { isFriendly, isRival } from '../game/state';
 import type { Point, State, TerritoryId, Tile } from '../game/types';
 import { buildingArt, barrierArt, iso, LandmarkArtKind, landmarkArt, sceneryArt, terrainArt, unitArt, uniso } from './art';
 import { missionRoute } from '../game/expedition';
@@ -13,6 +13,12 @@ import { indexActorsByScreenY, obscuresActor } from './visibility';
 import {LANDMARKS,ROAD_EXIT} from '../game/empire';
 import { SQUAD_COLORS } from '../game/army';
 import { pickSoldier } from './battlefield';
+interface CommandGesture { start:Point; end:Point; started:number; right:boolean; touch:boolean; active:boolean; cancelled:boolean }
+function groveDensity(x:number,y:number):number{
+  const gx=x/4,gy=y/4,ix=Math.floor(gx),iy=Math.floor(gy),u=(gx-ix)**2*(3-2*(gx-ix)),v=(gy-iy)**2*(3-2*(gy-iy));
+  const north=hash(ix,iy)*(1-u)+hash(ix+1,iy)*u,south=hash(ix,iy+1)*(1-u)+hash(ix+1,iy+1)*u;
+  return north*(1-v)+south*v;
+}
 export class WorldScene extends Phaser.Scene {
   private rt: Runtime;
   private landscape?:Phaser.GameObjects.Image;private terrainRegion='';
@@ -25,7 +31,7 @@ export class WorldScene extends Phaser.Scene {
   readonly civilians = new CivilianSystem();
   private health = new Map<number, { hp: number; until: number }>();
   private renderedState?: State;
-  private scenery: { tile: Tile; sprite?: Phaser.GameObjects.Image; height: number; width: number; texture:string; scale:number }[] = [];
+  private scenery: { tile: Tile; sprite?: Phaser.GameObjects.Image; height: number; width: number; texture:string; scale:number; offsetX:number; offsetY:number; tint:number; rotation:number }[] = [];
   private siteProps: {site:typeof LANDMARKS[number];sprite?:Phaser.GameObjects.Image}[]=[];
   private rewards=new Map<number,Phaser.GameObjects.Text>();
   private fallen = new Map<number, Phaser.GameObjects.Image>();
@@ -44,6 +50,7 @@ export class WorldScene extends Phaser.Scene {
   private boxSelecting = false;
   private boxEnd: Point | null = null;
   private pinchDistance = 0;
+  private commandGesture?:CommandGesture;
   private keys?: Record<string, Phaser.Input.Keyboard.Key>;
   private lastDraw = 0;
   constructor(rt: Runtime) { super('valley'); this.rt = rt; }
@@ -70,25 +77,39 @@ export class WorldScene extends Phaser.Scene {
     this.home();
     this.input.mouse?.disableContextMenu();
     this.input.addPointer(1);
-    this.input.on('pointerdown', (p: Phaser.Input.Pointer) => { const touches=this.input.manager.pointers.filter(q=>q.isDown&&q.wasTouch);if(touches.length>=2){this.pinchDistance=Phaser.Math.Distance.Between(touches[0].x,touches[0].y,touches[1].x,touches[1].y);this.dragStart=null;this.dragged=true;return;}this.dragStart = { x: p.x, y: p.y }; this.dragged = false; this.boxSelecting=!!(p.event as MouseEvent).shiftKey&&!this.rt.placement;this.boxEnd=null; });
+    this.input.on('pointerdown', (p: Phaser.Input.Pointer) => {
+      const touches=this.input.manager.pointers.filter(q=>q.isDown&&q.wasTouch);
+      if(touches.length>=2){this.pinchDistance=Phaser.Math.Distance.Between(touches[0].x,touches[0].y,touches[1].x,touches[1].y);this.dragStart=null;this.commandGesture=undefined;this.dragged=true;return;}
+      this.dragStart={x:p.x,y:p.y};this.dragged=false;this.boxSelecting=!!(p.event as MouseEvent).shiftKey&&!this.rt.placement;this.boxEnd=null;
+      const canCommand=!this.rt.heroMode&&!this.rt.placement&&this.rt.editingId===null&&!this.rt.rallyMode;
+      const right=canCommand&&!p.wasTouch&&(p.event as PointerEvent).button===2,touch=canCommand&&p.wasTouch;
+      if(right||touch){const wp=this.cameras.main.getWorldPoint(p.x,p.y),tile=uniso(wp.x,wp.y);this.commandGesture={start:tile,end:tile,started:performance.now(),right,touch,active:right,cancelled:false};}
+    });
     this.input.on('pointermove', (p: Phaser.Input.Pointer) => {
       const touches=this.input.manager.pointers.filter(q=>q.isDown&&q.wasTouch);
-      if(touches.length>=2){const a=touches[0],b=touches[1],d=Phaser.Math.Distance.Between(a.x,a.y,b.x,b.y);if(this.pinchDistance>1)this.zoom(this.cameras.main.zoom*(d/this.pinchDistance-1),{x:(a.x+b.x)/2,y:(a.y+b.y)/2});this.pinchDistance=d;this.dragged=true;return;}
-      const wp = this.cameras.main.getWorldPoint(p.x, p.y), t = uniso(wp.x, wp.y); this.hoverTile = { x: Math.round(t.x), y: Math.round(t.y) };this.rt.heroAim={x:t.x,y:t.y};
+      if(touches.length>=2){const a=touches[0],b=touches[1],d=Phaser.Math.Distance.Between(a.x,a.y,b.x,b.y);if(this.pinchDistance>1)this.zoom(this.cameras.main.zoom*(d/this.pinchDistance-1),{x:(a.x+b.x)/2,y:(a.y+b.y)/2});this.pinchDistance=d;this.dragged=true;this.commandGesture=undefined;return;}
+      const wp=this.cameras.main.getWorldPoint(p.x,p.y),t=uniso(wp.x,wp.y);this.hoverTile={x:Math.round(t.x),y:Math.round(t.y)};this.rt.heroAim={x:t.x,y:t.y};
+      const gesture=this.commandGesture;
+      if(gesture&&p.isDown&&!gesture.cancelled){gesture.end=t;const moved=this.dragStart?Math.hypot(p.x-this.dragStart.x,p.y-this.dragStart.y):0;
+        if(gesture.touch&&!gesture.active&&moved>8&&performance.now()-gesture.started<450){gesture.cancelled=true;this.commandGesture=undefined;}
+        else if(gesture.right||performance.now()-gesture.started>=450){gesture.active=true;this.dragged=true;return;}
+      }
       if(this.rt.editingId!==null&&p.isDown){this.rt.placementPreview=this.hoverTile;this.rt.onChange();return;}
-      if (p.isDown && this.dragStart && (this.dragged || Math.hypot(p.x - this.dragStart.x, p.y - this.dragStart.y) > 7)) {
-        this.dragged = true;
-        if(this.boxSelecting)this.boxEnd={x:p.x,y:p.y};
-        else {this.cameras.main.scrollX -= (p.x - p.prevPosition.x) / this.cameras.main.zoom; this.cameras.main.scrollY -= (p.y - p.prevPosition.y) / this.cameras.main.zoom;}
+      if(p.isDown&&this.dragStart&&(this.dragged||Math.hypot(p.x-this.dragStart.x,p.y-this.dragStart.y)>7)){
+        this.dragged=true;if(this.boxSelecting)this.boxEnd={x:p.x,y:p.y};else{this.cameras.main.scrollX-=(p.x-p.prevPosition.x)/this.cameras.main.zoom;this.cameras.main.scrollY-=(p.y-p.prevPosition.y)/this.cameras.main.zoom;}
       }
     });
     this.input.on('pointerup', (p: Phaser.Input.Pointer) => {
-      if(this.pinchDistance){this.pinchDistance=0;this.dragStart=null;this.dragged=true;this.boxEnd=null;return;}
+      if(this.pinchDistance){this.pinchDistance=0;this.dragStart=null;this.dragged=true;this.boxEnd=null;this.commandGesture=undefined;return;}
+      const gesture=this.commandGesture;this.commandGesture=undefined;
+      if(gesture&&!gesture.cancelled&&(gesture.right||gesture.active||gesture.touch&&performance.now()-gesture.started>=450)){
+        if(this.rt.ready)this.choose(gesture.end,true,gesture.touch,false,{x:p.x,y:p.y});this.dragged=true;this.dragStart=null;this.boxEnd=null;return;
+      }
       if(this.dragged&&this.boxSelecting&&this.dragStart){const a=this.dragStart;this.rt.selectUnits(this.rt.world.units.filter(u=>{const t=this.screenPoint(u);return isFriendly(u)&&t.x>=Math.min(a.x,p.x)&&t.x<=Math.max(a.x,p.x)&&t.y>=Math.min(a.y,p.y)&&t.y<=Math.max(a.y,p.y);}).map(u=>u.id));}
       if (!this.dragged && this.rt.ready) { const wp = this.cameras.main.getWorldPoint(p.x, p.y); this.choose(uniso(wp.x, wp.y), p.rightButtonReleased(), p.wasTouch,!!(p.event as MouseEvent).shiftKey,{x:p.x,y:p.y}); }
       this.dragStart = null;this.boxEnd=null;
     });
-    this.input.on('pointerupoutside',()=>{this.dragStart=null;this.boxEnd=null;this.pinchDistance=0;this.dragged=true;});
+    this.input.on('pointerupoutside',()=>{this.dragStart=null;this.boxEnd=null;this.pinchDistance=0;this.commandGesture=undefined;this.dragged=true;});
     this.input.on('wheel', (p: Phaser.Input.Pointer, _o: unknown, _dx: number, dy: number) => this.zoom(dy > 0 ? -0.08 : 0.08, p));
     this.keys = this.input.keyboard?.addKeys('W,A,S,D,F,UP,DOWN,LEFT,RIGHT') as Record<string, Phaser.Input.Keyboard.Key>;
     this.scale.on('resize', (_game: Phaser.Structs.Size, _base: Phaser.Structs.Size, _display: Phaser.Structs.Size, previousWidth: number, previousHeight: number) => {
@@ -108,9 +129,17 @@ export class WorldScene extends Phaser.Scene {
     this.terrainRegion=region;this.landscape?.destroy();if(this.textures.exists('valley'))this.textures.remove('valley');
     this.textures.addCanvas('valley',terrainArt(tilesFor(this.rt.world),region==='march'));this.landscape=this.add.image(0,0,'valley').setOrigin(0).setDepth(-100);
     for(const prop of this.scenery)prop.sprite?.destroy();for(const prop of this.siteProps)prop.sprite?.destroy();
-    this.scenery = tilesFor(this.rt.world).filter(t=>t.terrain==='forest'||t.terrain==='rock'||t.terrain==='marsh'&&t.variant>.65).map(t => {
-      const tree = t.terrain === 'forest', scale = tree ? .75 + t.variant * .5 : 1;
-      return { tile:t, height:tree?60*scale:26, width:tree?22*scale:18, texture:`scenery-${t.terrain}-${tree&&t.variant>.8?1:0}`, scale };
+    this.scenery=tilesFor(this.rt.world).flatMap(t=>{
+      const tree=t.terrain==='forest',rock=t.terrain==='rock',marsh=t.terrain==='marsh'&&t.variant>.65;
+      if(!tree&&!rock&&!marsh)return [];
+      const grove=groveDensity(t.x,t.y),detail=hash(t.x+131,t.y+47);
+      // A soft canopy field makes distinct clearings while deterministic tile
+      // jitter breaks the old grid without adding textures or random state.
+      if(tree&&(grove<.31||detail<.25)||rock&&(groveDensity(t.x+29,t.y+17)<.42||detail<.32))return [];
+      const scale=tree?.58+detail*.72:rock?.62+detail*.62:.76+detail*.3;
+      const offsetX=(hash(t.x+23,t.y+67)-.5)*(tree?24:rock?28:10),offsetY=(hash(t.x+57,t.y+11)-.5)*(tree?10:rock?12:6);
+      const palette=[0xf1f0dd,0xe0ead6,0xd1dfd0,0xeee6ce];
+      return [{tile:t,height:tree?60*scale:26,width:tree?22*scale:18,texture:`scenery-${t.terrain}-${tree&&detail>.72?1:0}`,scale,offsetX,offsetY,tint:tree?palette[Math.floor(detail*4)]:0xffffff,rotation:tree?(detail-.5)*.07:0}];
     });
     this.siteProps=region==='march'?LANDMARKS.map(site=>({site})):[];
 
@@ -128,7 +157,9 @@ export class WorldScene extends Phaser.Scene {
     const mode=this.rt.orderMode;
     const clicked=pickSoldier(this.rt.world.units,pointer??this.screenPoint(point),p=>this.screenPoint(p),this.cameras.main.zoom,touch,this.rt.rallyMode?mode:null);
     if(this.rt.editingId!==null){this.rt.placementPreview={x,y};this.rt.notify(this.rt.placementError({x,y})??'Valid site. Confirm move to apply.');this.rt.onChange();return;}
-    if (this.rt.rallyMode || right&&!this.rt.heroMode) { const focused=mode==='attack'||mode==='escort'?clicked:undefined;this.rt.orderAt(focused??{x,y},focused?.id); return; }
+    const hostileBuilding=this.rt.world.buildings.filter(b=>b.owner==='rival').sort((a,b)=>b.x+b.y-a.x-a.y).find(b=>{const p=pointer??this.screenPoint(point),q=this.screenPoint(b);return Math.abs(p.x-q.x)<28&&p.y<q.y+12&&p.y>q.y-(b.kind==='hearth'||b.kind==='tower'?90:b.kind==='wall'||b.kind==='gate'?30:58);});
+    if(right&&!this.rt.heroMode&&!this.rt.rallyMode&&(clicked&&!isFriendly(clicked)||hostileBuilding)){const target=clicked&&!isFriendly(clicked)?clicked:hostileBuilding!;this.rt.orderMode='attack';this.rt.rallyMode=true;this.rt.orderAt({x:target.x,y:target.y},target.id);return;}
+    if(this.rt.rallyMode||right&&!this.rt.heroMode){const focused=mode==='attack'||mode==='escort'?clicked:undefined,structure=mode==='attack'?hostileBuilding:undefined;this.rt.orderAt(focused??(structure?{x:structure.x,y:structure.y}:{x,y}),focused?.id??structure?.id);return;}
     if (this.rt.placement) {
       if (touch) {
         this.rt.placementPreview = { x, y }; this.hoverTile = { x, y };
@@ -216,7 +247,7 @@ export class WorldScene extends Phaser.Scene {
     const occupied = new Set(s.buildings.map(b => b.y * MAP_W + b.x));
     for (const prop of this.scenery) {
       const p=iso(prop.tile.x,prop.tile.y),view=this.cameras.main.worldView,visible=p.x>view.x-160&&p.x<view.right+160&&p.y>view.y-140&&p.y<view.bottom+120;
-      if(visible&&!prop.sprite)prop.sprite=this.add.image(p.x+(prop.tile.terrain==='forest'?(prop.tile.variant-.5)*18:0),p.y+4,prop.texture).setOrigin(.5,.8).setScale(prop.scale).setDepth(p.y+4);
+      if(visible&&!prop.sprite)prop.sprite=this.add.image(p.x+prop.offsetX,p.y+prop.offsetY+4,prop.texture).setOrigin(.5,.8).setScale(prop.scale).setTint(prop.tint).setRotation(prop.rotation).setDepth(p.y+prop.offsetY+4);
       else if(!visible&&prop.sprite){prop.sprite.destroy();prop.sprite=undefined;}
       if(prop.sprite){prop.sprite.setVisible(!occupied.has(prop.tile.y*MAP_W+prop.tile.x));prop.sprite.setAlpha(obscuresActor(prop.sprite,prop.width,prop.height,actorPoints) ? .28 : 1);}
     }
@@ -234,7 +265,7 @@ export class WorldScene extends Phaser.Scene {
       sprite.setPosition(p.x,p.y);if(isBarrier(b))sprite.setTexture((b.kind==='gate'?'gate-':'barrier-')+barrierMask(b,barriers)).setFlipX(false);
       const fade = obscuresActor(p, b.kind === 'wall' || b.kind === 'gate' ? 24 : 30, b.kind === 'tower' || b.kind === 'hearth' ? 85 : b.kind === 'wall' || b.kind === 'gate' ? 30 : 55, actorPoints);
       sprite.setDepth(p.y).setAlpha((b.progress < 1 ? 0.45 + b.progress * 0.5 : 1) * (fade ? .55 : 1));
-      sprite.setTint(this.damageTint(b.id, b.hp, s.time) ? 0xffa58b : b.hp < b.maxHp * .4 ? 0xb9a798 : 0xffffff);
+      sprite.setTint(this.damageTint(b.id, b.hp, s.time) ? 0xffa58b : b.hp < b.maxHp * .4 ? 0xb9a798 : b.owner==='rival'?0xc9a078:0xffffff);
       if (b.progress < 1) {
         this.overlay.lineStyle(2, 0x8f7653, .8).lineBetween(p.x - 25, p.y + 5, p.x - 25, p.y - 32).lineBetween(p.x + 25, p.y - 5, p.x + 25, p.y - 42).lineBetween(p.x - 25, p.y - 23, p.x + 25, p.y - 33);
       }
@@ -276,7 +307,7 @@ export class WorldScene extends Phaser.Scene {
       if (isFriendly(u) && u.id !== s.commander?.id) { const density = this.localActorDensity(u.x, u.y); bodyScale = density >= 28 ? .72 : density >= 18 ? .84 : 1; }
       if (sprite.scaleX !== bodyScale || sprite.scaleY !== bodyScale) sprite.setScale(bodyScale);
       sprite.setTexture(`unit-${u.kind}-${frame}`).setPosition(x + (sprite.flipX ? -1 : 1) * (strike * 2 - recoil), y+bob).setDepth(y + 1).setRotation((sprite.flipX?-1:1)*(strike*.055-recoil*.018)).setTint(hurt ? 0xff967d : u.attackFlash > 0 ? 0xffe5ad : sickColor);
-      const selectedUnit=selected.has(u.id),color=selectedUnit?0xffe29a:u.reanimatedFrom!==undefined?0xb6d773:isFriendly(u)?squadColors.get(u.squadId!)??0xb5d5d8:u.kind==='brute'?0xf1ba72:0xe6a37d;
+      const selectedUnit=selected.has(u.id),color=selectedUnit?0xffe29a:u.reanimatedFrom!==undefined?0xb6d773:isFriendly(u)?squadColors.get(u.squadId!)??0xb5d5d8:isRival(u)?0xd4ac68:u.kind==='brute'?0xf1ba72:0xe6a37d;
       const massSelection=selectedUnit&&selected.size>24,markScale=massSelection?.8:1;
       const view=this.cameras.main.worldView,visible=p.x>view.x-55&&p.x<view.right+55&&p.y>view.y-55&&p.y<view.bottom+55;sprite.setVisible(visible);
       let marker=this.markers.get(u.id);if(!marker){marker=this.add.image(p.x,p.y,'unit-marker').setOrigin(.5);this.markerLayer.add(marker);this.markers.set(u.id,marker);}
@@ -288,6 +319,7 @@ export class WorldScene extends Phaser.Scene {
       }
       if (u.injury) { this.overlay.lineStyle(2, 0xf0cd8d).lineBetween(p.x - 3, p.y - 49, p.x + 3, p.y - 49).lineBetween(p.x, p.y - 52, p.x, p.y - 46); }
       else if (isFriendly(u) && u.hp < u.maxHp * .3) this.overlay.lineStyle(2, 0xf7a88a, .75 + Math.sin(s.time * 7) * .2).strokeTriangle(p.x, p.y - 56, p.x - 4, p.y - 49, p.x + 4, p.y - 49);
+      if(isRival(u))this.overlay.lineStyle(1.5,0xd4ac68,.9).strokeTriangle(p.x,p.y-53,p.x-4,p.y-47,p.x+4,p.y-47);
       if (u.origin === 'battalion') this.overlay.lineStyle(2, 0xf0cd8d, .9).strokeEllipse(p.x, p.y, 23, 11);
       if(illness)this.overlay.lineStyle(2,illness.age>=55?0xff967d:illness.age>=18?0xc7d975:0xf1d695).strokeCircle(p.x,p.y-48,4);
       else if(u.exposureSourceId)this.overlay.lineStyle(2,0xe7bb64,.9).strokeCircle(p.x,p.y-48,4);
@@ -354,6 +386,7 @@ export class WorldScene extends Phaser.Scene {
       const p = iso(x, y); this.ghost.setTexture(texture).setPosition(p.x, p.y).setAlpha(0.65).setTint(valid ? 0xffffff : 0xda8a7a).setVisible(true);
     } else this.ghost?.setVisible(false);
     if (this.rt.rallyMode && this.hoverTile) this.diamond(this.hover, this.hoverTile.x, this.hoverTile.y, 0xffdfa2, 0.8);
+    const gesture=this.commandGesture;if(gesture?.active){const a=iso(gesture.start.x,gesture.start.y),b=iso(gesture.end.x,gesture.end.y);this.hover.lineStyle(2,0xe8d29b,.72).lineBetween(a.x,a.y,b.x,b.y);this.diamond(this.hover,gesture.end.x,gesture.end.y,0xf2d79d,.95);}
     const dusk = s.phase === 'night' ? 0.32 : s.phaseTime > 57 ? (s.phaseTime - 57) / 15 * 0.22 : 0;
     this.night.setAlpha(dusk);
     if (s.phase === 'night') for (const b of s.buildings.filter(b => ['hearth', 'tower', 'cottage'].includes(b.kind))) { const p = iso(b.x, b.y); this.overlay.fillStyle(0xffc46e, 0.12 + Math.sin(s.time * 2.5 + b.id) * 0.02).fillEllipse(p.x, p.y - 5, 100, 55); }

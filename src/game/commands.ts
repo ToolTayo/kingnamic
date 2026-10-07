@@ -1,10 +1,10 @@
 import {relocationError,relocate,placementAccessError} from './relocation';
-import {returnToHomeWatch,gatherCompany,travel,outpostError,foundOutpost,accessError} from './empire';
+import {returnToHomeWatch,gatherCompany,travel,outpostError,foundOutpost,accessError,captureStronghold} from './empire';
 import { BUILDINGS, MAX_BUILDINGS, TERRITORIES, UNITS } from './config';
 import { canAfford, capacity, idle, jobCapacity, rebalanceJobs, spend } from './economy';
 import { distance, key, tileAt } from './map';
 import { nearestOpen } from './navigation';
-import { army, enemies, log, makeBuilding, makeUnit } from './state';
+import { army, enemies, hostiles, log, makeBuilding, makeUnit } from './state';
 import { expeditionAction, launchExpedition } from './expedition';
 import { assignDestinations, available, orderArmy } from './army';
 import { addResidents, ensureResidents, removeResidents, assignResidentJobs } from './population';
@@ -21,7 +21,7 @@ export function buildError(s: State, kind: BuildingKind, x: number, y: number, r
   if(s.region&&kind!=='hearth'&&!s.march?.secured)return 'Clear the region and establish an outpost first.';
   if(s.region&&tile.terrain==='rock')return 'The bedrock cannot support a foundation. Choose open ground.';
   if(s.region&&tile.terrain==='forest')return 'Keep the dense grove for timber. Build on open ground beside it.';
-  if(s.region&&enemies(s).some(u=>distance(u,tile)<5))return 'Drive the infected away from this building site.';
+  if(s.region&&hostiles(s).some(u=>distance(u,tile)<5))return 'Drive defenders and infected away from this building site.';
   if ((tile.territory === 'wild' || !s.owned.includes(tile.territory)) && !(s.region==='march'&&s.march?.secured)) return 'Reclaim this territory before building here.';
   if (tile.terrain === 'water') return 'You cannot build on the river.';
   if (s.buildings.some(b => b.x === x && b.y === y)) return 'There is already a building here.';
@@ -60,6 +60,7 @@ function applyCommand(s: State, c: Command): CommandResult {
     if(!b||name.length<2)return result(false,'Choose a settlement and give it a name of at least two characters.');
     b.name=name;log(s,`${name} is entered in the kingdom ledger.`,'good');return result(true,`${name} named.`);
   }
+  if(c.type==='stronghold-capture')return captureStronghold(s);
   if (c.type === 'expedition-launch') {if(s.region)return result(false,'Depart for the Broken Standard from Hearthmere.');return launchExpedition(s, c.ids, c.approach);}
   if (c.type === 'expedition-share' || c.type === 'expedition-retreat' || c.type === 'expedition-extract') return expeditionAction(s, c.type);
   if (s.expedition) {
@@ -116,7 +117,7 @@ function applyCommand(s: State, c: Command): CommandResult {
     }
     case 'squad-rename': {const q=s.squads?.find(q=>q.id===c.squadId);if(!q||!c.name.trim())return result(false,'Choose a squad and a name.');q.name=c.name.trim().slice(0,24);return result(true,'Squad renamed.');}
     case 'squad-delete': {if(s.empire)for(const u of army(s.empire.reserve))if(u.squadId===c.squadId)delete u.squadId;s.squads=s.squads?.filter(q=>q.id!==c.squadId);for(const u of army(s))if(u.squadId===c.squadId)delete u.squadId;return result(true,'Squad dissolved. Its soldiers and orders remain.');}
-    case 'relocate': {const error=relocationError(s,c.id,c.x,c.y,c.rotation);if(error)return result(false,error);relocate(s,c.id,c.x,c.y,c.rotation);return result(true,'Building rearranged. Health, level, work and resources preserved.');}
+    case 'relocate': {if(s.buildings.some(b=>b.id===c.id&&b.owner==='rival'))return result(false,'Capture the stronghold before moving its structures.');const error=relocationError(s,c.id,c.x,c.y,c.rotation);if(error)return result(false,error);relocate(s,c.id,c.x,c.y,c.rotation);return result(true,'Building rearranged. Health, level, work and resources preserved.');}
     case 'build': {
       if(c.rotation!==undefined&&(![0,1].includes(c.rotation)||!['wall','gate'].includes(c.kind)))return result(false,'Choose a supported barrier orientation.');
       const error = buildError(s, c.kind, c.x, c.y,c.rotation); if (error) return result(false, error);
@@ -126,10 +127,11 @@ function applyCommand(s: State, c: Command): CommandResult {
     }
     case 'upgrade': case 'repair': {
       const b = s.buildings.find(b => b.id === c.id); if (!b) return result(false, 'That building is no longer standing.');
+      if (b.owner==='rival')return result(false,'Capture this structure before repairing or upgrading it.');
       if (b.progress < 1) return result(false, 'Wait for construction to finish.');
       if (c.type === 'upgrade' && b.level >= 3) return result(false, 'This building is fully upgraded.');
       if (c.type === 'repair' && b.hp >= b.maxHp) return result(false, 'This building is already in good repair.');
-      if (enemies(s).some(u => distance(u, b) < 2)) return result(false, 'Drive the infected away before repairing or upgrading.');
+      if (hostiles(s).some(u => distance(u, b) < 2)) return result(false, 'Drive the defenders and infected away before repairing or upgrading.');
       const cost = c.type === 'upgrade' ? upgradeCost(b) : repairCost(b);
       if (!canAfford(s, cost)) return result(false, 'Not enough supplies.');
       spend(s, cost);
@@ -144,7 +146,7 @@ function applyCommand(s: State, c: Command): CommandResult {
       s.jobs[c.job] = Math.max(0, s.jobs[c.job] + c.delta); return result(true, 'Work assignment updated.');
     }
     case 'recruit': {
-      const barracks = s.buildings.find(b => b.kind === 'barracks' && b.progress >= 1 && b.hp > 0);
+      const barracks = s.buildings.find(b => b.kind === 'barracks' && b.owner !== 'rival' && b.progress >= 1 && b.hp > 0);
       if (!barracks) return result(false, 'Build a garrison first.');
       const count = c.count ?? 1, plan = recruitmentPlan(s, c.kind);
       const blocker = recruitmentBlocker(s, c.kind, count, plan);
@@ -178,7 +180,7 @@ function applyCommand(s: State, c: Command): CommandResult {
       assignDestinations(s,troops,c);
       return result(true, `${troops.length} soldiers are moving to the rally point.`);
     }
-    case 'formation': if(c.ids){for(const u of army(s))if(c.ids.includes(u.id))u.formation=c.formation;}else{s.formation=c.formation;for(const u of army(s))u.formation=c.formation;} return result(true,c.formation==='line'?'Shield line: nearby wardens gain 3 armor.':'Loose order: bowmen gain 0.6 range.');
+    case 'formation': if(c.ids){for(const u of army(s))if(c.ids.includes(u.id))u.formation=c.formation;}else{s.formation=c.formation;for(const u of army(s))u.formation=c.formation;} return result(true,c.formation==='line'?'Shield line: nearby wardens gain 3 armor.':c.formation==='column'?'Road column: rally orders use a narrow file.':'Loose order: bowmen gain 0.6 range.');
     case 'claim': {
       if(s.region)return result(false,'Explore and clear Briar March; land here is never purchased.');
       const t = TERRITORIES[c.territory];

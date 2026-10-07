@@ -18,9 +18,13 @@ export function makeUnit(s: State, kind: UnitKind, x: number, y: number): Unit {
   const u: Unit = { id: s.nextId++, kind, x, y, hp: UNITS[kind].hp, maxHp: UNITS[kind].hp, cooldown: 0, target: { x, y }, path: [], repath: 0, attackFlash: 0 };
   s.units.push(u); return u;
 }
-export const isFriendly = (u: Unit): boolean => ['warden', 'ranger', 'spearman', 'scout'].includes(u.kind);
+export const isRival = (u: Unit): boolean => u.faction === 'rival';
+export const isInfected = (u: Unit): boolean => ['hollow', 'runner', 'brute'].includes(u.kind);
+export const isFriendly = (u: Unit): boolean => !isRival(u) && ['warden', 'ranger', 'spearman', 'scout'].includes(u.kind);
 export const army = (s: State): Unit[] => s.units.filter(u => isFriendly(u) && u.hp > 0);
-export const enemies = (s: State): Unit[] => s.units.filter(u => !isFriendly(u) && u.hp > 0);
+export const enemies = (s: State): Unit[] => s.units.filter(u => isInfected(u) && u.hp > 0);
+export const rivals = (s: State): Unit[] => s.units.filter(u => isRival(u) && u.hp > 0);
+export const hostiles = (s: State): Unit[] => [...enemies(s), ...rivals(s)];
 export function newGame(seed = 74019): State {
   const s: State = {
     version: 2, economyRevision:1, seed, rng: seed, time: 0, day: 1, phaseTime: 0, phase: 'day', speed: 1, lastSpeed: 1,

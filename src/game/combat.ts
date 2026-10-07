@@ -2,7 +2,7 @@ import { MAP_H, MAP_W, MAX_HOSTILES, MAX_UNITS, TERRITORIES, UNITS } from './con
 import { distance, key, tileAt } from './map';
 import { clearMelee, findPath, movementBlocker, nearestOpen, navigation, type Navigation } from './navigation';
 import { separateCrowd } from './crowd';
-import { army, enemies, isFriendly, log, makeUnit, random } from './state';
+import { army, enemies, isFriendly, isInfected, isRival, log, makeUnit, random, rivals } from './state';
 import type { Building, CommanderInput, Point, Resident, State, Unit, UnitKind } from './types';
 import { SpatialGrid } from './spatial';
 import { expose, recordDeath, resolveResidentDeaths } from './disease';
@@ -31,9 +31,11 @@ function hit(s: State, attacker: Unit | Building, target: Unit | Building | Resi
   if (attacker.cooldown > 0) return;
   let armor = 'kind' in target && target.kind in UNITS ? UNITS[target.kind as UnitKind].armor : 0;
   if ('kind' in target && target.kind === 'warden' && ((target as Unit).formation??s.formation) === 'line' && friends.nearest(target,2.5,u=>u.id!==target.id&&u.hp>0&&u.kind==='warden')) armor += 3;
-  if(target.hp>0&&'attackFlash' in attacker&&!isFriendly(attacker)&&('job' in target||'attackFlash' in target&&isFriendly(target)))expose(s,target as Unit|Resident,35,'bite',attacker.id);
+  const infectedAttacker='attackFlash'in attacker&&isInfected(attacker);
+  if(target.hp>0&&infectedAttacker&&('job'in target||'attackFlash'in target&&(isFriendly(target)||isRival(target))))expose(s,target as Unit|Resident,35,'bite',attacker.id);
   target.hp -= Math.max(1, damage - armor);
-  if('attackFlash' in target&&!isFriendly(target)&&(attacker.kind==='tower'||'attackFlash' in attacker&&isFriendly(attacker))){target.bountyEligible=true;if(attacker.id===s.commander?.id)target.commanderCredit=true;}
+  const playerAttacker='attackFlash'in attacker?isFriendly(attacker):attacker.owner!=='rival';
+  if('attackFlash'in target&&isInfected(target)&&playerAttacker){target.bountyEligible=true;if(attacker.id===s.commander?.id)target.commanderCredit=true;}
   attacker.cooldown = attacker.kind === 'tower' ? 1.5 : UNITS[attacker.kind as UnitKind].cooldown;
   if ('attackFlash' in attacker) attacker.attackFlash = 0.3;
   if (s.effects.length < 100) s.effects.push({ id: s.nextId++, x: attacker.x, y: attacker.y, kind: ranged ? 'arrow' : 'hit', to: { x: target.x, y: target.y }, ttl: ranged ? 0.35 : 0.3, source: attacker.id, unit: attacker.kind in UNITS ? attacker.kind as UnitKind : undefined, armored: armor >= 3 });
@@ -52,8 +54,8 @@ export function combatStep(s: State, dt: number, separate = true,input?:Commande
     const p = { x: Math.min(29, Math.max(0, route.x + (random(s) - 0.5))), y: Math.min(25, Math.max(0, route.y + (random(s) - 0.5))) };
     makeUnit(s, kind, p.x, p.y);
   }
-  const friends = army(s), foes = enemies(s), hearth = s.buildings.find(b => b.kind === 'hearth');
-  const nav=navigation(s),friendGrid=new SpatialGrid(friends),foeGrid=new SpatialGrid(foes),humanGrid=new SpatialGrid<Unit|Resident>([...friends,...(s.residents??[])]);
+  const friends=army(s),foes=enemies(s),rivalTroops=rivals(s),hearth=s.buildings.find(b=>b.kind==='hearth');
+  const nav=navigation(s),friendGrid=new SpatialGrid(friends),rivalGrid=new SpatialGrid(rivalTroops),playerThreatGrid=new SpatialGrid<Unit>([...foes,...rivalTroops]),rivalThreatGrid=new SpatialGrid<Unit>([...friends,...foes]),humanGrid=new SpatialGrid<Unit|Resident>([...friends,...rivalTroops,...(s.residents??[])]);
   const illnesses=new Map(s.infection.map(i=>[i.personId,i]));
   const isolated=new Map<number,Point>();
   if(s.quarantine&&illnesses.size){
@@ -67,14 +69,15 @@ export function combatStep(s: State, dt: number, separate = true,input?:Commande
   for (const b of s.buildings) {
     b.cooldown = Math.max(0, b.cooldown - dt);
     if (b.kind === 'tower' && b.progress >= 1) {
-      const target = foeGrid.nearest(b,6+(b.level-1)*.7,u=>u.hp>0);
-      if (target) hit(s, b, target, 14 + (b.level - 1) * 7, true,friendGrid);
+      const threatGrid=b.owner==='rival'?rivalThreatGrid:playerThreatGrid;
+      const target=threatGrid.nearest(b,6+(b.level-1)*.7,u=>u.hp>0);
+      if(target)hit(s,b,target,14+(b.level-1)*7,true,isRival(target)?rivalGrid:friendGrid);
     }
   }
   for (const u of s.units) {
     if (u.hp <= 0 || u.injury) continue;
     u.cooldown = Math.max(0, u.cooldown - dt); u.repath -= dt; u.attackFlash = Math.max(0, u.attackFlash - dt);
-    const friendly = isFriendly(u), ranged = u.kind === 'ranger' || u.kind === 'scout', def = UNITS[u.kind];
+    const friendly=isFriendly(u),rival=isRival(u),ranged=u.kind==='ranger'||u.kind==='scout',def=UNITS[u.kind];
     const illness=illnesses.get(u.id);
     if(friendly&&s.quarantine&&illness){const p=isolated.get(u.id);if(p)move(s,u,p,dt,false,nav);continue;}
     if(friendly&&input&&u.id===s.commander?.id){
@@ -83,7 +86,7 @@ export function combatStep(s: State, dt: number, separate = true,input?:Commande
       else if(u.order==='move'){if(distance(u,u.target)>.2)move(s,u,u.target,dt,false,nav);else{u.order='hold';u.path=[];}}
       if(input.attack&&u.cooldown<=0){
         const reach=weapon==='bow'?5.2:weapon==='spear'?2.2:1.4,aim=input.aim;
-        const victim=foeGrid.nearest(u,reach,v=>v.hp>0&&(weapon==='bow'||clearMelee(s,u,v,nav))&&(!aim||distance(aim,u)<.2||((v.x-u.x)*(aim.x-u.x)+(v.y-u.y)*(aim.y-u.y))/(distance(u,v)*distance(u,aim)||1)>.45));
+        const victim=playerThreatGrid.nearest(u,reach,v=>v.hp>0&&(weapon==='bow'||clearMelee(s,u,v,nav))&&(!aim||distance(aim,u)<.2||((v.x-u.x)*(aim.x-u.x)+(v.y-u.y)*(aim.y-u.y))/(distance(u,v)*distance(u,aim)||1)>.45));
         const power=(weapon==='bow'?14:weapon==='spear'?19:22)+Math.min(5,Math.floor(s.commander.xp/6))*2;
         if(victim)hit(s,u,victim,power*(illness&&illness.age>=18?.8:1)*(weapon==='bow'&&distance(u,victim)<1.5?.6:1),weapon==='bow',friendGrid);
         else if(s.effects.length<100)s.effects.push({id:s.nextId++,x:u.x,y:u.y,to:aim??{x:u.x,y:u.y+1},kind:weapon==='bow'?'arrow':'hit',source:u.id,unit:u.kind,ttl:.3});
@@ -96,37 +99,42 @@ export function combatStep(s: State, dt: number, separate = true,input?:Commande
     if(friendly&&u.order==='escort'){const escorted=byId.get(u.focus!);if(escorted&&escorted.hp>0){if(distance(u.target,escorted)>2){u.target=nearestOpen(s,{x:escorted.x+(u.id%3-1),y:escorted.y+1},undefined,nav);u.repath=0;}}else{u.order='defend';delete u.focus;}}
     const elevation = tileAt(u.x, u.y,s)?.height ?? 0;
     const range = def.range + (ranged ? elevation * 0.8 + ((u.formation??s.formation) === 'loose' ? 0.6 : 0) : 0);
-    const radius=friendly?(u.order==='hunt'?12:u.order==='attack'?8:u.order==='hold'?range:range+(ranged?.4:2)):u.order==='defend'?5.5:4;
-    let target:Unit|Resident|undefined=friendly?foeGrid.nearest(u,radius,v=>v.hp>0&&(u.order==='hunt'?distance(v,anchor)<=12:u.order==='hold'||u.order==='attack'||ranged||distance(v,anchor)<(u.order==='defend'?4:6)||!u.order&&!!hearth&&distance(v,hearth)<3)):humanGrid.nearest(u,radius,v=>v.hp>0);
-    if(friendly&&u.order==='attack'&&u.focus){const focused=byId.get(u.focus);if(focused&&focused.hp>0&&!isFriendly(focused))target=focused;else delete u.focus;}
+    const radius=friendly?(u.order==='hunt'?12:u.order==='attack'?8:u.order==='hold'?range:range+(ranged?.4:2)):rival?(u.order==='defend'?7:5.5):u.order==='defend'?5.5:4;
+    let target:Unit|Resident|Building|undefined=friendly?playerThreatGrid.nearest(u,radius,v=>v.hp>0&&(u.order==='hunt'?distance(v,anchor)<=12:u.order==='hold'||u.order==='attack'||ranged||distance(v,anchor)<(u.order==='defend'?4:6)||!u.order&&!!hearth&&distance(v,hearth)<3)):rival?rivalThreatGrid.nearest(u,radius,v=>v.hp>0):humanGrid.nearest(u,radius,v=>v.hp>0);
+    const focusedBuilding=friendly&&u.order==='attack'&&u.focus?s.buildings.find(b=>b.id===u.focus&&b.owner==='rival'&&b.hp>0):undefined;
+    if(friendly&&u.order==='attack'&&u.focus){const focused=byId.get(u.focus);if(focused&&focused.hp>0&&!isFriendly(focused))target=focused;else if(focusedBuilding)target=focusedBuilding;else delete u.focus;}
     // Runners punish an exposed rear. A front-line soldier already in reach
     // still intercepts them, so a screen has practical value.
     if (u.kind === 'runner' && target && distance(u, target) > 1.3) target = friendGrid.nearest(u,Math.min(4,distance(u,target)+1.5),v=>v.hp>0&&(v.kind==='ranger'||v.kind==='scout'))??target;
     const damage = (def.damage + (ranged ? elevation * 3 : u.kind === 'spearman' && target && 'kind' in target && target.kind === 'runner' ? 6 : 0))*(illness&&illness.age>=18?.8:1);
     const shotDamage = u.kind === 'ranger' && target && distance(u, target) < 1.5 ? damage * .6 : damage;
-    const canHit = target && distance(u, target) <= range && (ranged || clearMelee(s, u, target,nav));
+    const canHit=target&&distance(u,target)<=range&&(ranged||clearMelee(s,u,target,nav));
+    const cover=target&&'attackFlash'in target&&isRival(target)?rivalGrid:friendGrid;
+    if(friendly&&focusedBuilding){const d=distance(u,focusedBuilding),canHitBuilding=d<=range&&(ranged||d<=1.25||clearMelee(s,u,focusedBuilding,nav));if(canHitBuilding)hit(s,u,focusedBuilding,shotDamage,ranged,cover);else if(distance(u,u.target)>.2)move(s,u,u.target,dt,false,nav);continue;}
     if (friendly && (u.order === 'move'||u.order==='retreat'||u.order==='regroup')) {
       if (distance(u, u.target) <= .2) { if(u.order==='move')delete u.order;else u.order='hold'; u.path = []; u.repath = 0; }
       else {
-        if (canHit&&u.order!=='retreat') hit(s, u, target!, shotDamage, ranged,friendGrid);
+        if (canHit&&u.order!=='retreat') hit(s, u, target!, shotDamage, ranged,cover);
         move(s, u, u.target, dt, false,nav);
         continue;
       }
     }
     if (canHit) {
-      hit(s, u, target!, shotDamage, ranged,friendGrid);
+      hit(s, u, target!, shotDamage, ranged,cover);
       if (ranged&&u.order!=='hold'&&distance(u,target!)<(u.kind==='scout'?2:1.7)&&distance(u,anchor)<4) { const dx=u.x-target!.x,dy=u.y-target!.y,d=Math.hypot(dx,dy)||1;move(s,u,nearestOpen(s,{x:u.x+dx/d*2,y:u.y+dy/d*2},undefined,nav),dt,false,nav); }
     } else {
       // An idle guard must help at a breach instead of watching the Hearth fall
       // from a distant rally point. Explicit move orders above still take priority.
       const defense = friendly && !u.order && breached && hearth ? nearestOpen(s, { x: hearth.x + u.id % 3 - 1, y: hearth.y + 2 },undefined,nav) : u.target;
-      const destination = friendly&&u.order==='hold'?undefined:friendly&&ranged&&u.order!=='attack'&&u.order!=='hunt'?defense:target??(friendly?defense:u.order==='defend'?u.anchor??u.target:hearth??friendGrid.nearest(u,45,v=>v.hp>0));
+      const destination=friendly&&u.order==='hold'?undefined:friendly&&ranged&&u.order!=='attack'&&u.order!=='hunt'?defense:target??(friendly?defense:rival?u.anchor??u.target:u.order==='defend'?u.anchor??u.target:hearth??friendGrid.nearest(u,45,v=>v.hp>0));
       if (destination && distance(u, destination) > 0.2) {
-        const blocking = move(s, u, destination, dt, !friendly,nav);
-        if (blocking && !friendly) hit(s, u, blocking, def.damage,false,friendGrid);
+        const blocking=move(s,u,destination,dt,isInfected(u),nav);
+        if(blocking&&isInfected(u))hit(s,u,blocking,def.damage,false,friendGrid);
+        else if(blocking&&rival&&blocking.owner!=='rival')hit(s,u,blocking,def.damage,false,rivalGrid);
+        else if(blocking&&friendly&&blocking.owner==='rival')hit(s,u,blocking,shotDamage,ranged,cover);
       }
     }
-    if (!friendly) {
+    if (isInfected(u)) {
       const k = key(u); if (k >= 0 && k < s.contamination.length) s.contamination[k] = Math.min(100, s.contamination[k] + dt * 5);
       // Reaching an occupied tile is unnecessary: infected attack from its edge.
       if (!target && hearth && distance(u, hearth) <= 1.2) hit(s, u, hearth, def.damage,false,friendGrid);
@@ -136,7 +144,9 @@ export function combatStep(s: State, dt: number, separate = true,input?:Commande
   for (const u of s.units) if (u.hp <= 0) {
     if (s.effects.length < 100) s.effects.push({ id: s.nextId++, x: u.x, y: u.y, kind: 'death', ttl: 1, unit: u.kind });
     if (isFriendly(u)) { recordDeath(s,u);s.stats.lost++; log(s, `A ${UNITS[u.kind].name.toLowerCase()} has fallen.`, 'danger'); }
-    else {
+    else if(isRival(u)){
+      recordDeath(s,u);const war=s.march?.rival;if(war?.status==='occupied'){war.casualties++;war.remaining=Math.max(0,war.remaining-1);}
+    } else {
       if(u.commanderCredit&&u.reanimatedFrom===undefined&&s.commander)s.commander.xp=Math.min(100,s.commander.xp+1);
       s.stats.slain++;
       const paid=awardBounty(treasury,u,!!s.theatre);

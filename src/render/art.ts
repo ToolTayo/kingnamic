@@ -36,7 +36,7 @@ export function terrainArt(source:Tile[]=TILES,march=false): HTMLCanvasElement {
   const tiles = [...source].sort((a, b) => a.x + a.y - b.x - b.y);
   for (const t of tiles) {
     const p = iso(t.x, t.y), n = t.variant;
-    const color = t.terrain === 'water' ? ['#426c70', '#456f72', '#487477'][Math.floor(n * 3)] : t.terrain === 'road' ? ['#929274', '#989779', '#a09c7c'][Math.floor(n * 3)] : t.terrain === 'marsh' ? ['#687f6a', '#6b826f', '#6b7e65'][Math.floor(n * 3)] : t.terrain === 'rock' ? '#8b927d' : t.terrain === 'heath' ? ['#78836b','#85896d','#707b64'][Math.floor(n*3)] : t.terrain === 'field' ? ['#92936c','#a29a70','#888e68'][Math.floor(n*3)] : ['#7d906e', '#829674', '#899a75', '#819373'][Math.floor(n * 4)];
+    const color = t.terrain === 'water' ? ['#426c70', '#456f72', '#487477'][Math.floor(n * 3)] : t.terrain === 'road' ? ['#929274', '#989779', '#a09c7c'][Math.floor(n * 3)] : t.terrain === 'marsh' ? ['#687f6a', '#6b826f', '#6b7e65'][Math.floor(n * 3)] : t.terrain === 'rock' ? ['#828a78', '#8b927d', '#969985', '#7e8979'][Math.floor(n * 4)] : t.terrain === 'heath' ? ['#78836b','#85896d','#707b64'][Math.floor(n*3)] : t.terrain === 'field' ? ['#92936c','#a29a70','#888e68'][Math.floor(n*3)] : ['#7d906e', '#829674', '#899a75', '#819373'][Math.floor(n * 4)];
     poly(c, [p.x, p.y - 16, p.x + 32, p.y, p.x, p.y + 16, p.x - 32, p.y], color);
     if (t.terrain === 'water') {
       line(c, [p.x - 12, p.y + 2, p.x + 6, p.y + 2], '#91b1a733'); line(c, [p.x, p.y - 7, p.x + 12, p.y - 7], '#b6cbc233');

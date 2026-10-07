@@ -74,9 +74,9 @@ export interface RecruitmentPlan {
 }
 
 export function recruitmentPlan(s: State, kind: SoldierKind): RecruitmentPlan {
-  const barracks = s.buildings.some(b => b.kind === 'barracks' && b.progress >= 1 && b.hp > 0);
+  const barracks = s.buildings.some(b => b.kind === 'barracks' && b.owner !== 'rival' && b.progress >= 1 && b.hp > 0);
   const unlocked = kind !== 'spearman' && kind !== 'scout' || Boolean(s.lostBattalions?.recruited) ||
-    s.buildings.some(b => b.kind === 'barracks' && b.progress === 1 && b.level >= 2 && b.hp > 0);
+    s.buildings.some(b => b.kind === 'barracks' && b.owner !== 'rival' && b.progress === 1 && b.level >= 2 && b.hp > 0);
   const pool = recruitmentPool(s);
   const residents = pool.idle + pool.availableWorkers;
   const capacity = Math.max(0, Math.min(armyCapacity(s) - empireArmy(s), MAX_UNITS - s.units.length));
@@ -98,9 +98,9 @@ export function recruitmentPlan(s: State, kind: SoldierKind): RecruitmentPlan {
 
 export function recruitmentBlocker(s: State, kind: SoldierKind, count: number, plan = recruitmentPlan(s, kind)): string {
   if (!Number.isInteger(count) || count < 1) return 'Choose at least one soldier.';
-  if (!s.buildings.some(b => b.kind === 'barracks' && b.progress >= 1 && b.hp > 0)) return 'Build a completed garrison to recruit.';
+  if (!s.buildings.some(b => b.kind === 'barracks' && b.owner !== 'rival' && b.progress >= 1 && b.hp > 0)) return 'Build a completed garrison to recruit.';
   if ((kind === 'spearman' || kind === 'scout') && !s.lostBattalions?.recruited &&
-      !s.buildings.some(b => b.kind === 'barracks' && b.progress === 1 && b.level >= 2 && b.hp > 0)) {
+      !s.buildings.some(b => b.kind === 'barracks' && b.owner !== 'rival' && b.progress === 1 && b.level >= 2 && b.hp > 0)) {
     return 'Upgrade a garrison or enlist the Lost Battalion to train specialists.';
   }
   if (count > plan.capacity) return plan.capacity

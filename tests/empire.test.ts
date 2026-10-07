@@ -1,11 +1,13 @@
 import {describe,it,expect} from 'vitest';
-import {army,enemies,newGame,makeUnit,makeBuilding} from '../src/game/state';
+import {army,enemies,hostiles,rivals,newGame,makeUnit,makeBuilding} from '../src/game/state';
 import {command,buildError} from '../src/game/commands';
-import {ROAD_EXIT,empireArmy,empireStep,travelError} from '../src/game/empire';
+import {armyCapacity} from '../src/game/army';
+import {capacity} from '../src/game/economy';
+import {ROAD_EXIT,empireArmy,empireStep,strongholdCaptureError,travelError} from '../src/game/empire';
 import {decode} from '../src/game/persistence';
 import {combatStep} from '../src/game/combat';
 import {advance} from '../src/game/simulation';
-import {infect,plagueStep} from '../src/game/disease';
+import {cure,infect,plagueStep} from '../src/game/disease';
 import {rates} from '../src/game/economy';
 import {launchError} from '../src/game/expedition';
 import {nearestOpen} from '../src/game/navigation';
@@ -133,4 +135,30 @@ it('keeps regional gates solid to infected crowd pressure while allowing friendl
 
 it('recovers command at home after a complete regional wipe without returning dead soldiers or erasing the outpost',()=>{
  let s=founded();expect(command(s,{type:'home-watch'}).ok).toBe(false);const fallen=army(s).map(u=>u.id),home=army(s.empire!.reserve).map(u=>u.id);for(const u of army(s))u.hp=0;combatStep(s,.1);const outpost=JSON.stringify(s.buildings),people=s.population;expect(army(s)).toHaveLength(0);s=reload(s);expect(command(s,{type:'home-watch'}).ok).toBe(true);expect(s.region).toBeUndefined();expect(army(s).map(u=>u.id)).toEqual(home);expect(army(s).some(u=>fallen.includes(u.id))).toBe(false);expect(JSON.stringify(s.empire!.reserve.buildings)).toBe(outpost);expect(s.empire!.reserve.population).toBe(people);expect(s.empire!.reserve.corpses!.map(c=>c.personId).sort()).toEqual(fallen.sort());reload(s);
+});
+
+describe('Gloamward stronghold and multi-faction combat',()=>{
+ it('reveals a deterministic fortified garrison and round-trips its reserve ledger',()=>{
+  const s=cleared(),hero=army(s).find(u=>u.id===s.commander!.id)!;Object.assign(hero,{x:47,y:29});empireStep(s,.1);
+  expect(s.march!.rival).toMatchObject({id:'mossgate',status:'occupied',remaining:100,reserve:80,casualties:0});expect(rivals(s)).toHaveLength(20);expect(s.buildings.filter(b=>b.owner==='rival')).toHaveLength(23);expect(armyCapacity(s)).toBe(24);expect(capacity(s)).toBe(18);
+  const saved=reload(s);expect(saved.march!.rival).toEqual(s.march!.rival);expect(rivals(saved)).toHaveLength(20);expect(saved.buildings.filter(b=>b.owner==='rival').map(b=>b.kind)).toEqual(s.buildings.filter(b=>b.owner==='rival').map(b=>b.kind));
+ });
+ it('lets hostile troops fight the infected and preserves infection and treatment rules',()=>{
+  const s=cleared(),hero=army(s).find(u=>u.id===s.commander!.id)!;Object.assign(hero,{x:47,y:29});empireStep(s,.1);for(const [i,u] of army(s).entries())Object.assign(u,{x:8+i,y:8});const guard=rivals(s)[0];Object.assign(guard,{x:15,y:14,exposure:95,cooldown:1,order:'defend',anchor:{x:15,y:14}});const zombie=makeUnit(s,'hollow',15.8,14);const crowns=s.resources.stone;combatStep(s,.1,false);
+  expect(s.infection.some(i=>i.personId===guard.id&&i.source==='bite')).toBe(true);plagueStep(s,.2);expect(s.infection.find(i=>i.personId===guard.id)!.age).toBeCloseTo(.2);expect(cure(s,1,[guard.id])).toBe(1);expect(guard.immune).toBe(35);expect(s.resources.stone).toBe(crowns);expect(hostiles(s).some(u=>u.id===zombie.id)).toBe(true);reload(s);
+ });
+ it('counts each actual rival death once, grants no zombie bounty for a rival, and keeps capture gated by the full roster',()=>{
+  const s=cleared(),hero=army(s).find(u=>u.id===s.commander!.id)!;Object.assign(hero,{x:47,y:29});empireStep(s,.1);
+  const war=s.march!.rival!,victim=rivals(s)[0],crowns=s.resources.stone,bounty=s.bountyTotal??0;expect(strongholdCaptureError(s)).toContain('remaining 100');
+  victim.hp=0;combatStep(s,.1,false);expect(war).toMatchObject({remaining:99,casualties:1});expect(s.resources.stone).toBe(crowns);expect(s.bountyTotal??0).toBe(bounty);expect(rivals(s)).toHaveLength(19);
+  combatStep(s,.1,false);expect(war).toMatchObject({remaining:99,casualties:1});const state=reload(s);expect(state.march!.rival).toMatchObject({remaining:99,casualties:1});
+  const buildings=JSON.stringify(state.buildings),resources={...state.resources};expect(command(state,{type:'stronghold-capture'}).ok).toBe(false);expect(state.march!.rival!.status).toBe('occupied');expect(JSON.stringify(state.buildings)).toBe(buildings);expect(state.resources).toEqual(resources);
+ });
+ it('focuses squad attacks on enemy structures, then captures and persists Mossgate as a damaged settlement',()=>{
+  let s=cleared(),hero=army(s).find(u=>u.id===s.commander!.id)!;Object.assign(hero,{x:47,y:29});empireStep(s,.1);const tower=s.buildings.find(b=>b.owner==='rival'&&b.kind==='tower')!,ally=army(s)[1];expect(command(s,{type:'repair',id:tower.id})).toMatchObject({ok:false,message:'Capture this structure before repairing or upgrading it.'});expect(command(s,{type:'relocate',id:tower.id,x:tower.x+1,y:tower.y})).toMatchObject({ok:false,message:'Capture the stronghold before moving its structures.'});
+  expect(command(s,{type:'order',order:'attack',ids:[ally.id],x:tower.x,y:tower.y,focus:tower.id}).ok).toBe(true);expect(ally.order).toBe('attack');expect(ally.focus).toBe(tower.id);Object.assign(ally,{x:tower.x+1,y:tower.y,cooldown:0});const beforeTower=tower.hp;combatStep(s,.1,false);expect(tower.hp).toBeLessThan(beforeTower);
+  const war=s.march!.rival!,removed=s.units.filter(u=>u.faction==='rival'||['hollow','runner','brute'].includes(u.kind)).map(u=>u.id);s.units=s.units.filter(u=>!removed.includes(u.id));s.infection=s.infection.filter(i=>!removed.includes(i.personId!));s.corpses=(s.corpses??[]).filter(c=>!c.tainted||Math.hypot(c.x-47,c.y-29)>=7);war.remaining=0;war.reserve=0;war.casualties=100;war.leaderId=undefined;Object.assign(hero,{x:47,y:29});const before=s.resources.wood;
+  expect(command(s,{type:'stronghold-capture'})).toMatchObject({ok:true});expect(war.status).toBe('captured');expect(s.march!.secured).toBe(true);const hall=s.buildings.find(b=>b.name==='Mossgate Hall')!;expect(hall.owner).toBe('player');expect(hall.hp).toBeLessThan(hall.maxHp);expect(s.buildings.some(b=>b.owner==='player'&&b.kind==='farm')).toBe(true);expect(s.population).toBe(4);expect(s.resources.wood).toBe(before+45);
+  s=reload(s);expect(s.march!.rival).toMatchObject({status:'captured',remaining:0,reserve:0,casualties:100});expect(s.buildings.find(b=>b.name==='Mossgate Hall')?.owner).toBe('player');expect(s.population).toBe(4);
+ });
 });

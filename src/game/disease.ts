@@ -1,6 +1,6 @@
 import { MAP_W, MAX_HOSTILES, MAX_UNITS } from './config';
 import { key } from './map';
-import { army, enemies, isFriendly, log, makeUnit } from './state';
+import { army, enemies, isFriendly, isInfected, isRival, log, makeUnit, rivals } from './state';
 import { ensureResidents } from './population';
 import type { Infection, Resident, State, Unit } from './types';
 
@@ -30,7 +30,7 @@ function attachInfection(s: State, person: Resident | Unit, age: number, source:
 // attackerId through expose(); source-less restored cases are labelled legacy.
 export function infect(s: State, person: Resident | Unit, source: string, age = 0, sourceId?: number): boolean {
   if (source !== 'bite') return false;
-  if(sourceId!==undefined){const attacker=s.units.find(u=>u.id===sourceId);if(!attacker||isFriendly(attacker)||attacker.hp<=0)return false;}
+  if(sourceId!==undefined){const attacker=s.units.find(u=>u.id===sourceId);if(!attacker||!isInfected(attacker)||attacker.hp<=0)return false;}
   return sourceId === undefined
     ? attachInfection(s,person,age,'legacy',undefined,'bite')
     : attachInfection(s,person,age,'bite',sourceId);
@@ -39,7 +39,7 @@ export function infect(s: State, person: Resident | Unit, source: string, age = 
 // Environmental contamination, sickness, and ordinary HP loss never expose a host.
 export function expose(s: State, person: Resident | Unit, dose: number, source: string, sourceId?: number): void {
   const attacker = sourceId === undefined ? undefined : s.units.find(u => u.id === sourceId);
-    if (source !== 'bite' || !attacker || isFriendly(attacker) || attacker.hp <= 0 || person.hp <= 0 || (person.immune ?? 0) > 0 || illnessFor(s, person.id)) return;
+    if (source !== 'bite' || !attacker || !isInfected(attacker) || attacker.hp <= 0 || person.hp <= 0 || (person.immune ?? 0) > 0 || illnessFor(s, person.id)) return;
   const firstBite = (person.exposure ?? 0) <= 0;
   person.exposure = Math.min(100, (person.exposure ?? 0) + dose);
   person.exposureSourceId = sourceId;
@@ -54,14 +54,14 @@ export function restoreInfection(s: State, person: Resident | Unit, infection: I
     : attachInfection(s, person, infection.age, 'legacy', undefined, infection.legacyCause ?? 'unknown');
 }
 export function cure(s: State, count: number, ids?: number[]): number {
-  const hosts = new Map<number, Resident | Unit>([...(s.residents ?? []), ...army(s)].map(p => [p.id,p]));
+  const hosts = new Map<number, Resident | Unit>([...(s.residents ?? []), ...army(s), ...rivals(s)].map(p => [p.id,p]));
   const chosen = s.infection.filter(i => !ids || ids.includes(i.personId!)).sort((a,b) => illnessDeadline(s,a,hosts.get(a.personId!)) - illnessDeadline(s,b,hosts.get(b.personId!)) || b.age-a.age || a.id-b.id).slice(0,count);
   const cases = new Set(chosen.map(i => i.id));
   for (const i of chosen) { const p = hosts.get(i.personId!); if (p && p.hp > 0) { p.exposure = 0; p.immune = 35; p.hp = Math.min(p.maxHp, p.hp + 15); if ('sick' in p) p.sick = false; } }
   s.infection = s.infection.filter(i => !cases.has(i.id)); s.stats.cured += chosen.length; return chosen.length;
 }
 export function recordDeath(s: State, person: Resident | Unit): void {
-  if (person.hp > 0 || 'kind' in person && !isFriendly(person)) return;
+  if (person.hp > 0 || 'kind' in person && !isFriendly(person) && !isRival(person)) return;
   s.corpses ??= [];
   if (s.corpses.some(c => c.personId === person.id)) return;
   // Only a confirmed infection can animate a corpse. Bite exposure, soil, and
@@ -79,7 +79,7 @@ export function resolveResidentDeaths(s: State): void {
 }
 export function plagueStep(s: State, dt: number): void {
   ensureResidents(s);
-  const hosts: (Resident | Unit)[] = [...s.residents!, ...army(s)], byId = new Map(hosts.map(p => [p.id,p]));
+  const hosts: (Resident | Unit)[] = [...s.residents!, ...army(s), ...rivals(s)], byId = new Map(hosts.map(p => [p.id,p]));
   for (const p of hosts) { if (p.immune) p.immune = Math.max(0,p.immune-dt); p.exposure = Math.max(0,(p.exposure ?? 0)-dt*.35); if(!p.exposure)delete p.exposureSourceId; }
   for (const i of s.infection) {
     const p = byId.get(i.personId!); if (!p || p.hp <= 0) continue;
