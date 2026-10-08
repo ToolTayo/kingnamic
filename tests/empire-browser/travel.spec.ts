@@ -2,7 +2,7 @@ import {test,expect} from '@playwright/test';
 import {writeFile} from 'node:fs/promises';
 
 const read=(page:any)=>page.evaluate(()=>JSON.parse(JSON.stringify((window as any).__KINGNAMIC__.runtime.state)));
-const click=(page:any,selector:string)=>page.locator(selector).evaluate((el:any)=>(el as HTMLElement).click());
+const click=(page:any,selector:string)=>page.locator(selector).click();
 
 test('a selected company travels from Heartmere into Briar March and survives reload',async({page})=>{
  test.setTimeout(180000);const errors:string[]=[];page.on('pageerror',error=>errors.push(error.message));

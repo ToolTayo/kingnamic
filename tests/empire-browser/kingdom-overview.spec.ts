@@ -71,4 +71,63 @@ test('Kingdom Overview manages captured and founded settlements, real garrisons,
  await page.setViewportSize({width:390,height:844});await expect(page.locator('.kingdom-overview')).toContainText('Kingdom overview');const widths=await page.evaluate(()=>({viewport:innerWidth,document:document.documentElement.scrollWidth,panel:document.querySelector('#panel')?.scrollWidth,client:document.querySelector('#panel')?.clientWidth}));expect(widths.document).toBeLessThanOrEqual(widths.viewport);await page.screenshot({path:'test-results/empire-browser/kingdom-overview-mobile.png',fullPage:false});
 });
 
+test('settlement rename keeps typed text through live overview refreshes',async({page})=>{
+ await page.goto('/');await page.locator('#start').click();await pause(page);await page.locator('#tab-empire').click();
+ const name=page.locator('.kingdom-settlement.active .kingdom-name');await name.locator('summary').click();
+ await page.evaluate(()=>{const rt=(window as any).__KINGNAMIC__.runtime;rt.state.resources.wood+=1;});
+ await page.waitForTimeout(1250);
+ expect(await name.evaluate((el:any)=>el.open)).toBe(true);
+ const input=name.locator('input');await input.fill('A name in progress');const inputHandle=await input.elementHandle();if(!inputHandle)throw new Error('Settlement name field is missing.');
+ // Let the 250 ms panel refresh observe a changed live resource value while the text field stays focused.
+ await page.evaluate(()=>{const rt=(window as any).__KINGNAMIC__.runtime;rt.state.resources.stone+=1;});
+ await page.waitForTimeout(1250);
+ expect(await inputHandle.evaluate((el:any)=>el.isConnected)).toBe(true);
+ expect(await input.inputValue()).toBe('A name in progress');
+ await name.locator('button[data-rename-settlement]').click();
+ expect((await read(page)).buildings.find((b:any)=>b.kind==='hearth'&&b.owner!=='rival').name).toBe('A name in progress');
+});
+
+test('live overview refresh keeps a pressed management control attached',async({page})=>{
+ await page.goto('/');await page.locator('#start').click();await pause(page);await page.locator('#tab-empire').click();
+ const build=page.locator('.kingdom-settlement.active [data-kingdom-build]');await build.scrollIntoViewIfNeeded();
+ const handle=await build.elementHandle();if(!handle)throw new Error('Build defenses control is missing.');
+ const box=await build.boundingBox();if(!box)throw new Error('Build defenses control is not visible.');
+ await page.mouse.move(box.x+box.width/2,box.y+box.height/2);await page.mouse.down();
+ expect(await handle.evaluate((el:any)=>el.isConnected)).toBe(true);
+ await page.evaluate(()=>{const rt=(window as any).__KINGNAMIC__.runtime;rt.state.resources.wood+=1;});
+ await page.waitForTimeout(1250);
+ expect(await handle.evaluate((el:any)=>el.isConnected)).toBe(true);
+ await page.mouse.up();await expect(page.locator('#tab-build')).toHaveClass(/active/);
+});
+
+test('Empire refresh keeps Mossgate capture blockers current without detaching the action',async({page})=>{
+ await page.addInitScript(()=>{
+  const schedule=window.setInterval.bind(window),audit:any={delay:null,count:0,lastAt:0};
+  (window as any).__panelRefreshAudit=audit;
+  window.setInterval=((handler:TimerHandler,timeout?:number,...args:any[])=>{
+   if(timeout!==250)return schedule(handler,timeout,...args);
+   audit.delay=timeout;
+   return schedule(()=>{audit.count++;audit.lastAt=performance.now();if(typeof handler==='function')handler();},timeout,...args);
+  }) as typeof window.setInterval;
+ });
+ await page.goto('/');await page.locator('#start').click();await pause(page);await page.locator('#tab-empire').click();
+ await page.evaluate(()=>{
+  const rt=(window as any).__KINGNAMIC__.runtime,s=rt.state,hero=s.units.find((u:any)=>['warden','ranger','spearman','scout'].includes(u.kind));
+  if(!hero)throw new Error('A real soldier is required for the capture-range fixture.');
+  rt.act({type:'commander-appoint',id:hero.id});
+  s.units=s.units.filter((u:any)=>['warden','ranger','spearman','scout'].includes(u.kind));
+  s.region='march';s.speed=0;s.infection=[];s.corpses=[];
+  s.march={seen:[],rescued:[],secured:false,rewarded:false,incursion:0,warning:0,rival:{id:'mossgate',name:'Mossgate',faction:'The Gloamward',status:'occupied',remaining:0,reserve:0,casualties:100,warning:0}};
+  Object.assign(hero,{x:47,y:29,target:{x:47,y:29},anchor:{x:47,y:29},order:'hold'});rt.onChange();
+ });
+ const capture=page.locator('#capture-stronghold'),handle=await capture.elementHandle();expect(handle).toBeTruthy();await expect(capture).toBeEnabled();
+ expect(await page.evaluate(()=>((window as any).__panelRefreshAudit).delay)).toBe(250);
+ await page.waitForFunction(()=>{const a=(window as any).__panelRefreshAudit;return a.count>1&&performance.now()-a.lastAt<30;},null,{timeout:5000});
+ await page.evaluate(()=>{const rt=(window as any).__KINGNAMIC__.runtime,h=rt.world.units.find((u:any)=>u.id===rt.world.commander?.id);Object.assign(h,{x:65,y:40,target:{x:65,y:40},anchor:{x:65,y:40},order:'hold'});});
+ await expect(capture).toBeDisabled({timeout:800});await expect(page.locator('#capture-stronghold + .fine-print')).toContainText('within six tiles');
+ expect(await handle!.evaluate((el:any)=>el.isConnected)).toBe(true);
+ await page.evaluate(()=>{const rt=(window as any).__KINGNAMIC__.runtime,h=rt.world.units.find((u:any)=>u.id===rt.world.commander?.id);Object.assign(h,{x:47,y:29,target:{x:47,y:29},anchor:{x:47,y:29},order:'hold'});});
+ await expect(capture).toBeEnabled({timeout:800});await capture.click();expect((await read(page)).march.rival.status).toBe('captured');
+});
+
 async function armyView(state:any,id:number){return state.units.find((u:any)=>u.id===id&&['warden','ranger','spearman','scout'].includes(u.kind));}

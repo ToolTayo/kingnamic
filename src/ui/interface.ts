@@ -25,6 +25,49 @@ import { available, commandableIds } from '../game/army';
 import { nextIllnessDeadline } from '../game/disease';
 const escape = (str: string): string => str.replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]!));
 const resourceIcon: Record<keyof Resources, string> = { wood: 'wood', stone: 'crown', food: 'wheat', herbs: 'herb' };
+const panelIdentityAttributes = ['data-settlement', 'data-settlement-focus', 'data-kingdom-alert', 'data-kingdom-company', 'data-kingdom-defend', 'data-kingdom-recall', 'data-kingdom-build', 'data-kingdom-repair', 'data-rename-settlement', 'data-claim', 'data-focus', 'data-tab', 'data-weapon', 'data-approach', 'data-patrol', 'data-landmark', 'data-inspect', 'data-person-focus', 'data-remains-focus'] as const;
+function panelNodeKey(node: Node): string | null {
+  if (!(node instanceof Element)) return null;
+  if (node.id) return `#${node.id}`;
+  const identity = panelIdentityAttributes.filter(attribute => node.hasAttribute(attribute)).map(attribute => `${attribute}:${node.getAttribute(attribute)}`);
+  if (!identity.length) return null;
+  const settlement = node.closest<HTMLElement>('[data-settlement]')?.dataset.settlement ?? node.getAttribute('data-settlement-id') ?? '';
+  return `${node.localName}:${settlement}:${identity.join('|')}`;
+}
+function compatiblePanelNodes(current: Node, next: Node): boolean {
+  return current.nodeType === next.nodeType && (current.nodeType !== Node.ELEMENT_NODE || (current as Element).localName === (next as Element).localName);
+}
+function reconcilePanelNode(current: Node, next: Node): void {
+  if (current.nodeType === Node.TEXT_NODE || current.nodeType === Node.COMMENT_NODE) {
+    if (current.nodeValue !== next.nodeValue) current.nodeValue = next.nodeValue;
+    return;
+  }
+  if (!(current instanceof Element) || !(next instanceof Element)) return;
+  const wasOpen = current instanceof HTMLDetailsElement ? current.open : null;
+  const active = current.ownerDocument.activeElement;
+  for (const attribute of [...current.attributes]) if (!next.hasAttribute(attribute.name)) current.removeAttribute(attribute.name);
+  for (const attribute of [...next.attributes]) if (current.getAttribute(attribute.name) !== attribute.value) current.setAttribute(attribute.name, attribute.value);
+  reconcilePanelChildren(current, next);
+  if (current instanceof HTMLInputElement && next instanceof HTMLInputElement && active !== current) current.value = next.value;
+  else if (current instanceof HTMLTextAreaElement && next instanceof HTMLTextAreaElement && active !== current) current.value = next.value;
+  else if (current instanceof HTMLSelectElement && next instanceof HTMLSelectElement && active !== current) current.value = next.value;
+  if (wasOpen !== null && current instanceof HTMLDetailsElement) current.open = wasOpen;
+}
+function reconcilePanelChildren(current: Node, next: Node): void {
+  const previous = [...current.childNodes], used = new Set<Node>(), keyed = new Map<string, Node>();
+  for (const child of previous) { const key = panelNodeKey(child); if (key) keyed.set(key, child); }
+  const desired: Node[] = [];
+  [...next.childNodes].forEach((newChild, index) => {
+    const key = panelNodeKey(newChild);
+    let match = key ? keyed.get(key) : previous[index];
+    if (match && (used.has(match) || panelNodeKey(match) !== key || !compatiblePanelNodes(match, newChild))) match = undefined;
+    if (!match && !key) match = previous.find(candidate => !used.has(candidate) && !panelNodeKey(candidate) && compatiblePanelNodes(candidate, newChild));
+    if (match) { used.add(match); reconcilePanelNode(match, newChild); desired.push(match); }
+    else desired.push(newChild.cloneNode(true));
+  });
+  desired.forEach((child, index) => { if (current.childNodes[index] !== child) current.insertBefore(child, current.childNodes[index] ?? null); });
+  for (const child of [...current.childNodes]) if (!desired.includes(child)) child.remove();
+}
 export class Interface {
   private rt: Runtime;
   private scene: () => WorldScene;
@@ -50,9 +93,9 @@ export class Interface {
     for (const kind of Object.keys(BUILDINGS)) this.thumbs[kind] = buildingArt(kind as BuildingKind).toDataURL();
     this.mount(); this.bind(); this.render(); this.onboard();
     rt.onChange = () => this.render(); rt.onSound = kind => this.beep(kind);
-    // Keep live derived summaries useful without replacing interactive controls
-    // several times per second. Commands still render immediately via onChange.
-    window.setInterval(() => this.render(), 1000);
+    // Refresh live blockers four times a second while reconciliation preserves interactive controls.
+    // Commands still render immediately via onChange.
+    window.setInterval(() => this.render(), 250);
   }
   private mount(): void {
     document.querySelector('#app')!.innerHTML = `
@@ -82,6 +125,7 @@ export class Interface {
     this.panel = document.querySelector('#panel')!; this.dialog = document.querySelector('#dialog')!;
   }
   private bind(): void {
+    this.panel.addEventListener('focusout',e=>{if((e.target instanceof HTMLInputElement||e.target instanceof HTMLTextAreaElement||e.target instanceof HTMLSelectElement)&&!(e.relatedTarget instanceof Node&&this.panel.contains(e.relatedTarget)))queueMicrotask(()=>this.render());});
     document.addEventListener('input', e=>{if((e.target as HTMLElement).id==='squad-name')this.rt.squadName=(e.target as HTMLInputElement).value;});
     document.addEventListener('change',e=>{const el=e.target as HTMLSelectElement;if(el.id==='army-class-select'&&el.value){const kind=el.value as SoldierKind;this.rt.selectUnits(army(this.rt.world).filter(u=>u.kind===kind).map(u=>u.id));}});
     document.addEventListener('click', e => {
@@ -275,14 +319,29 @@ export class Interface {
     else if (this.tab === 'territories') html = this.territoriesPanel();
     else if (this.tab === 'chronicle') html = this.chroniclePanel();
     else html = this.buildPanel();
-    if (html !== this.lastHtml && document.activeElement?.id !== 'squad-name') { const focused = this.panel.contains(document.activeElement) ? document.activeElement?.id : null; this.panel.innerHTML = html; this.lastHtml = html; if (focused) document.getElementById(focused)?.focus({ preventScroll: true }); }
+    const active = document.activeElement;
+    const editingPanelControl = this.panel.contains(active) && (active instanceof HTMLInputElement || active instanceof HTMLTextAreaElement || active instanceof HTMLSelectElement);
+    if (html !== this.lastHtml && !editingPanelControl) {
+      const focused = active instanceof HTMLElement && this.panel.contains(active) ? active.id : '';
+      const summaries = [...this.panel.querySelectorAll<HTMLElement>('details > summary')];
+      const focusedSummary = active instanceof HTMLElement ? summaries.indexOf(active) : -1;
+      const template = document.createElement('template');template.innerHTML = html;
+      reconcilePanelChildren(this.panel, template.content);
+      this.lastHtml = html;
+      if (focused) document.getElementById(focused)?.focus({ preventScroll: true });
+      else if (focusedSummary >= 0) this.panel.querySelectorAll<HTMLElement>('details > summary')[focusedSummary]?.focus({ preventScroll: true });
+    }
     document.querySelector('#app')!.classList.toggle('targeting',this.rt.rallyMode||this.rt.editingId!==null);
     document.querySelector('#app')!.classList.toggle('commander-mode',this.rt.heroMode);document.querySelector('#hero-pad')?.classList.toggle('hidden',!this.rt.heroMode||!!s.expedition);
     const placement = document.querySelector('#placement-bar')!; placement.classList.toggle('hidden', !this.rt.placement && !this.rt.rallyMode);
     if (this.rt.placement || this.rt.rallyMode) {
       const point = this.rt.placementPreview, error = point && this.rt.placement ? this.rt.placementError(point) : null;
       const content = `${icon(this.rt.rallyMode ? 'flag' : 'hammer')}<span>${this.rt.rallyMode ? (this.rt.orderMode??'move').toUpperCase()+' · '+(this.rt.selectedIds.length||'All')+' soldiers · choose target' : `${this.rt.editingId!==null?'Moving':'Placing'} ${BUILDINGS[this.rt.placement!].name}`}${point ? `<small>${error ?? (this.rt.editingId!==null?'Valid move · no cost':'Ready to build')}</small>` : ''}</span>${point ? `<button class="primary" id="confirm-placement" ${error ? 'disabled' : ''}>${this.rt.editingId!==null?'Confirm move':'Build here'}</button>` : ''}${this.rt.placement&&isBarrier({kind:this.rt.placement})?`<button id="rotate-placement" title="Two grid axes; walls join adjacent segments">Rotate ↻ <small>${this.rt.placementRotation?'↙ ↗':'↖ ↘'} · R</small></button>`:''}<button id="cancel-placement">Cancel <kbd>Esc</kbd></button>`;
-      if (placement.innerHTML !== content) placement.innerHTML = content;
+      if (this.htmlCache.get('placement-bar') !== content) {
+        const template = document.createElement('template'); template.innerHTML = content;
+        reconcilePanelChildren(placement, template.content);
+        this.htmlCache.set('placement-bar', content);
+      }
     }
     const reward=document.querySelector('#bounty-feedback')!;reward.textContent=this.rt.bountyFeedback;reward.classList.toggle('hidden',performance.now()>this.rt.bountyFeedbackUntil);
     const toast = document.querySelector('#toast')!; toast.className = `toast ${this.rt.messageTone} ${performance.now() > this.rt.messageUntil ? 'hidden' : ''}`; if (toast.textContent !== this.rt.message) toast.textContent = this.rt.message;
