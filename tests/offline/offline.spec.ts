@@ -102,7 +102,11 @@ test('production expedition survives an offline reload and extracts without dupl
   await expect(page.locator('#world-title')).toHaveText('Broken Standard');
   const resumed = await page.evaluate(() => JSON.parse(localStorage.getItem('kingnamic.save.v2')!));
   expect(resumed.expedition).toEqual(snapshot.expedition);
-  await page.locator('#expedition-retreat').click(); await page.locator('#expedition-extract').click();
+  // Retreat clears neither nearby infected nor the extraction rule. Let the live
+  // fighting withdrawal resolve until the entry is safe, then extract while paused.
+  await page.locator('#expedition-retreat').click(); await page.locator('#speed-1').click();
+  await expect(page.locator('#expedition-extract')).toBeEnabled({timeout:60000});
+  await page.locator('#pause').click(); await page.locator('#expedition-extract').click();
   await expect(page.locator('#panel')).toContainText('A fighting withdrawal');
   await page.locator('#save').click(); await page.reload(); await page.locator('#start').click();
   const returned = await page.evaluate(() => JSON.parse(localStorage.getItem('kingnamic.save.v2')!));

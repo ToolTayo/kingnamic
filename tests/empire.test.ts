@@ -138,6 +138,14 @@ it('recovers command at home after a complete regional wipe without returning de
 });
 
 describe('Gloamward stronghold and multi-faction combat',()=>{
+ it('retains exact fallen soldier identities after clean corpse decay and save reload',()=>{
+  const s=cleared(),soldier=army(s)[0];soldier.hp=0;combatStep(s,.1,false);
+  expect(army(s).some(u=>u.id===soldier.id)).toBe(false);expect(s.fallenIds).toContain(soldier.id);expect(s.corpses?.some(c=>c.personId===soldier.id)).toBe(true);
+  plagueStep(s,12.1);expect(s.corpses?.some(c=>c.personId===soldier.id)).toBe(false);const saved=reload(s);
+  expect(saved.fallenIds).toContain(soldier.id);expect(saved.units.some(u=>u.id===soldier.id)).toBe(false);
+  const resurrected=structuredClone(saved),copy={...soldier,hp:1};resurrected.units.push(copy);expect(decode(JSON.stringify(resurrected))).toBeNull();
+  const duplicated=structuredClone(saved);duplicated.empire!.reserve.fallenIds=[soldier.id];expect(decode(JSON.stringify(duplicated))).toBeNull();
+ });
  it('reveals a deterministic fortified garrison and round-trips its reserve ledger',()=>{
   const s=cleared(),hero=army(s).find(u=>u.id===s.commander!.id)!;Object.assign(hero,{x:47,y:29});empireStep(s,.1);
   expect(s.march!.rival).toMatchObject({id:'mossgate',status:'occupied',remaining:100,reserve:80,casualties:0});expect(rivals(s)).toHaveLength(20);expect(s.buildings.filter(b=>b.owner==='rival')).toHaveLength(33);expect(armyCapacity(s)).toBe(24);expect(capacity(s)).toBe(18);

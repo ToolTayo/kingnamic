@@ -106,6 +106,9 @@ export function decode(raw: string, battlefield = false,parked=false): State | n
       e.world = world;
     }
     if(s.commander&&s.commander.id>=s.nextId)return null;
+    if(s.fallenIds!==undefined&&(!Array.isArray(s.fallenIds)||s.fallenIds.length>MAX_RESIDENTS+MAX_UNITS||!s.fallenIds.every((id:any)=>integer(id,1,s.nextId-1))||new Set(s.fallenIds).size!==s.fallenIds.length))return null;
+    if(s.fallenIds===undefined){const departedIds=[...new Set([...(s.corpses??[]).map((c:any)=>c.personId),...s.units.filter((u:any)=>u.reanimatedFrom!==undefined).map((u:any)=>u.reanimatedFrom)])];if(departedIds.length)s.fallenIds=departedIds;}
+    if((s.fallenIds??[]).some((id:number)=>s.units.some((u:any)=>isFriendly(u)&&u.id===id)||(s.residents??[]).some((r:any)=>r.id===id)))return null;
     if(s.region&&s.march.secured&&s.buildings.filter((b:any)=>b.kind==='hearth').length<1)return null;
     if(s.empire!==undefined){
       if(!object(s.empire)||!finite(s.empire.elapsed,0,1e9)||!object(s.empire.reserve)||s.empire.reserve.region===s.region)return null;
@@ -118,6 +121,8 @@ export function decode(raw: string, battlefield = false,parked=false): State | n
       const living=new Set([...s.units,...s.residents,...other.units,...(other.residents??[]),...(away?.units??[])].map(v=>v.id));
       const dead=[...departed,...(other.corpses??[]).map(c=>c.personId),...other.units.filter(u=>u.reanimatedFrom!==undefined).map(u=>u.reanimatedFrom!),...(away?.corpses??[]).map(c=>c.personId),...(away?.units??[]).filter(u=>u.reanimatedFrom!==undefined).map(u=>u.reanimatedFrom!)];
       if(new Set(dead).size!==dead.length||dead.some(id=>living.has(id)))return null;
+      const fallen=[...(s.fallenIds??[]),...(other.fallenIds??[]),...(away?.fallenIds??[])];
+      if(new Set(fallen).size!==fallen.length||fallen.some(id=>living.has(id)))return null;
       other.resources=s.resources;other.squads=s.squads;s.empire.reserve=other;
     }
     s.economyRevision=1;s.effects = []; return s as State;

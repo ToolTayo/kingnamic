@@ -62,6 +62,8 @@ export function cure(s: State, count: number, ids?: number[]): number {
 }
 export function recordDeath(s: State, person: Resident | Unit): void {
   if (person.hp > 0 || 'kind' in person && !isFriendly(person) && !isRival(person)) return;
+  s.fallenIds ??= [];
+  if (!s.fallenIds.includes(person.id)) s.fallenIds.push(person.id);
   s.corpses ??= [];
   if (s.corpses.some(c => c.personId === person.id)) return;
   // Only a confirmed infection can animate a corpse. Bite exposure, soil, and

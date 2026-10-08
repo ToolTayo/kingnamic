@@ -1,5 +1,6 @@
 import {test,expect} from '@playwright/test';
 import {writeFile} from 'node:fs/promises';
+if(process.env.KINGNAMIC_HARDWARE_PROFILE==='1')test.use({launchOptions:{args:['--enable-gpu','--use-gl=angle','--use-angle=d3d11']}});
 
 test('attribute remaining 200-soldier stalls across UI, scene, simulation, saves and WebGL render',async({page})=>{
  await page.goto('/');await page.bringToFront();await page.locator('#start').click();await page.evaluate(async()=>{

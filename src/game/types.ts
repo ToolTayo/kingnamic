@@ -49,6 +49,8 @@ export interface State {
   completed: string[]; outcome: 'playing' | 'won' | 'lost'; tutorialSeen: boolean;
   theatre?: 'expedition'; expedition?: Expedition; lostBattalions?: BattalionRecord;
   residents?: Resident[]; corpses?: Corpse[]; squads?: Squad[]; suppliesTaint?: number;
+  // Permanent human casualty identities survive corpse decay and regional travel.
+  fallenIds?: number[];
   musterClock?: number; endless?: boolean; frontierClock?: number;
   economyRevision?: 1; biteRulesRevision?: 1; bountyPaid?: number; bountyTotal?: number;
   region?: 'march'; march?: March; empire?: Empire; commander?: Commander;
