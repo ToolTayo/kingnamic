@@ -9,14 +9,15 @@ export type ExpeditionApproach = 'ridge' | 'ford';
 export type Formation = 'line' | 'protected' | 'loose' | 'column';
 export type UnitKind = SoldierKind | 'hollow' | 'runner' | 'brute';
 export type TerritoryId = 'hearthmere' | 'pinewatch' | 'greybank' | 'fen';
+export type StrongholdId = 'mossgate' | 'tallowmere';
 export type Terrain = 'grass' | 'forest' | 'rock' | 'water' | 'road' | 'marsh' | 'heath' | 'field';
 export interface Point { x: number; y: number }
 export interface Tile extends Point { terrain: Terrain; territory: TerritoryId | 'wild'; height: number; variant: number }
-export interface Building extends Point { id: number; kind: BuildingKind; hp: number; maxHp: number; level: number; progress: number; cooldown: number; rotation?: 0 | 1; name?: string; owner?: 'rival' | 'player' }
+export interface Building extends Point { id: number; kind: BuildingKind; hp: number; maxHp: number; level: number; progress: number; cooldown: number; rotation?: 0 | 1; name?: string; owner?: 'rival' | 'player'; rivalId?: StrongholdId }
 export interface Unit extends Point {
   id: number; kind: UnitKind; hp: number; maxHp: number; cooldown: number;
   target: Point; path: Point[]; repath: number; attackFlash: number; order?: ArmyOrder;
-  injury?: number; origin?: 'party' | 'battalion'; faction?: 'rival';
+  injury?: number; origin?: 'party' | 'battalion'; faction?: 'rival'; rivalId?: StrongholdId;
   exposure?: number; exposureSourceId?: number; immune?: number; squadId?: number; formation?: Formation;
   anchor?: Point; patrol?: { a: Point; b: Point; leg: 0 | 1 }; focus?: number;
   homeId?: number; reanimatedFrom?: number; reanimatedBy?: number;
@@ -35,8 +36,8 @@ export interface Effect extends Point { id: number; kind: 'hit' | 'arrow' | 'hea
 export interface Stats { slain: number; lost: number; built: number; nights: number; cured: number; claimed: number }
 export interface Commander { id:number; weapon:'sword'|'spear'|'bow'; xp:number }
 export interface CommanderInput { walk:Point; attack:boolean; aim?:Point }
-export interface RivalStronghold { id:'mossgate'; name:string; faction:string; status:'unseen'|'occupied'|'captured'; remaining:number; reserve:number; casualties:number; warning:number; leaderId?:number }
-export interface March { seen:string[]; rescued?:string[]; secured:boolean; rewarded:boolean; incursion:number; warning:number; rival?:RivalStronghold }
+export interface RivalStronghold { id:StrongholdId; name:string; faction:string; status:'unseen'|'occupied'|'captured'; remaining:number; reserve:number; casualties:number; warning:number; leaderId?:number; patrolVariant?:0|1|2 }
+export interface March { seen:string[]; rescued?:string[]; rumors?:string[]; secured:boolean; rewarded:boolean; incursion:number; warning:number; rival?:RivalStronghold; weirward?:RivalStronghold }
 export interface Empire { reserve:State; elapsed:number }
 export interface State {
   version: 2; seed: number; rng: number; time: number; day: number; phaseTime: number;
@@ -60,7 +61,7 @@ export type Command =
   | { type:'commander-appoint'; id?:number }
   | { type:'commander-weapon'; weapon:'sword'|'spear'|'bow' }
   | { type:'settlement-rename'; id:number; name:string }
-  | { type:'stronghold-capture' }
+  | { type:'stronghold-capture'; id?:StrongholdId }
   | { type:'travel'|'gather-company'; ids:number[] }
   | { type:'home-watch' }
 

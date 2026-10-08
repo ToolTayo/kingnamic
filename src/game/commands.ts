@@ -60,7 +60,7 @@ function applyCommand(s: State, c: Command): CommandResult {
     if(!b||name.length<2)return result(false,'Choose a settlement and give it a name of at least two characters.');
     b.name=name;log(s,`${name} is entered in the kingdom ledger.`,'good');return result(true,`${name} named.`);
   }
-  if(c.type==='stronghold-capture')return captureStronghold(s);
+  if(c.type==='stronghold-capture')return captureStronghold(s,c.id);
   if (c.type === 'expedition-launch') {if(s.region)return result(false,'Depart for the Broken Standard from Hearthmere.');return launchExpedition(s, c.ids, c.approach);}
   if (c.type === 'expedition-share' || c.type === 'expedition-retreat' || c.type === 'expedition-extract') return expeditionAction(s, c.type);
   if (s.expedition) {

@@ -65,7 +65,7 @@ export function sceneryArt(kind: 'forest' | 'rock' | 'marsh', variant = 0): HTML
   if (kind === 'marsh') for (let i = 0; i < 4; i++) line(c, [x + i * 3, y, x + i * 3 - 2, y - 12 - i % 2 * 4], '#4a6854', 1.5);
   return cv;
 }
-export type LandmarkArtKind='village'|'grove'|'ruin'|'ford'|'shrine'|'homestead'|'camp'|'watch';
+export type LandmarkArtKind='village'|'grove'|'ruin'|'ford'|'shrine'|'homestead'|'camp'|'watch'|'keep';
 export function landmarkArt(kind:LandmarkArtKind):HTMLCanvasElement{
  const [cv,c]=canvas(112,128),x=56,y=106;
  ellipse(c,x,y,42,13,'#172d2730');
@@ -86,6 +86,17 @@ export function landmarkArt(kind:LandmarkArtKind):HTMLCanvasElement{
    ellipse(c,x,y+5,41,12,'#4d7778');
    for(let i=-2;i<=2;i++)ellipse(c,x+i*13,y+2+(i%2)*3,6,3,['#aaa991','#c1b99d','#868b7b'][Math.abs(i)%3]);
    line(c,[x-35,y-10,x-21,y-9,x-11,y-7],'#c7b38b',3);line(c,[x+15,y+10,x+27,y+11,x+39,y+15],'#c7b38b',3);
+ }else if(kind==='keep'){
+   // Tallowmere's squat causeway keep: a gatehouse flanked by twin towers,
+   // flood marks, and the Compact's warm signal lamps.
+   poly(c,[x-42,y+8,x-35,y-20,x,y-39,x+37,y-20,x+43,y+8],'#66776a','#414f46');
+   box(c,x-27,y-10,19,18,30,['#9caa91','#71816f','#c0bda0']);
+   box(c,x+27,y-10,19,18,30,['#9caa91','#71816f','#c0bda0']);
+   box(c,x,y-7,30,22,42,['#b2b69b','#7e8b78','#d0c9a9']);
+   roof(c,x-27,y-40,23,20,17,['#6d7e6c','#485d52']);roof(c,x+27,y-40,23,20,17,['#6d7e6c','#485d52']);
+   poly(c,[x-9,y+5,x-9,y-15,x,y-22,x+9,y-15,x+9,y+7],'#514b3d','#b19d6b');
+   line(c,[x-38,y-1,x-25,y+3,x-13,y-1],'#85917a',2);line(c,[x+14,y-1,x+27,y+3,x+39,y-1],'#85917a',2);
+   banner(c,x+2,y-60,'#c2a66d');ellipse(c,x-27,y-33,4,3,'#e7bd70');ellipse(c,x+27,y-33,4,3,'#e7bd70');
  }else if(kind==='shrine'){
    poly(c,[x-19,y+7,x-15,y-34,x-5,y-51,x+6,y-40,x+10,y+5],'#aaa991','#626a5a');
    line(c,[x-4,y-28,x+2,y-35,x+8,y-28],'#d1c59f',2);

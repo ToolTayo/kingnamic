@@ -1,5 +1,6 @@
 import { MAP_H, MAP_W } from './config';
 import type { Point, Terrain, TerritoryId, Tile, State } from './types';
+export const STRONGHOLD_CENTERS={mossgate:{x:47,y:29},tallowmere:{x:37,y:36}} as const;
 export function hash(x: number, y: number): number { return ((Math.imul(x + 63, 374761393) ^ Math.imul(y + 71, 668265263)) >>> 0) / 4294967296; }
 export function territoryAt(x: number, y: number): TerritoryId | 'wild' {
   if (x >= 9 && x <= 20 && y >= 7 && y <= 18) return 'hearthmere';
@@ -17,7 +18,7 @@ function followsRoad(x:number,y:number,points:Point[],width=.58):boolean{
   return false;
 }
 const homeRoad:Point[]=[{x:14,y:24},{x:14,y:31},{x:19,y:37},{x:30,y:41},{x:40,y:40},{x:48,y:33},{x:51,y:24},{x:48,y:17},{x:41,y:14},{x:29,y:14}];
-const marchRoad:Point[]=[{x:14,y:24},{x:14,y:32},{x:21,y:38},{x:33,y:39},{x:43,y:34},{x:49,y:27},{x:49,y:18},{x:43,y:14},{x:29,y:14}];
+const marchRoad:Point[]=[{x:14,y:24},{x:14,y:32},{x:21,y:38},{x:29,y:39},{x:32,y:42},{x:41,y:42},{x:44,y:38},{x:43,y:34},{x:49,y:27},{x:49,y:18},{x:43,y:14},{x:29,y:14}];
 export const TILES: Tile[] = Array.from({ length: MAP_W * MAP_H }, (_, i) => {
   const x = i % MAP_W, y = Math.floor(i / MAP_W), n = hash(x, y), territory = territoryAt(x, y);
   let terrain: Terrain = 'grass';
@@ -62,9 +63,16 @@ export const MARCH_TILES:Tile[]=TILES.map(t=>{
     if(t.x>25&&t.x<42&&t.y>22&&t.y<35&&n>.2)terrain='field';
     if(t.x>30&&t.y<13&&n>.3)terrain='heath';
     if(Math.abs(t.x-riverX)<1.35&&t.y>20&&t.y<45)terrain='water';
-    if(followsRoad(t.x,t.y,marchRoad))terrain='road';
+    if(followsRoad(t.x,t.y,marchRoad)||followsRoad(t.x,t.y,[{x:29,y:39},{x:28,y:44}],.56))terrain='road';
   }
-  return {...t,terrain,territory:'hearthmere',variant:n,height:t.y<9?1:0};
+  // The causeway rises over the southern reed-river; Tallowmere sits on a
+  // dry knoll just beyond it. Keep its approaches legible and buildable while
+  // letting the surrounding fen close back in around the cleared ground.
+  const keep=Math.hypot(t.x-STRONGHOLD_CENTERS.tallowmere.x,t.y-STRONGHOLD_CENTERS.tallowmere.y),causeway=followsRoad(t.x,t.y,[{x:27,y:39},{x:30,y:39},{x:33,y:39}],.7);
+  if(keep<5.8&&terrain!=='road'&&terrain!=='water')terrain=keep>3.5&&n>.58?'field':'grass';
+  else if(keep>=5.8&&keep<8.5&&t.y>37&&terrain==='grass'&&n>.38)terrain='marsh';
+  const height=t.y<9?1:keep<2.4?1.2:keep<4?.65:causeway?.35:0;
+  return {...t,terrain,territory:'hearthmere',variant:n,height};
 });
 export const tilesFor=(s?:{region?:State['region']})=>s?.region==='march'?MARCH_TILES:TILES;
 export function tileAt(x: number, y: number,s?:{region?:State['region']}): Tile | undefined { if(x<0||y<0||x>=MAP_W||y>=MAP_H)return undefined;return tilesFor(s)[Math.floor(y)*MAP_W+Math.floor(x)]; }

@@ -1,14 +1,14 @@
 import { BUILDINGS, LEGACY_MAP_H, LEGACY_MAP_W, MAP_H, MAP_W, MAX_BUILDINGS, MAX_UNITS, MAX_RESIDENTS, MAX_ARMY, TERRITORIES, UNITS } from './config';
 import { isFriendly, isRival, newGame } from './state';
 import { ensureResidents, civilianCases, assignResidentJobs } from './population';
-import type { State } from './types';
+import type { RivalStronghold, State } from './types';
 export const SAVE_KEY = 'kingnamic.save.v2', BACKUP_KEY = 'kingnamic.backup.v2';
 export interface StoragePort { getItem(key: string): string | null; setItem(key: string, value: string): void; removeItem(key: string): void }
 const finite = (n: unknown, min: number, max: number): n is number => typeof n === 'number' && Number.isFinite(n) && n >= min && n <= max;
 const integer = (n: unknown, min: number, max: number): n is number => finite(n, min, max) && Number.isInteger(n);
 const object = (v: unknown): v is Record<string, any> => !!v && typeof v === 'object' && !Array.isArray(v);
 const point = (v: unknown): boolean => object(v) && finite(v.x, 0, MAP_W - 1) && finite(v.y, 0, MAP_H - 1);
-const discoveryIds=['village','grove','ruins','splitford','pilgrim-shrine','mossgate','bogstead','wayfarer-camp','northwatch'];
+const discoveryIds=['village','grove','ruins','splitford','pilgrim-shrine','mossgate','bogstead','wayfarer-camp','saltwick-causeway','tallowmere','northwatch'];
 export function decode(raw: string, battlefield = false,parked=false): State | null {
   try {
     if (raw.length > 4_000_000) return null;
@@ -16,8 +16,13 @@ export function decode(raw: string, battlefield = false,parked=false): State | n
     if (!object(s)) return null;
     const migrateBiteRules=s.biteRulesRevision!==1;
     if(s.region!==undefined&&s.region!=='march'||battlefield&&(s.region||s.empire||s.commander)||parked&&(s.empire||s.expedition||s.commander)||s.region&&!s.empire&&!parked)return null;
-    if(s.region){const m=s.march;if(!object(m)||!Array.isArray(m.seen)||m.seen.length>discoveryIds.length||new Set(m.seen).size!==m.seen.length||m.seen.some((id:any)=>!discoveryIds.includes(id))||m.rescued!==undefined&&(!Array.isArray(m.rescued)||m.rescued.length>2||new Set(m.rescued).size!==m.rescued.length||m.rescued.some((id:any)=>!['mossgate','wayfarer-camp'].includes(id)||!m.seen.includes(id)))||typeof m.secured!=='boolean'||typeof m.rewarded!=='boolean'||!finite(m.incursion,0,1e9)||!finite(m.warning,0,8))return null;}else if(s.march!==undefined)return null;
-    if(s.region&&s.march.rival!==undefined){const w=s.march.rival;if(!object(w)||w.id!=='mossgate'||w.name!=='Mossgate'||w.faction!=='The Gloamward'||!['unseen','occupied','captured'].includes(w.status)||!integer(w.remaining,0,100)||!integer(w.reserve,0,80)||!integer(w.casualties,0,100)||w.remaining+w.casualties!==100||w.reserve>w.remaining||!finite(w.warning,0,5)||w.leaderId!==undefined&&!integer(w.leaderId,1,1e9)||w.status==='captured'&&(w.remaining!==0||w.reserve!==0))return null;}
+    if(s.region){const m=s.march;if(!object(m)||!Array.isArray(m.seen)||m.seen.length>discoveryIds.length||new Set(m.seen).size!==m.seen.length||m.seen.some((id:any)=>!discoveryIds.includes(id))||m.rescued!==undefined&&(!Array.isArray(m.rescued)||m.rescued.length>2||new Set(m.rescued).size!==m.rescued.length||m.rescued.some((id:any)=>!['mossgate','wayfarer-camp'].includes(id)||!m.seen.includes(id)))||m.rumors!==undefined&&(!Array.isArray(m.rumors)||m.rumors.length>1||new Set(m.rumors).size!==m.rumors.length||m.rumors.some((id:any)=>id!=='weirward'||!m.seen.includes('wayfarer-camp')))||typeof m.secured!=='boolean'||typeof m.rewarded!=='boolean'||!finite(m.incursion,0,1e9)||!finite(m.warning,0,8))return null;}else if(s.march!==undefined)return null;
+    const validStronghold=(w:any,id:'mossgate'|'tallowmere'):w is RivalStronghold=>{const tallowmere=id==='tallowmere';return object(w)&&w.id===id&&w.name===(tallowmere?'Tallowmere':'Mossgate')&&w.faction===(tallowmere?'The Weirward Compact':'The Gloamward')&&['unseen','occupied','captured'].includes(w.status)&&integer(w.remaining,0,tallowmere?150:100)&&integer(w.reserve,0,tallowmere?120:80)&&integer(w.casualties,0,tallowmere?150:100)&&w.remaining+w.casualties===(tallowmere?150:100)&&w.reserve<=w.remaining&&finite(w.warning,0,5)&&(w.leaderId===undefined||integer(w.leaderId,1,1e9))&&(w.patrolVariant===undefined||tallowmere&&integer(w.patrolVariant,0,2))&&!(w.status==='captured'&&(w.remaining!==0||w.reserve!==0));};
+    if(s.region&&s.march.rival!==undefined&&!validStronghold(s.march.rival,'mossgate'))return null;
+    if(s.region&&s.march.weirward!==undefined&&!validStronghold(s.march.weirward,'tallowmere'))return null;
+    // New frontier content is optional on disk; old valid March saves receive
+    // its untouched, seed-stable campaign record during normal decoding.
+    if(s.region){s.march.rumors??=[];s.march.weirward??={id:'tallowmere',name:'Tallowmere',faction:'The Weirward Compact',status:'unseen',remaining:150,reserve:120,casualties:0,warning:0,patrolVariant:((s.seed>>>4)%3) as 0|1|2};}
     if(s.commander!==undefined&&(!object(s.commander)||!integer(s.commander.id,1,1e9)||!['sword','spear','bow'].includes(s.commander.weapon)||!integer(s.commander.xp,0,100)))return null;
     if (battlefield ? s.theatre !== 'expedition' || s.expedition !== undefined || s.lostBattalions !== undefined : s.theatre !== undefined) return null;
     // v1 was the pre-release shape; missing new fields receive explicit defaults.
@@ -42,9 +47,9 @@ export function decode(raw: string, battlefield = false,parked=false): State | n
     if(s.bountyTotal!==undefined&&!finite(s.bountyTotal,0,1e9))return null;
     if (!integer(s.population, 0, 1000) || !object(s.jobs) || !['farmers', 'woodcutters', 'miners', 'healers', 'builders'].every(k => integer(s.jobs[k], 0, 1000))) return null;
     if (!Array.isArray(s.buildings) || s.buildings.length > MAX_BUILDINGS || !s.buildings.every((b: any) => point(b) && integer(b.x, 0, MAP_W - 1) && integer(b.y, 0, MAP_H - 1) && Object.hasOwn(BUILDINGS, b.kind) && integer(b.id, 1, 1e9) && finite(b.hp, 0.001, 100000) && finite(b.maxHp, b.hp, 100000) && integer(b.level, 1, 3) && finite(b.progress, 0, 1) && finite(b.cooldown, 0, 10) && (b.rotation===undefined||[0,1].includes(b.rotation)&&['wall','gate'].includes(b.kind)) && (b.name===undefined||typeof b.name==='string'&&b.name.trim().length>0&&b.name.length<=32))) return null;
-    if(!s.buildings.every((b:any)=>b.owner===undefined||b.owner==='player'&&s.region==='march'&&s.march?.rival?.status==='captured'||b.owner==='rival'&&s.region==='march'&&s.march?.rival?.status==='occupied'))return null;
+    if(!s.buildings.every((b:any)=>b.owner===undefined?b.rivalId===undefined:b.owner==='player'?s.region==='march'&&b.rivalId===undefined:b.owner==='rival'&&s.region==='march'&&(b.rivalId===undefined?s.march?.rival?.status==='occupied':b.rivalId==='tallowmere'?s.march?.weirward?.status==='occupied':b.rivalId==='mossgate'&&s.march?.rival?.status==='occupied')))return null;
     if (!Array.isArray(s.units) || s.units.length > MAX_UNITS || !s.units.every((u: any) => point(u) && Object.hasOwn(UNITS, u.kind) && integer(u.id, 1, 1e9) && finite(u.hp, 0.001, 100000) && finite(u.maxHp, u.hp, 100000) && finite(u.cooldown, 0, 10) && finite(u.repath, -1e9, 120) && finite(u.attackFlash, 0, 1) && point(u.target) && Array.isArray(u.path) && u.path.length <= MAP_W * MAP_H && u.path.every(point))) return null;
-    if(!s.units.every((u:any)=>u.faction===undefined||u.faction==='rival'&&s.region==='march'&&s.march?.rival?.status==='occupied'&&['warden','ranger','spearman','scout'].includes(u.kind)))return null;
+    if(!s.units.every((u:any)=>u.faction===undefined?u.rivalId===undefined:u.faction==='rival'&&s.region==='march'&&['warden','ranger','spearman','scout'].includes(u.kind)&&(u.rivalId===undefined?s.march?.rival?.status==='occupied':u.rivalId==='tallowmere'?s.march?.weirward?.status==='occupied':u.rivalId==='mossgate'&&s.march?.rival?.status==='occupied')))return null;
     if (!s.units.every((u: any) => u.order === undefined || ['move','attack','hunt','defend','patrol','hold','retreat','regroup','escort'].includes(u.order))) return null;
     if(!s.units.every((u:any)=>u.muster===undefined||isFriendly(u)&&typeof u.muster==='boolean'))return null;
     if(!s.units.every((u:any)=>u.commanderCredit===undefined||!isFriendly(u)&&!isRival(u)&&typeof u.commanderCredit==='boolean'))return null;
