@@ -5,7 +5,7 @@ import { command } from '../src/game/commands';
 import { combatStep, waveSize } from '../src/game/combat';
 import { separateCrowd } from '../src/game/crowd';
 import { cure,expose,infect,plagueStep,resolveResidentDeaths } from '../src/game/disease';
-import { armyCapacity } from '../src/game/army';
+import { armyCapacity,assignDestinations,formationSlots } from '../src/game/army';
 import { addResidents,assignResidentJobs } from '../src/game/population';
 import { decode } from '../src/game/persistence';
 import { distance,key,tileAt } from '../src/game/map';
@@ -62,6 +62,21 @@ describe('individual plague lifecycle',()=>{
   });
 });
 describe('persistent independent armies',()=>{
+  it('builds distinct heading-aware line, protected-ranged and two-file column destinations',()=>{
+    const s=empty();for(let i=0;i<12;i++)makeUnit(s,(i<6?'warden':i<8?'spearman':i<11?'ranger':'scout'),8+i%6,8+Math.floor(i/6));const troops=army(s),center={x:24,y:22},heading={x:1,y:0};
+    s.formation='line';const line=formationSlots(s,troops,center,heading);expect(new Set(line.map(p=>`${p.x.toFixed(2)},${p.y.toFixed(2)}`)).size).toBe(troops.length);
+    expect(Math.max(...line.map(p=>p.y))-Math.min(...line.map(p=>p.y))).toBeGreaterThan(2);
+    s.formation='protected';for(const u of troops)u.formation='protected';const protectedSlots=formationSlots(s,troops,center,heading),melee=protectedSlots.filter(p=>!p.rear),bows=protectedSlots.filter(p=>p.rear);
+    expect(melee).toHaveLength(8);expect(bows).toHaveLength(4);expect(Math.min(...bows.map(p=>p.rank))-Math.max(...melee.map(p=>p.rank))).toBeGreaterThanOrEqual(3);
+    s.formation='column';for(const u of troops)u.formation='column';const column=formationSlots(s,troops,center,heading);expect(Math.max(...column.map(p=>p.y))-Math.min(...column.map(p=>p.y))).toBeLessThan(1);
+    for(const u of troops)u.formation='protected';assignDestinations(s,troops,center,'move',undefined,heading);expect(new Set(troops.map(u=>key(u.target))).size).toBe(troops.length);expect(troops.every(u=>u.anchor?.x===u.target.x&&u.anchor?.y===u.target.y)).toBe(true);
+    expect(decode(JSON.stringify(s))?.units.every(u=>u.formation==='protected')).toBe(true);
+  });
+  it('keeps a solo selected ranger on the commanded tile in any formation',()=>{
+    const s=empty(),ranger=makeUnit(s,'ranger',10,10),point={x:21,y:17};ranger.formation='protected';
+    expect(formationSlots(s,[ranger],point,{x:0,y:1})).toEqual([{id:ranger.id,kind:'ranger',rank:0,rear:false,...point}]);
+    assignDestinations(s,[ranger],point,'move',undefined,{x:0,y:1});expect(ranger.target).toEqual(point);
+  });
   it('can demobilize to rebuild the workforce without refunding equipment or healing wounds',()=>{
     const s=newGame();const u=army(s)[0],id=u.id;u.hp=u.maxHp*.8;const resources={...s.resources};
     expect(command(s,{type:'demobilize',ids:[id]}).ok).toBe(true);expect(s.residents!.find(r=>r.id===id)?.hp).toBe(40);expect(s.resources).toEqual(resources);expect(army(s).some(u=>u.id===id)).toBe(false);
@@ -75,6 +90,12 @@ describe('persistent independent armies',()=>{
     const s=empty(),a=makeUnit(s,'warden',10,10),b=makeUnit(s,'ranger',12,10),z=makeUnit(s,'hollow',10,13);command(s,{type:'order',order:'hold',ids:[b.id]});const saved=structuredClone(b);
     expect(command(s,{type:'order',order:'attack',ids:[a.id],focus:z.id}).ok).toBe(true);for(let n=0;n<30;n++)combatStep(s,.1);expect(z.hp).toBeLessThan(z.maxHp);
     command(s,{type:'formation',formation:'loose',ids:[a.id]});expect(b.formation).toBe(saved.formation);command(s,{type:'order',order:'regroup',ids:[a.id]});expect(b.order).toBe('hold');expect(b.target).toEqual(saved.target);
+  });
+  it('focused gate attackers intercept an immediately threatening infected before striking the wall',()=>{
+    const s=empty(),guard=makeUnit(s,'warden',10,10),infected=makeUnit(s,'hollow',10,11),gate=makeBuilding(s,'gate',18,10,true),gateHp=gate.hp,infectedHp=infected.hp;gate.owner='rival';
+    expect(command(s,{type:'order',order:'attack',ids:[guard.id],x:gate.x,y:gate.y,focus:gate.id}).ok).toBe(true);
+    combatStep(s,.1,false);
+    expect(infected.hp).toBeLessThan(infectedHp);expect(gate.hp).toBe(gateHp);
   });
   it('grows capacity through garrisons and pays for recruitment from individual residents',()=>{
     const s=newGame();expect(armyCapacity(s)).toBe(24);const b=s.buildings.find(b=>b.kind==='barracks')!;s.resources={wood:9999,stone:9999,food:9999,herbs:99};
@@ -148,10 +169,10 @@ describe('large army simulation',()=>{
     const s=empty();s.buildings=newGame().buildings;s.nextId=Math.max(s.nextId,...s.buildings.map(b=>b.id+1));const reserved=new Set<number>();
     for(let i=0;i<count;i++){const p=nearestOpen(s,{x:9+i%12,y:7+Math.floor(i/12)},reserved);reserved.add(key(p));makeUnit(s,(['warden','ranger','spearman','scout'] as const)[i%4],p.x,p.y);}
     for(let i=0;i<Math.max(10,count/2);i++){const p=nearestOpen(s,{x:10+i%10,y:22+Math.floor(i/10)%4},reserved);reserved.add(key(p));makeUnit(s,i%7===0?'brute':i%3?'hollow':'runner',p.x,p.y);}
-    const ids=army(s).map(u=>u.id);command(s,{type:'order',order:'defend',ids:ids.slice(0,5),x:14,y:17});command(s,{type:'order',order:'hunt',ids:ids.slice(5),x:14,y:23});
+    const ids=army(s).map(u=>u.id);command(s,{type:'order',order:'defend',ids:ids.slice(0,5),x:14,y:17});const queriesBefore=navigationMetrics.pathQueries;command(s,{type:'order',order:'hunt',ids:ids.slice(5),x:14,y:23});const singleGroupRouteQueries=navigationMetrics.pathQueries-queriesBefore;
     const started=performance.now(),fields=navigationMetrics.fieldsBuilt;for(let i=0;i<200;i++){combatStep(s,.1);plagueStep(s,.1);}
-    const elapsed=performance.now()-started;stress.push({soldiers:count,hostiles:Math.max(10,count/2),steps:200,msPerStep:elapsed/200,fieldsBuilt:navigationMetrics.fieldsBuilt-fields,surviving:army(s).length,slain:s.stats.slain});
-    expect(army(s).length).toBeLessThanOrEqual(count);expect(s.units.every(u=>Number.isFinite(u.x)&&tileAt(Math.round(u.x),Math.round(u.y))?.terrain!=='water')).toBe(true);expect(s.stats.slain).toBeGreaterThan(0);expect(decode(JSON.stringify(s))).not.toBeNull();expect(elapsed).toBeLessThan(15000);
+    const elapsed=performance.now()-started;stress.push({soldiers:count,hostiles:Math.max(10,count/2),steps:200,msPerStep:elapsed/200,singleGroupRouteQueries,fieldsBuilt:navigationMetrics.fieldsBuilt-fields,surviving:army(s).length,slain:s.stats.slain});
+    expect(singleGroupRouteQueries).toBe(1);expect(army(s).length).toBeLessThanOrEqual(count);expect(s.units.every(u=>Number.isFinite(u.x)&&tileAt(Math.round(u.x),Math.round(u.y))?.terrain!=='water')).toBe(true);expect(s.stats.slain).toBeGreaterThan(0);expect(decode(JSON.stringify(s))).not.toBeNull();expect(elapsed).toBeLessThan(15000);
     writeFileSync('docs/evidence/legions-simulation.json',JSON.stringify(stress,null,2));
   });
   it('settles residents at their doorsteps',()=>{const s=newGame();s.phase='night';const system=new CivilianSystem();for(let n=0;n<400;n++){s.time+=.1;system.update(s,.1);}expect(system.people.filter(r=>r.path.length)).toHaveLength(0);});

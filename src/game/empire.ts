@@ -111,19 +111,27 @@ export function accessError(s:State,x:number,y:number,kind:BuildingKind):string|
 function stronghold(s:State):RivalStronghold {return s.march!.rival??=(s.march!.rival={id:'mossgate',name:'Mossgate',faction:'The Gloamward',status:'unseen',remaining:100,reserve:80,casualties:0,warning:0});}
 const MOSS={x:47,y:29};
 function deployRivals(s:State,count:number):number{
-  const roster:UnitKind[]=['warden','warden','warden','warden','spearman','spearman','ranger','ranger','scout'],slots=[{x:46,y:28},{x:47,y:28},{x:48,y:28},{x:46,y:29},{x:48,y:29},{x:46,y:30},{x:47,y:30},{x:48,y:30},{x:50,y:27},{x:50,y:28},{x:50,y:29},{x:50,y:30}],reserved=new Set(s.units.map(key));
+  const roster:UnitKind[]=['warden','warden','warden','warden','spearman','spearman','ranger','ranger','scout'];
+  // Mossgate needs room for a real garrison. Keep every post inside the wall;
+  // the old seven-cell yard spilled half of its defenders through the gate.
+  const yard: {x:number;y:number}[]=[];
+  for(let y=26;y<=32;y++)for(let x=45;x<=49;x++)if(tileAt(x,y,s)&&!s.buildings.some(b=>b.hp>0&&b.x===x&&b.y===y))yard.push({x,y});
+  const meleePosts=[...yard].sort((a,b)=>Math.abs(a.y-MOSS.y)-Math.abs(b.y-MOSS.y)||a.x-b.x),rangedPosts=[...yard].sort((a,b)=>b.x-a.x||Math.abs(a.y-MOSS.y)-Math.abs(b.y-MOSS.y)),occupied=new Set(rivals(s).map(u=>key(u.anchor??u)));
   let deployed=0;
-  for(;deployed<count&&s.units.length<MAX_UNITS;deployed++){const slot=slots[(s.march!.rival!.casualties+deployed)%slots.length],p=nearestOpen(s,slot,reserved);reserved.add(key(p));const u=makeUnit(s,roster[(s.march!.rival!.casualties+deployed)%roster.length],p.x,p.y);u.faction='rival';u.formation='line';u.anchor={...MOSS};u.order='defend';if(!s.march!.rival!.leaderId){s.march!.rival!.leaderId=u.id;u.maxHp=Math.round(u.maxHp*1.7);u.hp=u.maxHp;}if(deployed%7===3){u.order='patrol';u.patrol={a:{x:46,y:28},b:{x:48,y:30},leg:0};u.target={...u.patrol.a};}}
+  for(;deployed<count&&s.units.length<MAX_UNITS;deployed++){
+    const rosterIndex=(s.march!.rival!.casualties+deployed)%roster.length,kind=roster[rosterIndex],posts=kind==='ranger'||kind==='scout'?rangedPosts:meleePosts,p=posts.find(at=>!occupied.has(key(at)));
+    if(!p)break;
+    occupied.add(key(p));const u=makeUnit(s,kind,p.x,p.y);u.faction='rival';u.formation=rosterIndex>=6?'protected':'line';u.anchor={...p};u.target={...p};u.order='defend';
+    if(!s.march!.rival!.leaderId){s.march!.rival!.leaderId=u.id;u.maxHp=Math.round(u.maxHp*1.7);u.hp=u.maxHp;}
+  }
   return deployed;
 }
 function raiseMossgate(s:State):void{
  const w=stronghold(s);if(w.status!=='unseen')return;w.status='occupied';
  const own=(kind:BuildingKind,x:number,y:number,name?:string)=>{const b=makeBuilding(s,kind,x,y,true);b.owner='rival';if(name)b.name=name;return b;};
- own('wall',45,26);own('wall',46,26);own('wall',47,26);own('wall',48,26);own('wall',49,26);
- own('wall',45,27);own('wall',45,28);own('wall',45,29);own('wall',45,30);own('wall',45,31);
- own('wall',46,31);own('wall',47,31);own('wall',48,31);own('wall',49,31);
- own('wall',49,27);own('gate',49,28);own('wall',49,29);own('wall',49,30);
- own('tower',46,27,'Gloamward Lookout');own('barracks',48,27,'Gloamward Muster Hall');own('cottage',46,30);own('cottage',48,30);own('hearth',47,29,'Mossgate Hall');
+ for(let x=44;x<=50;x++){own('wall',x,25);own('wall',x,33);}
+ for(let y=26;y<=32;y++){own(y===29?'gate':'wall',44,y);own('wall',50,y);}
+ own('tower',46,27,'Gloamward Lookout');own('barracks',48,27,'Gloamward Muster Hall');own('cottage',46,31);own('cottage',48,31);own('hearth',47,29,'Mossgate Hall');
  const deployed=deployRivals(s,20);w.reserve=100-deployed;w.remaining=100;log(s,`The Gloamward have fortified Mossgate. Scouts count one hundred defenders; ${deployed} hold the walls while their relief companies muster behind the gate.`,'danger');
 }
 export function strongholdCaptureError(s:State):string|null{
@@ -140,7 +148,7 @@ export function captureStronghold(s:State):CommandResult{
  w.status='captured';w.warning=0;w.leaderId=undefined;s.march!.secured=true;
  for(const b of s.buildings)if(b.owner==='rival')b.owner='player';
  const hearth=s.buildings.find(b=>b.kind==='hearth'&&b.name==='Mossgate Hall');if(hearth)hearth.hp=Math.max(1,Math.floor(hearth.maxHp*.72));
- for(const [kind,x,y]of [['farm',44,32],['cottage',47,32]] as const)if(!s.buildings.some(b=>b.x===x&&b.y===y)){const b=makeBuilding(s,kind,x,y,true);b.owner='player';}
+ for(const [kind,x,y]of [['farm',45,32],['cottage',47,32]] as const)if(!s.buildings.some(b=>b.x===x&&b.y===y)){const b=makeBuilding(s,kind,x,y,true);b.owner='player';}
  addResidents(s,4);s.jobs.farmers=2;s.jobs.builders=2;assignResidentJobs(s);s.resources.wood+=45;s.resources.stone+=25;
  log(s,'Mossgate is secured. Four survivors begin repairs and tend the new croft. +45 Timber · +25 Crowns.','good');return{ok:true,message:'Mossgate secured. Repair the damaged hall, develop its croft and station a garrison.'};
 }
@@ -158,7 +166,10 @@ export function empireStep(s:State,dt:number):void{
   }
   const m=s.march;if(!s.region||!m)return;
   const hero=army(s).find(u=>u.id===s.commander?.id),war=stronghold(s);
-  if(hero&&war.status==='unseen'&&distance(hero,MOSS)<4)raiseMossgate(s);
+  // Reveal the garrison before the commander reaches the perimeter, and put
+  // the gate on the western approach from the southern road. Revealing at 4
+  // tiles used to build a closed ring around the commander and trap them in it.
+  if(hero&&war.status==='unseen'&&distance(hero,MOSS)<8)raiseMossgate(s);
   if(war.status==='occupied'){
     const active=rivals(s).length,pressure=[...army(s),...enemies(s)].some(u=>distance(u,MOSS)<12);
     if(war.warning>0){war.warning=Math.max(0,war.warning-dt);if(!war.warning&&war.reserve){const n=Math.min(12,war.reserve),deployed=deployRivals(s,n);war.reserve-=deployed;log(s,`Gloamward relief reaches Mossgate. ${war.remaining} defenders still stand${deployed<n?' · remaining relief is delayed by battlefield capacity':''}.`,'danger');}}
@@ -170,7 +181,7 @@ export function empireStep(s:State,dt:number):void{
     const cache=found.map(([resource,amount])=>`${amount} ${resource==='stone'?'Crowns':resource==='wood'?'Timber':resource==='food'?'provisions':'herbs'}`).join(' · ');
     log(s,`${site.name} discovered${cache?` · ${cache} recovered`:''}.`,'good');
     if(site.hostiles?.length){const danger=Math.min(2,Math.floor(distance(hero,ROAD_EXIT)/18)),count=Math.min(site.hostiles.length,2+danger),reserved=new Set(s.units.map(key)),offsets=[{x:1,y:0},{x:-1,y:1},{x:1,y:2},{x:-2,y:-1},{x:2,y:-2}];
-      for(let i=0;i<count;i++){const at=offsets[i%offsets.length],p=nearestOpen(s,{x:site.x+at.x,y:site.y+at.y},reserved);reserved.add(key(p));const u=makeUnit(s,site.hostiles[i],p.x,p.y);u.order='defend';u.anchor={x:site.x,y:site.y};}
+      for(let i=0;i<count;i++){const at=offsets[i%offsets.length],p=nearestOpen(s,{x:site.x+at.x,y:site.y+at.y},reserved,undefined,'infected');reserved.add(key(p));const u=makeUnit(s,site.hostiles[i],p.x,p.y);u.order='defend';u.anchor={x:site.x,y:site.y};}
       log(s,`The infected stir around ${site.name}. The road is not safe yet.`,'danger');
     }
   }

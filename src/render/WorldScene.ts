@@ -11,7 +11,7 @@ import { missionRoute } from '../game/expedition';
 import { ambushFronts } from '../game/encounters';
 import { indexActorsByScreenY, obscuresActor } from './visibility';
 import {LANDMARKS,ROAD_EXIT} from '../game/empire';
-import { SQUAD_COLORS } from '../game/army';
+import { commandableIds, formationFacing, formationSlots, SQUAD_COLORS } from '../game/army';
 import { pickSoldier } from './battlefield';
 interface CommandGesture { start:Point; end:Point; started:number; right:boolean; touch:boolean; active:boolean; cancelled:boolean }
 function groveDensity(x:number,y:number):number{
@@ -54,6 +54,7 @@ export class WorldScene extends Phaser.Scene {
   private keys?: Record<string, Phaser.Input.Keyboard.Key>;
   private lastDraw = 0;
   constructor(rt: Runtime) { super('valley'); this.rt = rt; }
+  private showCommandPreview(show:boolean):void { this.game.canvas.closest('.world-wrap')?.classList.toggle('command-preview',show); }
   create(): void {
 
     for (const kind of Object.keys(BUILDINGS)) this.textures.addCanvas(`building-${kind}`, buildingArt(kind as keyof typeof BUILDINGS));
@@ -79,11 +80,11 @@ export class WorldScene extends Phaser.Scene {
     this.input.addPointer(1);
     this.input.on('pointerdown', (p: Phaser.Input.Pointer) => {
       const touches=this.input.manager.pointers.filter(q=>q.isDown&&q.wasTouch);
-      if(touches.length>=2){this.pinchDistance=Phaser.Math.Distance.Between(touches[0].x,touches[0].y,touches[1].x,touches[1].y);this.dragStart=null;this.commandGesture=undefined;this.dragged=true;return;}
+      if(touches.length>=2){this.pinchDistance=Phaser.Math.Distance.Between(touches[0].x,touches[0].y,touches[1].x,touches[1].y);this.dragStart=null;this.commandGesture=undefined;this.showCommandPreview(false);this.dragged=true;return;}
       this.dragStart={x:p.x,y:p.y};this.dragged=false;this.boxSelecting=!!(p.event as MouseEvent).shiftKey&&!this.rt.placement;this.boxEnd=null;
       const canCommand=!this.rt.heroMode&&!this.rt.placement&&this.rt.editingId===null&&!this.rt.rallyMode;
       const right=canCommand&&!p.wasTouch&&(p.event as PointerEvent).button===2,touch=canCommand&&p.wasTouch;
-      if(right||touch){const wp=this.cameras.main.getWorldPoint(p.x,p.y),tile=uniso(wp.x,wp.y);this.commandGesture={start:tile,end:tile,started:performance.now(),right,touch,active:right,cancelled:false};}
+      if(right||touch){const wp=this.cameras.main.getWorldPoint(p.x,p.y),tile=uniso(wp.x,wp.y);this.commandGesture={start:tile,end:tile,started:performance.now(),right,touch,active:right,cancelled:false};this.showCommandPreview(right);}
     });
     this.input.on('pointermove', (p: Phaser.Input.Pointer) => {
       const touches=this.input.manager.pointers.filter(q=>q.isDown&&q.wasTouch);
@@ -92,7 +93,7 @@ export class WorldScene extends Phaser.Scene {
       const gesture=this.commandGesture;
       if(gesture&&p.isDown&&!gesture.cancelled){gesture.end=t;const moved=this.dragStart?Math.hypot(p.x-this.dragStart.x,p.y-this.dragStart.y):0;
         if(gesture.touch&&!gesture.active&&moved>8&&performance.now()-gesture.started<450){gesture.cancelled=true;this.commandGesture=undefined;}
-        else if(gesture.right||performance.now()-gesture.started>=450){gesture.active=true;this.dragged=true;return;}
+        else if(gesture.right||performance.now()-gesture.started>=450){gesture.active=true;this.showCommandPreview(true);this.dragged=true;return;}
       }
       if(this.rt.editingId!==null&&p.isDown){this.rt.placementPreview=this.hoverTile;this.rt.onChange();return;}
       if(p.isDown&&this.dragStart&&(this.dragged||Math.hypot(p.x-this.dragStart.x,p.y-this.dragStart.y)>7)){
@@ -101,15 +102,16 @@ export class WorldScene extends Phaser.Scene {
     });
     this.input.on('pointerup', (p: Phaser.Input.Pointer) => {
       if(this.pinchDistance){this.pinchDistance=0;this.dragStart=null;this.dragged=true;this.boxEnd=null;this.commandGesture=undefined;return;}
-      const gesture=this.commandGesture;this.commandGesture=undefined;
+      const gesture=this.commandGesture;this.commandGesture=undefined;this.showCommandPreview(false);
       if(gesture&&!gesture.cancelled&&(gesture.right||gesture.active||gesture.touch&&performance.now()-gesture.started>=450)){
-        if(this.rt.ready)this.choose(gesture.end,true,gesture.touch,false,{x:p.x,y:p.y});this.dragged=true;this.dragStart=null;this.boxEnd=null;return;
+        const heading={x:gesture.end.x-gesture.start.x,y:gesture.end.y-gesture.start.y};
+        if(this.rt.ready)this.choose(gesture.end,true,gesture.touch,false,{x:p.x,y:p.y},Math.hypot(heading.x,heading.y)>.8?heading:undefined);this.dragged=true;this.dragStart=null;this.boxEnd=null;return;
       }
       if(this.dragged&&this.boxSelecting&&this.dragStart){const a=this.dragStart;this.rt.selectUnits(this.rt.world.units.filter(u=>{const t=this.screenPoint(u);return isFriendly(u)&&t.x>=Math.min(a.x,p.x)&&t.x<=Math.max(a.x,p.x)&&t.y>=Math.min(a.y,p.y)&&t.y<=Math.max(a.y,p.y);}).map(u=>u.id));}
       if (!this.dragged && this.rt.ready) { const wp = this.cameras.main.getWorldPoint(p.x, p.y); this.choose(uniso(wp.x, wp.y), p.rightButtonReleased(), p.wasTouch,!!(p.event as MouseEvent).shiftKey,{x:p.x,y:p.y}); }
       this.dragStart = null;this.boxEnd=null;
     });
-    this.input.on('pointerupoutside',()=>{this.dragStart=null;this.boxEnd=null;this.pinchDistance=0;this.commandGesture=undefined;this.dragged=true;});
+    this.input.on('pointerupoutside',()=>{const gesture=this.commandGesture;this.commandGesture=undefined;this.showCommandPreview(false);if(gesture&&!gesture.cancelled&&(gesture.right||gesture.active||gesture.touch&&performance.now()-gesture.started>=450)){const heading={x:gesture.end.x-gesture.start.x,y:gesture.end.y-gesture.start.y};if(this.rt.ready)this.choose(gesture.end,true,gesture.touch,false,this.screenPoint(gesture.end),Math.hypot(heading.x,heading.y)>.8?heading:undefined);this.dragged=true;this.dragStart=null;this.boxEnd=null;return;}this.dragStart=null;this.boxEnd=null;this.pinchDistance=0;this.commandGesture=undefined;this.showCommandPreview(false);this.dragged=true;});
     this.input.on('wheel', (p: Phaser.Input.Pointer, _o: unknown, _dx: number, dy: number) => this.zoom(dy > 0 ? -0.08 : 0.08, p));
     this.keys = this.input.keyboard?.addKeys('W,A,S,D,F,UP,DOWN,LEFT,RIGHT') as Record<string, Phaser.Input.Keyboard.Key>;
     this.scale.on('resize', (_game: Phaser.Structs.Size, _base: Phaser.Structs.Size, _display: Phaser.Structs.Size, previousWidth: number, previousHeight: number) => {
@@ -152,14 +154,19 @@ export class WorldScene extends Phaser.Scene {
     if (anchor) { cam.scrollX += (anchor.x - cam.width / 2) * (1 / old - 1 / next); cam.scrollY += (anchor.y - cam.height / 2) * (1 / old - 1 / next); }
   }
   focus(point: Point): void { const p = iso(point.x, point.y); this.cameras.main.pan(p.x, p.y - 25, 350, 'Sine.easeInOut'); }
-  private choose(point: Point, right: boolean, touch = false, shift = false, pointer?:Point): void {
+  private choose(point: Point, right: boolean, touch = false, shift = false, pointer?:Point, heading?:Point): void {
     const x = Math.round(point.x), y = Math.round(point.y), tile = tileAt(x, y,this.rt.world); if (!tile) return;
     const mode=this.rt.orderMode;
     const clicked=pickSoldier(this.rt.world.units,pointer??this.screenPoint(point),p=>this.screenPoint(p),this.cameras.main.zoom,touch,this.rt.rallyMode?mode:null);
     if(this.rt.editingId!==null){this.rt.placementPreview={x,y};this.rt.notify(this.rt.placementError({x,y})??'Valid site. Confirm move to apply.');this.rt.onChange();return;}
-    const hostileBuilding=this.rt.world.buildings.filter(b=>b.owner==='rival').sort((a,b)=>b.x+b.y-a.x-a.y).find(b=>{const p=pointer??this.screenPoint(point),q=this.screenPoint(b);return Math.abs(p.x-q.x)<28&&p.y<q.y+12&&p.y>q.y-(b.kind==='hearth'||b.kind==='tower'?90:b.kind==='wall'||b.kind==='gate'?30:58);});
-    if(right&&!this.rt.heroMode&&!this.rt.rallyMode&&(clicked&&!isFriendly(clicked)||hostileBuilding)){const target=clicked&&!isFriendly(clicked)?clicked:hostileBuilding!;this.rt.orderMode='attack';this.rt.rallyMode=true;this.rt.orderAt({x:target.x,y:target.y},target.id);return;}
-    if(this.rt.rallyMode||right&&!this.rt.heroMode){const focused=mode==='attack'||mode==='escort'?clicked:undefined,structure=mode==='attack'?hostileBuilding:undefined;this.rt.orderAt(focused??(structure?{x:structure.x,y:structure.y}:{x,y}),focused?.id??structure?.id);return;}
+    const hostileBuilding=this.rt.world.buildings.filter(b=>b.owner==='rival').sort((a,b)=>b.x+b.y-a.x-a.y).find(b=>{const p=pointer??this.screenPoint(point),q=this.screenPoint(b);return Math.abs(p.x-q.x)<28&&p.y<q.y+12&&p.y>q.y-(b.kind==='hearth'||b.kind==='tower'?90:b.kind==='wall'||b.kind==='gate'?30:58);})??this.rt.world.buildings.find(b=>b.owner==='rival'&&b.x===x&&b.y===y);
+    if(right&&!this.rt.heroMode&&!this.rt.rallyMode){const target=hostileBuilding??(clicked&&!isFriendly(clicked)?clicked:undefined);if(target){this.rt.orderMode='attack';this.rt.rallyMode=true;this.rt.orderAt({x:target.x,y:target.y},target.id);return;}}
+    if(this.rt.rallyMode||right&&!this.rt.heroMode){
+      const structure=mode==='attack'?hostileBuilding:undefined;
+      // The visible structure hit area wins when the defended gate overlaps a soldier body.
+      const focused=clicked&&(mode==='escort'||mode==='attack'&&!isFriendly(clicked))&&!structure?clicked:undefined;
+      this.rt.orderAt(focused??(structure?{x:structure.x,y:structure.y}:{x,y}),focused?.id??structure?.id,heading);return;
+    }
     if (this.rt.placement) {
       if (touch) {
         this.rt.placementPreview = { x, y }; this.hoverTile = { x, y };
@@ -386,7 +393,13 @@ export class WorldScene extends Phaser.Scene {
       const p = iso(x, y); this.ghost.setTexture(texture).setPosition(p.x, p.y).setAlpha(0.65).setTint(valid ? 0xffffff : 0xda8a7a).setVisible(true);
     } else this.ghost?.setVisible(false);
     if (this.rt.rallyMode && this.hoverTile) this.diamond(this.hover, this.hoverTile.x, this.hoverTile.y, 0xffdfa2, 0.8);
-    const gesture=this.commandGesture;if(gesture?.active){const a=iso(gesture.start.x,gesture.start.y),b=iso(gesture.end.x,gesture.end.y);this.hover.lineStyle(2,0xe8d29b,.72).lineBetween(a.x,a.y,b.x,b.y);this.diamond(this.hover,gesture.end.x,gesture.end.y,0xf2d79d,.95);}
+    const gesture=this.commandGesture;if(gesture?.active){
+      const a=iso(gesture.start.x,gesture.start.y),b=iso(gesture.end.x,gesture.end.y),ids=new Set(commandableIds(s,this.rt.selectedIds.length?this.rt.selectedIds:undefined)),troops=s.units.filter(u=>ids.has(u.id)&&isFriendly(u));
+      const input={x:gesture.end.x-gesture.start.x,y:gesture.end.y-gesture.start.y},heading=formationFacing(s,troops,gesture.end,input),slots=formationSlots(s,troops,gesture.end,heading);
+      this.hover.lineStyle(2,0xe8d29b,.72).lineBetween(a.x,a.y,b.x,b.y);this.diamond(this.hover,gesture.end.x,gesture.end.y,0xf2d79d,.95);
+      for(const slot of slots){const p=iso(slot.x,slot.y);this.hover.fillStyle(slot.rear?0xa8d3df:0xf0d18e,.82).fillCircle(p.x,p.y-4,2);}
+      const head=iso(gesture.end.x+heading.x*2,gesture.end.y+heading.y*2);this.hover.lineStyle(2,0xe9d294,.86).lineBetween(b.x,b.y,head.x,head.y);
+    }
     const dusk = s.phase === 'night' ? 0.32 : s.phaseTime > 57 ? (s.phaseTime - 57) / 15 * 0.22 : 0;
     this.night.setAlpha(dusk);
     if (s.phase === 'night') for (const b of s.buildings.filter(b => ['hearth', 'tower', 'cottage'].includes(b.kind))) { const p = iso(b.x, b.y); this.overlay.fillStyle(0xffc46e, 0.12 + Math.sin(s.time * 2.5 + b.id) * 0.02).fillEllipse(p.x, p.y - 5, 100, 55); }

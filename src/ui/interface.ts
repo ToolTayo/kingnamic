@@ -81,6 +81,7 @@ export class Interface {
   }
   private bind(): void {
     document.addEventListener('input', e=>{if((e.target as HTMLElement).id==='squad-name')this.rt.squadName=(e.target as HTMLInputElement).value;});
+    document.addEventListener('change',e=>{const el=e.target as HTMLSelectElement;if(el.id==='army-class-select'&&el.value){const kind=el.value as SoldierKind;this.rt.selectUnits(army(this.rt.world).filter(u=>u.kind===kind).map(u=>u.id));}});
     document.addEventListener('click', e => {
       const el = (e.target as HTMLElement).closest<HTMLElement>('button, .brand'); if (!el) return;
       const id = el.id;
@@ -151,7 +152,7 @@ export class Interface {
       if (el.dataset.recruit) this.rt.act({ type: 'recruit', kind: el.dataset.recruit as SoldierKind, count:Number(el.dataset.count??1) });
       if (el.dataset.claim) this.rt.act({ type: 'claim', territory: el.dataset.claim as TerritoryId });
       if (el.dataset.focus) this.scene().focus(TERRITORIES[el.dataset.focus as TerritoryId]);
-      if (el.dataset.formation) this.rt.act({ type: 'formation', formation: el.dataset.formation as 'line' | 'loose' | 'column', ids:this.rt.selectedIds.length?this.rt.selectedIds:undefined });
+      if (el.dataset.formation) this.rt.act({ type: 'formation', formation: el.dataset.formation as 'line' | 'protected' | 'loose' | 'column', ids:this.rt.selectedIds.length?this.rt.selectedIds:undefined });
       if (el.dataset.inspect) { this.rt.selection = { type: 'building', id: Number(el.dataset.inspect) }; const b = this.rt.state.buildings.find(b => b.id === Number(el.dataset.inspect)); if (b) this.scene().focus(b); this.render(); }
       if (id === 'zoom-in' || id === 'zoom-out') this.scene().zoom(id === 'zoom-in' ? 0.12 : -0.12);
       if (id === 'home-camera') this.scene().home();

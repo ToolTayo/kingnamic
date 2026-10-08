@@ -4,6 +4,7 @@ import { combatStep, waveSize, spawnWave } from '../src/game/combat';
 import { separateCrowd } from '../src/game/crowd';
 import { economyStep } from '../src/game/economy';
 import { command } from '../src/game/commands';
+import { orderArmy } from '../src/game/army';
 import { distance, tileAt } from '../src/game/map';
 import { decode } from '../src/game/persistence';
 import { newGame, makeBuilding, makeUnit } from '../src/game/state';
@@ -27,6 +28,30 @@ describe('crowds, passage and finishing orders', () => {
       expect(a.buildings.some(v => v.kind !== 'gate' && v.x === Math.round(u.x) && v.y === Math.round(u.y))).toBe(false);
       for (let j = i + 1; j < a.units.length; j++) expect(distance(u, a.units[j])).toBeGreaterThan(.35);
     }
+  });
+  it('lets a moving soldier pass through stationary ranks without overlap', () => {
+    const s=newGame();s.units=[];
+    const leader=makeUnit(s,'warden',14,16);leader.order='move';leader.target={x:14,y:20};leader.path=[];
+    for(let i=0;i<12;i++){const u=makeUnit(s,'warden',14+(i%3)*.06,16.2+Math.floor(i/3)*.06);u.order='hold';u.target={x:u.x,y:u.y};u.path=[];}
+    for(let n=0;n<400;n++)combatStep(s,.1);
+    expect(leader.y).toBeGreaterThan(18);
+    for(let i=0;i<s.units.length;i++)for(let j=i+1;j<s.units.length;j++)expect(distance(s.units[i],s.units[j])).toBeGreaterThan(.3);
+  });
+  it('lets a single soldier take a held ally\'s tile as its requested destination', () => {
+    const s=newGame();s.units=[];
+    const point=Array.from({length:12*12},(_,i)=>({x:19+i%12,y:10+Math.floor(i/12)})).find(p=>tileAt(p.x,p.y,s)?.terrain!=='water'&&!s.buildings.some(b=>b.x===p.x&&b.y===p.y))!;
+    const mover=makeUnit(s,'warden',14,16),guard=makeUnit(s,'spearman',point.x,point.y);
+    guard.order='hold';guard.target={...point};guard.path=[];
+    const result=orderArmy(s,[mover.id],'move',point);
+    expect(result.ok,result.message).toBe(true);expect(mover.target).toEqual(point);expect(guard.order).toBe('hold');expect(guard.target).toEqual(point);
+  });
+  it('keeps a 100-soldier protected advance flowing through a shared corridor', () => {
+    const s=newGame();s.units=[];s.formation='protected';
+    for(let i=0;i<100;i++){const u=makeUnit(s,i%5===0?'ranger':'warden',14+(i%10)*.1,24+Math.floor(i/10)*.1);u.formation='protected';}
+    const troops=s.units,issued=orderArmy(s,troops.map(u=>u.id),'move',{x:42,y:29},undefined,{x:1,y:.2});
+    expect(issued.ok).toBe(true);for(let n=0;n<1200;n++)combatStep(s,.1);
+    const arrived=s.units.filter(u=>distance(u,u.target)<1),stuck=s.units.filter(u=>distance(u,u.target)>=1).slice(0,12).map(u=>({id:u.id,x:u.x,y:u.y,target:u.target,path:u.path.slice(0,3),order:u.order,repath:u.repath}));
+    expect(arrived.length,JSON.stringify({arrived:arrived.length,stuck})).toBeGreaterThan(90);
   });
   it('moves seven soldiers through the gate and crossing without leaving orders stuck', () => {
     const s = newGame(); s.units = [];

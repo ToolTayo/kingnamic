@@ -69,14 +69,17 @@ export class Runtime {
     this.selectedIds = [...chosen].filter(id=>valid.has(id)); this.orderMode=null;this.rallyMode=false;this.selection = {type:'army'}; this.onChange();
   }
   selectAvailable(): void { this.selectUnits(commandableIds(this.world)); }
-  private issueOrder(order: ArmyOrder, point?:Point, focus?:number):CommandResult {
+  private issueOrder(order: ArmyOrder, point?:Point, focus?:number, heading?:Point):CommandResult {
     const ids=commandableIds(this.world,this.selectedIds.length?this.selectedIds:undefined);
     const excluded=this.selectedIds.length?this.selectedIds.length-ids.length:0;
     if(!ids.length){const r={ok:false,message:'No selected soldiers are available. Let injuries recover or treat quarantined infections.'};this.notify(r.message,'warn');this.onChange();return r;}
     // Visible-body targeting may pass a Unit. Copy coordinates only, so its
     // own order cannot override the player's Escort/Attack command.
-    const r=this.act({type:'order',order,ids,x:point?.x,y:point?.y,focus});
-    if(r.ok){this.orderFeedbackUntil=performance.now()+3500;if(excluded)this.notify(`${r.message} ${excluded} recovering or isolated soldiers kept their assignments.`,'good');}
+    const r=this.act({type:'order',order,ids,x:point?.x,y:point?.y,focus,heading});
+    if(r.ok){
+      this.orderFeedbackUntil=performance.now()+3500;
+      this.notify(`${ORDER_NAMES[order]} · ${ids.length} soldiers${excluded?` · ${excluded} recovering or isolated kept their orders`:''}.`,'good',excluded?3200:1800);
+    }
     return r;
   }
   beginOrder(order: ArmyOrder): void {
@@ -87,8 +90,8 @@ export class Runtime {
     this.orderMode=order;this.rallyMode=true;this.placement=null;
     this.notify(`${ORDER_NAMES[order]}: choose ${order==='escort'?'an allied soldier':order==='attack'?'an enemy or ground':'ground'} for ${this.selectedIds.length} selected soldiers.`);this.onChange();
   }
-  orderAt(point: Point, focus?: number): void {
-    const r=this.issueOrder(this.orderMode??'move',point,focus);
+  orderAt(point: Point, focus?: number, heading?:Point): void {
+    const r=this.issueOrder(this.orderMode??'move',point,focus,heading);
     if(r.ok){this.rallyMode=false;this.orderMode=null;}this.onChange();
   }
   act(c: Command): CommandResult {
@@ -97,7 +100,7 @@ export class Runtime {
     if (r.ok && (c.type.startsWith('expedition-')||c.type==='travel'||c.type==='home-watch')) { this.heroMode=false;this.heroWalk={x:0,y:0};this.heroAttack=false;this.heroTap=false;this.heroTouchAttack=false;this.heroTouchWalk=undefined;this.heroAim=undefined;this.cancelPlacement();this.selection = null; this.selectedIds=[]; this.orderMode=null; this.placement = null; this.rallyMode = false; this.persist(); }
     this.notify(r.message, r.ok ? 'good' : 'warn'); this.onSound(r.ok ? c.type === 'build' ? 'build' : 'click' : 'warn'); this.onChange(); return r;
   }
-  notify(message: string, tone: 'info' | 'good' | 'warn' = 'info'): void { this.message = message; this.messageTone = tone; this.messageUntil = performance.now() + 4500; }
+  notify(message: string, tone: 'info' | 'good' | 'warn' = 'info', duration = 4500): void { this.message = message; this.messageTone = tone; this.messageUntil = performance.now() + duration; }
   tick(delta: number): void {
     if (!this.ready || document.hidden || !this.state.speed || this.state.outcome === 'lost') return;
     this.accumulator += Math.min(delta / 1000, 0.25) * this.state.speed;

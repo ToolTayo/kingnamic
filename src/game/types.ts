@@ -6,7 +6,7 @@ export type BuildingKind = 'hearth' | 'cottage' | 'farm' | 'lumberyard' | 'quarr
 export type SoldierKind = 'warden' | 'ranger' | 'spearman' | 'scout';
 export type ArmyOrder = 'move' | 'attack' | 'hunt' | 'defend' | 'patrol' | 'hold' | 'retreat' | 'regroup' | 'escort';
 export type ExpeditionApproach = 'ridge' | 'ford';
-export type Formation = 'line' | 'loose' | 'column';
+export type Formation = 'line' | 'protected' | 'loose' | 'column';
 export type UnitKind = SoldierKind | 'hollow' | 'runner' | 'brute';
 export type TerritoryId = 'hearthmere' | 'pinewatch' | 'greybank' | 'fen';
 export type Terrain = 'grass' | 'forest' | 'rock' | 'water' | 'road' | 'marsh' | 'heath' | 'field';
@@ -69,7 +69,7 @@ export type Command =
   | { type: 'job'; job: Job; delta: number }
   | { type: 'rally'; x: number; y: number; ids?: number[] }
   | { type: 'formation'; formation: Formation; ids?: number[] }
-  | { type: 'order'; order: ArmyOrder; ids: number[]; x?: number; y?: number; focus?: number }
+  | { type: 'order'; order: ArmyOrder; ids: number[]; x?: number; y?: number; focus?: number; heading?: Point }
   | { type: 'squad-create'; ids: number[]; name: string }
   | { type: 'squad-assign'; ids: number[]; squadId?: number }
   | { type: 'squad-rename'; squadId: number; name: string }

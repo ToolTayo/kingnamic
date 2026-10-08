@@ -7,11 +7,13 @@ import type { Building, CommanderInput, Point, Resident, State, Unit, UnitKind }
 import { SpatialGrid } from './spatial';
 import { expose, recordDeath, resolveResidentDeaths } from './disease';
 import { awardBounty } from './treasury';
+const MOSS_CENTER={x:47,y:29};
 function move(s: State, u: Unit, target: Point, dt: number, enemy: boolean, nav: Navigation): Building | undefined {
+  const faction=isInfected(u)?'infected':isRival(u)?'rival':'player';
   const endpoint = u.path[u.path.length - 1];
   if (endpoint && distance(endpoint, target) > 1.5) u.repath = 0;
   if (u.repath <= 0) {
-    u.path = findPath(s, u, target, enemy,nav);
+    u.path = findPath(s, u, target, enemy,nav,faction);
     // A* returns no nodes when both positions round to the same tile. Finish
     // that last fraction instead of leaving a move order permanently pending.
     if (!u.path.length && key(u) === key(target)) u.path = [{ x: target.x, y: target.y }];
@@ -22,7 +24,7 @@ function move(s: State, u: Unit, target: Point, dt: number, enemy: boolean, nav:
   if (obstruction && distance(u, obstruction) < 1.3) return obstruction;
   const d = distance(u, next), speed = UNITS[u.kind].speed * (tileAt(u.x, u.y,s)?.terrain === 'marsh' ? 0.6 : 1);
   const fraction=d?Math.min(1,speed*dt/d):1,p={x:u.x+(next.x-u.x)*fraction,y:u.y+(next.y-u.y)*fraction};
-  const blocked=movementBlocker(nav,u,p,enemy,true);
+  const blocked=movementBlocker(nav,u,p,enemy,true,faction);
   if(blocked){u.path=[];u.repath=0;return blocked==='terrain'?undefined:blocked;}
   u.x=p.x;u.y=p.y;if(fraction===1)u.path.shift();
   return;
@@ -100,9 +102,9 @@ export function combatStep(s: State, dt: number, separate = true,input?:Commande
     const elevation = tileAt(u.x, u.y,s)?.height ?? 0;
     const range = def.range + (ranged ? elevation * 0.8 + ((u.formation??s.formation) === 'loose' ? 0.6 : 0) : 0);
     const radius=friendly?(u.order==='hunt'?12:u.order==='attack'?8:u.order==='hold'?range:range+(ranged?.4:2)):rival?(u.order==='defend'?7:5.5):u.order==='defend'?5.5:4;
-    let target:Unit|Resident|Building|undefined=friendly?playerThreatGrid.nearest(u,radius,v=>v.hp>0&&(u.order==='hunt'?distance(v,anchor)<=12:u.order==='hold'||u.order==='attack'||ranged||distance(v,anchor)<(u.order==='defend'?4:6)||!u.order&&!!hearth&&distance(v,hearth)<3)):rival?rivalThreatGrid.nearest(u,radius,v=>v.hp>0):humanGrid.nearest(u,radius,v=>v.hp>0);
+    let target:Unit|Resident|Building|undefined=friendly?playerThreatGrid.nearest(u,radius,v=>v.hp>0&&(u.order==='hunt'?distance(v,anchor)<=12:u.order==='hold'||u.order==='attack'||ranged||distance(v,anchor)<(u.order==='defend'?4:6)||!u.order&&!!hearth&&distance(v,hearth)<3)):rival?rivalThreatGrid.nearest(u,radius,v=>v.hp>0&&distance(v,MOSS_CENTER)<=9):humanGrid.nearest(u,radius,v=>v.hp>0);
     const focusedBuilding=friendly&&u.order==='attack'&&u.focus?s.buildings.find(b=>b.id===u.focus&&b.owner==='rival'&&b.hp>0):undefined;
-    if(friendly&&u.order==='attack'&&u.focus){const focused=byId.get(u.focus);if(focused&&focused.hp>0&&!isFriendly(focused))target=focused;else if(focusedBuilding)target=focusedBuilding;else delete u.focus;}
+    if(friendly&&u.order==='attack'&&u.focus){const focused=byId.get(u.focus);if(focused&&focused.hp>0&&!isFriendly(focused))target=focused;else if(focusedBuilding){const immediate=target&&'attackFlash'in target&&target.hp>0&&distance(u,target)<=range&&(ranged||clearMelee(s,u,target,nav));target=immediate?target:focusedBuilding;}else delete u.focus;}
     // Runners punish an exposed rear. A front-line soldier already in reach
     // still intercepts them, so a screen has practical value.
     if (u.kind === 'runner' && target && distance(u, target) > 1.3) target = friendGrid.nearest(u,Math.min(4,distance(u,target)+1.5),v=>v.hp>0&&(v.kind==='ranger'||v.kind==='scout'))??target;
@@ -110,7 +112,7 @@ export function combatStep(s: State, dt: number, separate = true,input?:Commande
     const shotDamage = u.kind === 'ranger' && target && distance(u, target) < 1.5 ? damage * .6 : damage;
     const canHit=target&&distance(u,target)<=range&&(ranged||clearMelee(s,u,target,nav));
     const cover=target&&'attackFlash'in target&&isRival(target)?rivalGrid:friendGrid;
-    if(friendly&&focusedBuilding){const d=distance(u,focusedBuilding),canHitBuilding=d<=range&&(ranged||d<=1.25||clearMelee(s,u,focusedBuilding,nav));if(canHitBuilding)hit(s,u,focusedBuilding,shotDamage,ranged,cover);else if(distance(u,u.target)>.2)move(s,u,u.target,dt,false,nav);continue;}
+    if(friendly&&focusedBuilding){const d=distance(u,focusedBuilding),canHitBuilding=d<=range&&(ranged||d<=1.25||clearMelee(s,u,focusedBuilding,nav));if(target&&'attackFlash'in target&&canHit)hit(s,u,target,shotDamage,ranged,cover);else if(canHitBuilding)hit(s,u,focusedBuilding,shotDamage,ranged,cover);else if(distance(u,u.target)>.2)move(s,u,u.target,dt,false,nav);continue;}
     if (friendly && (u.order === 'move'||u.order==='retreat'||u.order==='regroup')) {
       if (distance(u, u.target) <= .2) { if(u.order==='move')delete u.order;else u.order='hold'; u.path = []; u.repath = 0; }
       else {

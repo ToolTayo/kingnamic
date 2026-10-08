@@ -102,7 +102,7 @@ function applyCommand(s: State, c: Command): CommandResult {
       if(!canAfford(s,{stone:20}))return result(false,'Inviting five settlers costs 20 Crowns.');
       spend(s,{stone:20});addResidents(s,5);s.musterClock=20;return result(true,'Five settlers arrived. Assign them work or equip them as soldiers.');
     }
-    case 'order': return orderArmy(s,c.ids,c.order,c.x!==undefined&&c.y!==undefined?{x:c.x,y:c.y}:undefined,c.focus);
+    case 'order': return orderArmy(s,c.ids,c.order,c.x!==undefined&&c.y!==undefined?{x:c.x,y:c.y}:undefined,c.focus,c.heading);
     case 'squad-create': {
       const ids=new Set(c.ids),members=army(s).filter(u=>ids.has(u.id)&&u.origin!=='battalion');s.squads??=[];
       if(!members.length||members.length!==ids.size||s.squads.length>=20)return result(false,'Choose living soldiers; at most 20 squads can be named.');
@@ -180,7 +180,7 @@ function applyCommand(s: State, c: Command): CommandResult {
       assignDestinations(s,troops,c);
       return result(true, `${troops.length} soldiers are moving to the rally point.`);
     }
-    case 'formation': if(c.ids){for(const u of army(s))if(c.ids.includes(u.id))u.formation=c.formation;}else{s.formation=c.formation;for(const u of army(s))u.formation=c.formation;} return result(true,c.formation==='line'?'Shield line: nearby wardens gain 3 armor.':c.formation==='column'?'Road column: rally orders use a narrow file.':'Loose order: bowmen gain 0.6 range.');
+    case 'formation': if(c.ids){for(const u of army(s))if(c.ids.includes(u.id))u.formation=c.formation;}else{s.formation=c.formation;for(const u of army(s))u.formation=c.formation;} return result(true,c.formation==='line'?'Battle line set · swords ahead of bows.':c.formation==='protected'?'Protected set · melee screens archers.':c.formation==='column'?'Column set · two files for narrow roads.':'Loose order set · wider spacing.');
     case 'claim': {
       if(s.region)return result(false,'Explore and clear Briar March; land here is never purchased.');
       const t = TERRITORIES[c.territory];
