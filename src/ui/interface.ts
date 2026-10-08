@@ -1,6 +1,6 @@
 import {isBarrier} from '../game/barriers';
 import {empirePanel} from './empirePanel';
-import {LANDMARKS,ROAD_EXIT} from '../game/empire';
+import {LANDMARKS,ROAD_EXIT,STRONGHOLDS} from '../game/empire';
 import { shopPanel } from './shopPanel';
 import { RESOURCE_NAMES } from '../game/treasury';
 import { armyPanel } from './armyPanel';
@@ -21,10 +21,53 @@ import { missionRoute, defaultPatrol, readyArmy } from '../game/expedition';
 import { ambushFronts } from '../game/encounters';
 import { isFriendly } from '../game/state';
 import { waveSize } from '../game/combat';
-import { commandableIds } from '../game/army';
+import { available, commandableIds } from '../game/army';
 import { nextIllnessDeadline } from '../game/disease';
 const escape = (str: string): string => str.replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]!));
 const resourceIcon: Record<keyof Resources, string> = { wood: 'wood', stone: 'crown', food: 'wheat', herbs: 'herb' };
+const panelIdentityAttributes = ['data-settlement', 'data-settlement-focus', 'data-kingdom-alert', 'data-kingdom-company', 'data-kingdom-defend', 'data-kingdom-recall', 'data-kingdom-build', 'data-kingdom-repair', 'data-rename-settlement', 'data-claim', 'data-focus', 'data-tab', 'data-weapon', 'data-approach', 'data-patrol', 'data-landmark', 'data-inspect', 'data-person-focus', 'data-remains-focus'] as const;
+function panelNodeKey(node: Node): string | null {
+  if (!(node instanceof Element)) return null;
+  if (node.id) return `#${node.id}`;
+  const identity = panelIdentityAttributes.filter(attribute => node.hasAttribute(attribute)).map(attribute => `${attribute}:${node.getAttribute(attribute)}`);
+  if (!identity.length) return null;
+  const settlement = node.closest<HTMLElement>('[data-settlement]')?.dataset.settlement ?? node.getAttribute('data-settlement-id') ?? '';
+  return `${node.localName}:${settlement}:${identity.join('|')}`;
+}
+function compatiblePanelNodes(current: Node, next: Node): boolean {
+  return current.nodeType === next.nodeType && (current.nodeType !== Node.ELEMENT_NODE || (current as Element).localName === (next as Element).localName);
+}
+function reconcilePanelNode(current: Node, next: Node): void {
+  if (current.nodeType === Node.TEXT_NODE || current.nodeType === Node.COMMENT_NODE) {
+    if (current.nodeValue !== next.nodeValue) current.nodeValue = next.nodeValue;
+    return;
+  }
+  if (!(current instanceof Element) || !(next instanceof Element)) return;
+  const wasOpen = current instanceof HTMLDetailsElement ? current.open : null;
+  const active = current.ownerDocument.activeElement;
+  for (const attribute of [...current.attributes]) if (!next.hasAttribute(attribute.name)) current.removeAttribute(attribute.name);
+  for (const attribute of [...next.attributes]) if (current.getAttribute(attribute.name) !== attribute.value) current.setAttribute(attribute.name, attribute.value);
+  reconcilePanelChildren(current, next);
+  if (current instanceof HTMLInputElement && next instanceof HTMLInputElement && active !== current) current.value = next.value;
+  else if (current instanceof HTMLTextAreaElement && next instanceof HTMLTextAreaElement && active !== current) current.value = next.value;
+  else if (current instanceof HTMLSelectElement && next instanceof HTMLSelectElement && active !== current) current.value = next.value;
+  if (wasOpen !== null && current instanceof HTMLDetailsElement) current.open = wasOpen;
+}
+function reconcilePanelChildren(current: Node, next: Node): void {
+  const previous = [...current.childNodes], used = new Set<Node>(), keyed = new Map<string, Node>();
+  for (const child of previous) { const key = panelNodeKey(child); if (key) keyed.set(key, child); }
+  const desired: Node[] = [];
+  [...next.childNodes].forEach((newChild, index) => {
+    const key = panelNodeKey(newChild);
+    let match = key ? keyed.get(key) : previous[index];
+    if (match && (used.has(match) || panelNodeKey(match) !== key || !compatiblePanelNodes(match, newChild))) match = undefined;
+    if (!match && !key) match = previous.find(candidate => !used.has(candidate) && !panelNodeKey(candidate) && compatiblePanelNodes(candidate, newChild));
+    if (match) { used.add(match); reconcilePanelNode(match, newChild); desired.push(match); }
+    else desired.push(newChild.cloneNode(true));
+  });
+  desired.forEach((child, index) => { if (current.childNodes[index] !== child) current.insertBefore(child, current.childNodes[index] ?? null); });
+  for (const child of [...current.childNodes]) if (!desired.includes(child)) child.remove();
+}
 export class Interface {
   private rt: Runtime;
   private scene: () => WorldScene;
@@ -50,6 +93,8 @@ export class Interface {
     for (const kind of Object.keys(BUILDINGS)) this.thumbs[kind] = buildingArt(kind as BuildingKind).toDataURL();
     this.mount(); this.bind(); this.render(); this.onboard();
     rt.onChange = () => this.render(); rt.onSound = kind => this.beep(kind);
+    // Refresh live blockers four times a second while reconciliation preserves interactive controls.
+    // Commands still render immediately via onChange.
     window.setInterval(() => this.render(), 250);
   }
   private mount(): void {
@@ -80,6 +125,7 @@ export class Interface {
     this.panel = document.querySelector('#panel')!; this.dialog = document.querySelector('#dialog')!;
   }
   private bind(): void {
+    this.panel.addEventListener('focusout',e=>{if((e.target instanceof HTMLInputElement||e.target instanceof HTMLTextAreaElement||e.target instanceof HTMLSelectElement)&&!(e.relatedTarget instanceof Node&&this.panel.contains(e.relatedTarget)))queueMicrotask(()=>this.render());});
     document.addEventListener('input', e=>{if((e.target as HTMLElement).id==='squad-name')this.rt.squadName=(e.target as HTMLInputElement).value;});
     document.addEventListener('change',e=>{const el=e.target as HTMLSelectElement;if(el.id==='army-class-select'&&el.value){const kind=el.value as SoldierKind;this.rt.selectUnits(army(this.rt.world).filter(u=>u.kind===kind).map(u=>u.id));}});
     document.addEventListener('click', e => {
@@ -90,11 +136,25 @@ export class Interface {
       if(el.dataset.tab||el.dataset.build||id==='cancel-placement'||id==='hero-toggle'||id==='place-outpost'||id==='rally'||id==='clear-selection')this.rt.cancelPlacement();
 
       if(id==='capture-stronghold'){this.rt.act({type:'stronghold-capture'});return;}
+      if(id==='capture-tallowmere'){this.rt.act({type:'stronghold-capture',id:'tallowmere'});return;}
       if(id==='appoint-commander'){this.rt.act({type:'commander-appoint',id:this.rt.selectedIds[0]});return;}
       if(id==='hero-toggle'){this.rt.heroMode=!this.rt.heroMode;this.rt.orderMode=null;this.rt.rallyMode=false;this.rt.placement=null;this.rt.heroWalk={x:0,y:0};this.render();return;}
       if(el.dataset.weapon){this.rt.act({type:'commander-weapon',weapon:el.dataset.weapon as 'sword'|'spear'|'bow'});return;}
       if(el.dataset.renameSettlement){const id=Number(el.dataset.renameSettlement),input=this.panel.querySelector<HTMLInputElement>(`#settlement-name-${id}`);this.rt.act({type:'settlement-rename',id,name:input?.value??''});return;}
       if(el.dataset.settlementFocus){const b=this.rt.world.buildings.find(b=>b.id===Number(el.dataset.settlementFocus));if(b){this.rt.selection={type:'building',id:b.id};this.scene().focus(b);this.render();}return;}
+      if(el.dataset.kingdomCompany){this.rt.heroMode=false;this.tab='army';this.rt.selection=null;this.rt.armyView='roster';this.render();this.panel.scrollTop=0;return;}
+      if(el.dataset.kingdomDefend){const b=this.rt.world.buildings.find(v=>v.id===Number(el.dataset.kingdomDefend)&&v.kind==='hearth'&&v.owner!=='rival');if(b)this.rt.act({type:'order',order:'defend',ids:this.rt.selectedIds,x:b.x,y:b.y});return;}
+      if(el.dataset.kingdomRecall){const b=this.rt.world.buildings.find(v=>v.id===Number(el.dataset.kingdomRecall)&&v.kind==='hearth'),hero=army(this.rt.world).find(u=>u.id===this.rt.state.commander?.id);if(!b||!hero){this.rt.notify('Recall requires an active settlement and commander.','warn');return;}const ids=army(this.rt.world).filter(u=>u.id!==hero.id&&u.origin!=='battalion'&&u.order==='defend'&&Math.hypot((u.anchor??u.target).x-b.x,(u.anchor??u.target).y-b.y)<8&&available(this.rt.world,u)).map(u=>u.id);if(!ids.length){this.rt.notify('No fit soldiers are ordered to defend this settlement.','warn');return;}this.rt.act({type:'order',order:'move',ids,x:hero.x,y:hero.y});return;}
+      if(el.dataset.kingdomRepair){this.rt.act({type:'repair',id:Number(el.dataset.kingdomRepair)});return;}
+      if(el.dataset.kingdomBuild){const b=this.rt.world.buildings.find(v=>v.id===Number(el.dataset.kingdomBuild)&&v.kind==='hearth');if(b){this.category='defense';this.tab='build';this.rt.selection=null;this.scene().focus(b);this.render();this.panel.scrollTop=0;}return;}
+      if(el.dataset.kingdomAlert){
+        const action=el.dataset.kingdomAlert,id=Number(el.dataset.settlementId),b=this.rt.world.buildings.find(v=>v.id===id),remote=this.rt.state.empire?.reserve.buildings.find(v=>v.id===id);
+        if(action==='people'){this.tab='people';this.rt.selection=null;this.render();this.panel.scrollTop=0;}
+        else if(action==='army'){this.tab='army';this.rt.selection=null;this.rt.armyView='roster';this.render();this.panel.scrollTop=0;}
+        else if(b){this.rt.selection={type:'building',id:action==='repairs'?(this.rt.world.buildings.find(v=>v.id!==b.id&&v.owner!=='rival'&&Math.hypot(v.x-b.x,v.y-b.y)<7&&v.hp<v.maxHp)?.id??b.id):b.id};this.scene().focus(b);this.render();}
+        else if(remote){this.tab='army';this.rt.selection=null;this.rt.armyView='roster';this.rt.notify('Travel to '+(remote.name??'the settlement')+' to respond.','warn');this.render();this.panel.scrollTop=0;}
+        return;
+      }
       if(id==='hero-strike'){this.rt.heroTap=true;return;}
       if(id==='choose-company'){this.rt.heroMode=false;this.tab='army';this.rt.selection=null;this.rt.armyView='roster';this.render();return;}
       if(id==='gather-road'){const ids=[...new Set([...this.rt.selectedIds,...(this.rt.state.commander?[this.rt.state.commander.id]:[])])];this.rt.act({type:'gather-company',ids});this.scene().focus(ROAD_EXIT);return;}
@@ -216,7 +276,7 @@ export class Interface {
   private territoriesPanel(): string { if(this.rt.state.region)return this.panelHeader('CONNECTED LAND','Briar March','Discover this land by exploring with your commander.')+'<p>Clearing the infected and founding an outpost secures this region. The original three marches are managed from Hearthmere.</p><button data-tab="empire" class="primary full">Open Empire</button>';return this.panelHeader('BEYOND THE PALISADE', 'The three marches', 'More land. More hope. More ground to defend.') + `<div class="tip-box compact">${icon('flag')}<p>Reclaim in daylight with at least 4 soldiers and no infected remaining.</p></div>` + (['pinewatch', 'greybank', 'fen'] as TerritoryId[]).map(id => this.territoryCard(id)).join(''); }
   private buildingPanel(b: Building): string {
     const d = BUILDINGS[b.kind], s = this.rt.state;
-    if(b.owner==='rival')return '<button class="back-button" id="clear-selection">← Back to kingdom</button>'+this.panelHeader('HOSTILE STRUCTURE · THE GLOAMWARD',b.name??d.name,'Mossgate is under siege.')+'<div class="detail-art"><img alt="'+escape(d.name)+'" src="'+this.thumbs[b.kind]+'"/></div><p class="detail-description">'+d.description+'</p><div class="section-label">STRUCTURE HEALTH<span>'+Math.ceil(b.hp)+' / '+b.maxHp+'</span></div><div class="health-track"><i style="width:'+b.hp/b.maxHp*100+'%"></i></div><div class="war-card"><strong>Hostile property</strong><p>Right-click this building to focus the soldiers you command. Capture Mossgate before repairing or moving it.</p></div>';
+    if(b.owner==='rival'){const stronghold=STRONGHOLDS[b.rivalId??'mossgate'];return '<button class="back-button" id="clear-selection">← Back to kingdom</button>'+this.panelHeader('HOSTILE STRUCTURE · '+stronghold.faction.toUpperCase(),b.name??d.name,stronghold.name+' is under siege.')+'<div class="detail-art"><img alt="'+escape(d.name)+'" src="'+this.thumbs[b.kind]+'"/></div><p class="detail-description">'+d.description+'</p><div class="section-label">STRUCTURE HEALTH<span>'+Math.ceil(b.hp)+' / '+b.maxHp+'</span></div><div class="health-track"><i style="width:'+b.hp/b.maxHp*100+'%"></i></div><div class="war-card"><strong>Hostile property</strong><p>Right-click this building to focus the soldiers you command. Capture '+stronghold.name+' before repairing or moving it.</p></div>';}
     return `<button class="back-button" id="clear-selection">← Back to kingdom</button>` + this.panelHeader('YOUR SETTLEMENT · LEVEL ' + b.level, d.name, d.subtitle) + `<div class="detail-art"><img alt="${escape(d.name)}" src="${this.thumbs[b.kind]}"/></div><p class="detail-description">${d.description}</p>${b.progress < 1 ? `<div class="crew-note">${constructionCrew(s, b.id)} builder${constructionCrew(s, b.id) === 1 ? '' : 's'} assigned · ${constructionCrew(s, b.id) ? 'crew working' : 'slow resident help only'}</div>` : ''}<div class="section-label">${b.progress < 1 ? 'UNDER CONSTRUCTION' : 'BUILDING HEALTH'}<span>${b.progress < 1 ? Math.floor(b.progress * 100) + '%' : `${Math.ceil(b.hp)} / ${b.maxHp}`}</span></div><div class="health-track"><i style="width:${b.progress < 1 ? b.progress * 100 : b.hp / b.maxHp * 100}%"></i></div><div class="detail-actions"><button id="edit-building" class="secondary full">Edit / Move building</button><button id="upgrade" class="primary full" ${b.level >= 3 || b.progress < 1 || !canAfford(s, upgradeCost(b)) ? 'disabled' : ''}>${icon('hammer')}${b.level >= 3 ? 'Fully upgraded' : 'Upgrade to level ' + (b.level + 1)}${b.level < 3 ? this.cost(upgradeCost(b)) : ''}</button><button id="repair" class="secondary full" ${b.hp >= b.maxHp || b.progress < 1 || !canAfford(s, repairCost(b)) ? 'disabled' : ''}>Repair building ${this.cost(repairCost(b))}</button></div><div class="tip-box">${icon('shield')}<p><strong>Invest in what you defend</strong>Upgrades restore health and increase durability${d.job ? ', worker capacity' : ''}${b.kind === 'tower' ? ', damage, and range' : ''}${b.kind === 'cottage' ? ', and housing' : ''}. Repairs require nearby ground to be clear of infected.</p></div>`;
   }
   private chroniclePanel(): string { return this.panelHeader('WORDS BY FIRELIGHT', 'The chronicle', 'A record of the kingdom you are becoming.') + `<div class="chronicle-list">${this.rt.state.logs.map(l => `<article class="log-${l.tone}"><span>${Math.floor(l.time / 60)}:${String(Math.floor(l.time % 60)).padStart(2, '0')}</span><p>${escape(l.text)}</p></article>`).join('')}</div>`; }
@@ -247,7 +307,7 @@ export class Interface {
     const action = !s.completed.includes('build') ? quarry ? 'Assign builders' : 'Build Trading post' : quarry && s.jobs.miners < 3 ? 'Assign traders' : s.infection.length ? 'Treat sickness' : army(s).length < 5 ? 'Recruit soldiers' : !s.completed.includes('night') ? 'Position defense' : s.owned.length < 4 ? 'Review marches' : '';
     const guidance = action === 'Assign traders' ? 'Trading post needs workers. Open People and assign three traders.' : action === 'Assign builders' ? 'Builders finish your construction. Open People to check the crew.' : next?.detail ?? 'You have given the valley a future.';
     document.querySelector('.objectives-card')!.classList.toggle('combat', !!s.expedition || s.phase === 'night' || enemies(s).length > 0);
-    this.html('objectives',s.region?`<h3>${s.march?.rival?.status==='occupied'?'Besiege Mossgate':s.march?.secured?'Hold Briar March':'A new foothold'}</h3><p>${s.march?.rival?.status==='occupied'?`${s.march.rival.remaining} Gloamward defenders remain. Right-click hostile soldiers or structures to focus your army.`:s.march?.secured?'Build, staff and defend your settlement.':enemies(s).length+' infected remain. Explore with your commander, then found an outpost.'}</p><button id="tab-empire-objective" data-tab="empire" class="secondary">Empire →</button>`: s.expedition ? `<h3>${missionObjective(s.expedition)}</h3>` : `<h3>${next?.title ?? 'The kingdom endures'}</h3><p>${guidance}</p>${action && s.outcome === 'playing' && s.phase === 'day' && !enemies(s).length ? `<button id="next-action" class="secondary">${action} →</button>` : ''}<div class="milestone-dots">${OBJECTIVES.map(o => `<i class="${s.completed.includes(o.id) ? 'done' : next?.id === o.id ? 'current' : ''}" title="${o.title}"></i>`).join('')}</div>`);
+      this.html('objectives',s.region?`<h3>${s.march?.weirward?.status==='occupied'?'Scout or besiege Tallowmere':s.march?.rival?.status==='occupied'?'Besiege Mossgate':s.march?.secured?'Hold Briar March':'A new foothold'}</h3><p>${s.march?.weirward?.status==='occupied'?`${s.march.weirward.remaining} Weirward defenders remain at the twin-gate keep. Right-click hostile soldiers or either gate to focus your army.`:s.march?.rival?.status==='occupied'?`${s.march.rival.remaining} Gloamward defenders remain. Right-click hostile soldiers or structures to focus your army.`:s.march?.secured?'Build, staff and defend your settlement.':enemies(s).length+' infected remain. Explore with your commander, then found an outpost.'}</p><button id="tab-empire-objective" data-tab="empire" class="secondary">Empire →</button>`: s.expedition ? `<h3>${missionObjective(s.expedition)}</h3>` : `<h3>${next?.title ?? 'The kingdom endures'}</h3><p>${guidance}</p>${action && s.outcome === 'playing' && s.phase === 'day' && !enemies(s).length ? `<button id="next-action" class="secondary">${action} →</button>` : ''}<div class="milestone-dots">${OBJECTIVES.map(o => `<i class="${s.completed.includes(o.id) ? 'done' : next?.id === o.id ? 'current' : ''}" title="${o.title}"></i>`).join('')}</div>`);
     this.text('objective-count', s.expedition ? 'Bring your soldiers home' : `${s.completed.length} / 5 milestones`);
     for (const b of document.querySelectorAll<HTMLElement>('[data-tab]')) { b.classList.toggle('active', b.dataset.tab === this.tab && !this.rt.selection); b.setAttribute('aria-pressed', String(b.classList.contains('active'))); }
     let html: string;
@@ -260,14 +320,29 @@ export class Interface {
     else if (this.tab === 'territories') html = this.territoriesPanel();
     else if (this.tab === 'chronicle') html = this.chroniclePanel();
     else html = this.buildPanel();
-    if (html !== this.lastHtml && document.activeElement?.id !== 'squad-name') { const focused = this.panel.contains(document.activeElement) ? document.activeElement?.id : null; this.panel.innerHTML = html; this.lastHtml = html; if (focused) document.getElementById(focused)?.focus({ preventScroll: true }); }
+    const active = document.activeElement;
+    const editingPanelControl = this.panel.contains(active) && (active instanceof HTMLInputElement || active instanceof HTMLTextAreaElement || active instanceof HTMLSelectElement);
+    if (html !== this.lastHtml && !editingPanelControl) {
+      const focused = active instanceof HTMLElement && this.panel.contains(active) ? active.id : '';
+      const summaries = [...this.panel.querySelectorAll<HTMLElement>('details > summary')];
+      const focusedSummary = active instanceof HTMLElement ? summaries.indexOf(active) : -1;
+      const template = document.createElement('template');template.innerHTML = html;
+      reconcilePanelChildren(this.panel, template.content);
+      this.lastHtml = html;
+      if (focused) document.getElementById(focused)?.focus({ preventScroll: true });
+      else if (focusedSummary >= 0) this.panel.querySelectorAll<HTMLElement>('details > summary')[focusedSummary]?.focus({ preventScroll: true });
+    }
     document.querySelector('#app')!.classList.toggle('targeting',this.rt.rallyMode||this.rt.editingId!==null);
     document.querySelector('#app')!.classList.toggle('commander-mode',this.rt.heroMode);document.querySelector('#hero-pad')?.classList.toggle('hidden',!this.rt.heroMode||!!s.expedition);
     const placement = document.querySelector('#placement-bar')!; placement.classList.toggle('hidden', !this.rt.placement && !this.rt.rallyMode);
     if (this.rt.placement || this.rt.rallyMode) {
       const point = this.rt.placementPreview, error = point && this.rt.placement ? this.rt.placementError(point) : null;
       const content = `${icon(this.rt.rallyMode ? 'flag' : 'hammer')}<span>${this.rt.rallyMode ? (this.rt.orderMode??'move').toUpperCase()+' · '+(this.rt.selectedIds.length||'All')+' soldiers · choose target' : `${this.rt.editingId!==null?'Moving':'Placing'} ${BUILDINGS[this.rt.placement!].name}`}${point ? `<small>${error ?? (this.rt.editingId!==null?'Valid move · no cost':'Ready to build')}</small>` : ''}</span>${point ? `<button class="primary" id="confirm-placement" ${error ? 'disabled' : ''}>${this.rt.editingId!==null?'Confirm move':'Build here'}</button>` : ''}${this.rt.placement&&isBarrier({kind:this.rt.placement})?`<button id="rotate-placement" title="Two grid axes; walls join adjacent segments">Rotate ↻ <small>${this.rt.placementRotation?'↙ ↗':'↖ ↘'} · R</small></button>`:''}<button id="cancel-placement">Cancel <kbd>Esc</kbd></button>`;
-      if (placement.innerHTML !== content) placement.innerHTML = content;
+      if (this.htmlCache.get('placement-bar') !== content) {
+        const template = document.createElement('template'); template.innerHTML = content;
+        reconcilePanelChildren(placement, template.content);
+        this.htmlCache.set('placement-bar', content);
+      }
     }
     const reward=document.querySelector('#bounty-feedback')!;reward.textContent=this.rt.bountyFeedback;reward.classList.toggle('hidden',performance.now()>this.rt.bountyFeedbackUntil);
     const toast = document.querySelector('#toast')!; toast.className = `toast ${this.rt.messageTone} ${performance.now() > this.rt.messageUntil ? 'hidden' : ''}`; if (toast.textContent !== this.rt.message) toast.textContent = this.rt.message;
@@ -287,7 +362,7 @@ export class Interface {
       const plague=e.world.infection.length?e.world.infection.length+' infected allies · use packed herbs / ':'';
       const message = plague + (e.warning > 0 ? 'Ambush in ' + Math.ceil(e.warning) + 's · protect your bowmen' : enemies(e.world).length || e.pending?.length ? enemies(e.world).length + ' infected · ' + (e.pending?.length ?? 0) + ' approaching' : e.world.corpses?.some(c=>c.tainted)?'Infected remains rising · keep watch':'');
       alert.classList.toggle('hidden', !message); this.html('alert-banner', escape(message));
-    } else {this.text('world-title',s.region?'Briar March':'Hearthmere');if(s.region){const settlements=s.buildings.filter(b=>b.kind==='hearth').length;this.text('world-subtitle',s.march?.secured?settlements+' settlements · '+threats+' threats':'Explore · clear threats · found an outpost');this.text('day-label','Briar March');this.text('phase-label',s.march?.rival?.status==='occupied'?'Mossgate under siege':s.march?.secured?'Watch the eastern road':'Discover nine places');}}
+    } else {this.text('world-title',s.region?'Briar March':'Hearthmere');if(s.region){const settlements=s.buildings.filter(b=>b.kind==='hearth').length;this.text('world-subtitle',s.march?.secured?settlements+' settlements · '+threats+' threats':'Explore · clear threats · found an outpost');this.text('day-label','Briar March');this.text('phase-label',s.march?.weirward?.status==='occupied'?'Tallowmere under siege':s.march?.rival?.status==='occupied'?'Mossgate under siege':s.march?.secured?'Watch the eastern road':'Explore eleven places');}}
     for (const b of document.querySelectorAll<HTMLButtonElement>('[data-tab]')) { b.disabled = !!s.expedition; if (s.expedition) b.classList.toggle('active', b.dataset.tab === 'army'); }
     this.drawMinimap();
     if (s.outcome !== 'playing' && this.lastOutcome !== s.outcome && this.rt.ready) { this.lastOutcome = s.outcome; this.ending(); this.rt.persist(); }

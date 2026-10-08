@@ -11,7 +11,7 @@ import {cure,infect,plagueStep} from '../src/game/disease';
 import {rates} from '../src/game/economy';
 import {launchError} from '../src/game/expedition';
 import {findPath,movementBlocker,nearestOpen,navigation} from '../src/game/navigation';
-import {tileAt,tilesFor} from '../src/game/map';
+import {STRONGHOLD_CENTERS,tileAt,tilesFor} from '../src/game/map';
 import {MAP_W,MAP_H} from '../src/game/config';
 import type {State} from '../src/game/types';
 function depart(){const s=newGame();command(s,{type:'commander-appoint'});const party=army(s).slice(0,2);for(const u of party)Object.assign(u,ROAD_EXIT,{target:{...ROAD_EXIT},order:'hold'});expect(command(s,{type:'travel',ids:party.map(u=>u.id)}).ok).toBe(true);return s;}
@@ -138,6 +138,13 @@ it('recovers command at home after a complete regional wipe without returning de
 });
 
 describe('Gloamward stronghold and multi-faction combat',()=>{
+ it('keeps Tallowmere dormant on the Mossgate route until its wayfarer report is found',()=>{
+  const s=cleared(),hero=army(s).find(u=>u.id===s.commander!.id)!;
+  Object.assign(hero,{x:32,y:42});empireStep(s,.1);
+  expect(s.march!.weirward?.status).toBe('unseen');
+  s.march!.rumors=['weirward'];empireStep(s,.1);
+  expect(s.march!.weirward?.status).toBe('occupied');
+ });
  it('retains exact fallen soldier identities after clean corpse decay and save reload',()=>{
   const s=cleared(),soldier=army(s)[0];soldier.hp=0;combatStep(s,.1,false);
   expect(army(s).some(u=>u.id===soldier.id)).toBe(false);expect(s.fallenIds).toContain(soldier.id);expect(s.corpses?.some(c=>c.personId===soldier.id)).toBe(true);
@@ -186,5 +193,28 @@ describe('Gloamward stronghold and multi-faction combat',()=>{
   expect(findPath(s,inside,outside,false,nav,'player')).toHaveLength(0);expect(findPath(s,inside,outside,false,nav,'rival').length).toBeGreaterThan(0);expect(findPath(s,inside,outside,true,nav,'infected').length).toBeGreaterThan(0);
   expect(movementBlocker(nav,{x:43.5,y:29},{x:44.5,y:29},false,false,'player')).toBe(gate);expect(movementBlocker(nav,{x:43.5,y:29},{x:44.5,y:29},false,false,'rival')).toBeUndefined();expect(movementBlocker(nav,{x:43.5,y:29},{x:44.5,y:29},true,false,'infected')).toBe(gate);
   const original=navigation(s);gate.hp=0;const breached=navigation(s);expect(breached).not.toBe(original);expect(findPath(s,inside,outside,false,breached,'player').length).toBeGreaterThan(0);
+ });
+});
+
+describe('Weirward Compact and Tallowmere campaign',()=>{
+ it('reveals a distinct 150-defender twin-gate keep from the wayfarers’ scout report',()=>{
+  const s=cleared(),hero=army(s).find(u=>u.id===s.commander!.id)!;Object.assign(hero,{x:28,y:44});empireStep(s,.1);
+  expect(s.march!.seen).toContain('wayfarer-camp');expect(s.march!.rumors).toContain('weirward');expect(s.march!.weirward).toMatchObject({status:'unseen',remaining:150,reserve:120,casualties:0});
+  Object.assign(hero,{x:33,y:39});empireStep(s,.1);const war=s.march!.weirward!;
+  expect(war).toMatchObject({id:'tallowmere',name:'Tallowmere',faction:'The Weirward Compact',status:'occupied',remaining:150,reserve:120});expect(rivals(s,'tallowmere')).toHaveLength(30);expect(rivals(s,'mossgate')).toHaveLength(0);
+  const composition=Object.fromEntries(['warden','spearman','ranger','scout'].map(kind=>[kind,rivals(s,'tallowmere').filter(u=>u.kind===kind).length]));expect(composition).toEqual({warden:9,spearman:12,ranger:6,scout:3});
+  const walls=s.buildings.filter(b=>b.owner==='rival'&&b.rivalId==='tallowmere'),gates=walls.filter(b=>b.kind==='gate');expect(walls).toHaveLength(39);expect(gates.map(b=>b.name).sort()).toEqual(['Causeway Gate','East Postern']);
+  expect(walls.filter(b=>b.kind==='tower').map(b=>b.name)).toEqual(['Reed Bell Tower','Roadward Beacon']);expect(tileAt(STRONGHOLD_CENTERS.tallowmere.x,STRONGHOLD_CENTERS.tallowmere.y,s)!.height).toBeGreaterThan(.8);expect(tileAt(29,39,s)?.terrain).toBe('road');
+  const gate=gates.find(b=>b.name==='Causeway Gate')!;expect(findPath(s,{x:32,y:38},{x:34,y:38},false,navigation(s),'player')).toHaveLength(0);expect(movementBlocker(navigation(s),{x:32.5,y:38},{x:33.5,y:38},false,false,'player')).toBe(gate);
+  const saved=reload(s);expect(saved.march!.weirward).toEqual(war);expect(rivals(saved,'tallowmere')).toHaveLength(30);expect(saved.march!.rumors).toEqual(['weirward']);
+ });
+ it('counts Weirward casualties once, keeps Mossgate isolated, and retains zombie bite rules',()=>{
+  let s=cleared(),hero=army(s).find(u=>u.id===s.commander!.id)!;Object.assign(hero,{x:28,y:44});empireStep(s,.1);Object.assign(hero,{x:33,y:39});empireStep(s,.1);const war=s.march!.weirward!,victim=rivals(s,'tallowmere')[0];
+  expect(strongholdCaptureError(s,'tallowmere')).toContain('remaining 150');victim.hp=0;combatStep(s,.1,false);expect(war).toMatchObject({remaining:149,reserve:120,casualties:1});expect(s.march!.rival!.remaining).toBe(100);combatStep(s,.1,false);expect(war.casualties).toBe(1);s=reload(s);expect(s.march!.weirward).toMatchObject({remaining:149,reserve:120,casualties:1});
+  const commander=army(s).find(u=>u.id===s.commander!.id)!,guard=rivals(s,'tallowmere').find(u=>u.kind==='spearman')!;Object.assign(commander,{x:16,y:15,cooldown:8});Object.assign(guard,{x:35,y:36,cooldown:8,exposure:95,order:'defend',anchor:{x:35,y:36}});for(const tower of s.buildings.filter(b=>b.kind==='tower'))tower.cooldown=8;s.units=[commander,guard];const zombie=makeUnit(s,'hollow',35.8,36);combatStep(s,.1,false);expect(s.infection.some(i=>i.personId===guard.id&&i.source==='bite'&&i.sourceId===zombie.id)).toBe(true);expect(s.march!.weirward!.remaining).toBe(149);
+ });
+ it('migrates older March saves with no second-faction fields and blocks hostile property edits',()=>{
+  const s=cleared(),hero=army(s).find(u=>u.id===s.commander!.id)!;Object.assign(hero,{x:47,y:29});empireStep(s,.1);const old=structuredClone(s);delete old.march!.weirward;delete old.march!.rumors;const migrated=reload(old);expect(migrated.march!.weirward).toMatchObject({status:'unseen',remaining:150,reserve:120,casualties:0});expect(migrated.march!.rumors).toEqual([]);
+  Object.assign(hero,{x:28,y:44});empireStep(s,.1);Object.assign(hero,{x:33,y:39});empireStep(s,.1);const gate=s.buildings.find(b=>b.name==='Causeway Gate')!;expect(command(s,{type:'repair',id:gate.id})).toMatchObject({ok:false,message:'Capture this structure before repairing or upgrading it.'});expect(command(s,{type:'relocate',id:gate.id,x:gate.x+1,y:gate.y})).toMatchObject({ok:false,message:'Capture the stronghold before moving its structures.'});expect(command(s,{type:'stronghold-capture',id:'tallowmere'}).ok).toBe(false);
  });
 });

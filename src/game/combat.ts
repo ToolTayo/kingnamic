@@ -1,13 +1,12 @@
 import { MAP_H, MAP_W, MAX_HOSTILES, MAX_UNITS, TERRITORIES, UNITS } from './config';
-import { distance, key, tileAt } from './map';
+import { distance, key, STRONGHOLD_CENTERS, tileAt } from './map';
 import { clearMelee, findPath, movementBlocker, nearestOpen, navigation, type Navigation } from './navigation';
 import { separateCrowd } from './crowd';
-import { army, enemies, isFriendly, isInfected, isRival, log, makeUnit, random, rivals } from './state';
-import type { Building, CommanderInput, Point, Resident, State, Unit, UnitKind } from './types';
+import { army, enemies, isFriendly, isInfected, isRival, log, makeUnit, random, rivalIdOf, rivalStronghold, rivals } from './state';
+import type { Building, CommanderInput, Point, Resident, State, StrongholdId, Unit, UnitKind } from './types';
 import { SpatialGrid } from './spatial';
 import { expose, recordDeath, resolveResidentDeaths } from './disease';
 import { awardBounty } from './treasury';
-const MOSS_CENTER={x:47,y:29};
 function move(s: State, u: Unit, target: Point, dt: number, enemy: boolean, nav: Navigation): Building | undefined {
   const faction=isInfected(u)?'infected':isRival(u)?'rival':'player';
   const endpoint = u.path[u.path.length - 1];
@@ -58,6 +57,9 @@ export function combatStep(s: State, dt: number, separate = true,input?:Commande
   }
   const friends=army(s),foes=enemies(s),rivalTroops=rivals(s),hearth=s.buildings.find(b=>b.kind==='hearth');
   const nav=navigation(s),friendGrid=new SpatialGrid(friends),rivalGrid=new SpatialGrid(rivalTroops),playerThreatGrid=new SpatialGrid<Unit>([...foes,...rivalTroops]),rivalThreatGrid=new SpatialGrid<Unit>([...friends,...foes]),humanGrid=new SpatialGrid<Unit|Resident>([...friends,...rivalTroops,...(s.residents??[])]);
+  // Quiet garrisons stay dormant outside their visible local threat radius.
+  // Reserves are ledger entries, not 120 extra pathfinding agents.
+  const activeRivalZones=new Set<StrongholdId>((['mossgate','tallowmere'] as const).filter(id=>rivalStronghold(s,id)?.status==='occupied'&&!!rivalThreatGrid.nearest(STRONGHOLD_CENTERS[id],12,u=>u.hp>0)));
   const illnesses=new Map(s.infection.map(i=>[i.personId,i]));
   const isolated=new Map<number,Point>();
   if(s.quarantine&&illnesses.size){
@@ -79,7 +81,8 @@ export function combatStep(s: State, dt: number, separate = true,input?:Commande
   for (const u of s.units) {
     if (u.hp <= 0 || u.injury) continue;
     u.cooldown = Math.max(0, u.cooldown - dt); u.repath -= dt; u.attackFlash = Math.max(0, u.attackFlash - dt);
-    const friendly=isFriendly(u),rival=isRival(u),ranged=u.kind==='ranger'||u.kind==='scout',def=UNITS[u.kind];
+    const friendly=isFriendly(u),rival=isRival(u),rivalId=rival?rivalIdOf(u):undefined,rivalCenter=rivalId?STRONGHOLD_CENTERS[rivalId]:undefined,ranged=u.kind==='ranger'||u.kind==='scout',def=UNITS[u.kind];
+    if(rival&&rivalId&&!activeRivalZones.has(rivalId))continue;
     const illness=illnesses.get(u.id);
     if(friendly&&s.quarantine&&illness){const p=isolated.get(u.id);if(p)move(s,u,p,dt,false,nav);continue;}
     if(friendly&&input&&u.id===s.commander?.id){
@@ -97,12 +100,12 @@ export function combatStep(s: State, dt: number, separate = true,input?:Commande
       continue;
     }
     const anchor=u.anchor??u.target;
-    if(friendly&&u.order==='patrol'&&u.patrol&&distance(u,u.target)<.35){u.patrol.leg=u.patrol.leg?0:1;u.target={...(u.patrol.leg?u.patrol.b:u.patrol.a)};u.path=[];u.repath=0;}
+    if((friendly||rival)&&u.order==='patrol'&&u.patrol&&distance(u,u.target)<.35){u.patrol.leg=u.patrol.leg?0:1;u.target={...(u.patrol.leg?u.patrol.b:u.patrol.a)};u.path=[];u.repath=0;}
     if(friendly&&u.order==='escort'){const escorted=byId.get(u.focus!);if(escorted&&escorted.hp>0){if(distance(u.target,escorted)>2){u.target=nearestOpen(s,{x:escorted.x+(u.id%3-1),y:escorted.y+1},undefined,nav);u.repath=0;}}else{u.order='defend';delete u.focus;}}
     const elevation = tileAt(u.x, u.y,s)?.height ?? 0;
     const range = def.range + (ranged ? elevation * 0.8 + ((u.formation??s.formation) === 'loose' ? 0.6 : 0) : 0);
-    const radius=friendly?(u.order==='hunt'?12:u.order==='attack'?8:u.order==='hold'?range:range+(ranged?.4:2)):rival?(u.order==='defend'?7:5.5):u.order==='defend'?5.5:4;
-    let target:Unit|Resident|Building|undefined=friendly?playerThreatGrid.nearest(u,radius,v=>v.hp>0&&(u.order==='hunt'?distance(v,anchor)<=12:u.order==='hold'||u.order==='attack'||ranged||distance(v,anchor)<(u.order==='defend'?4:6)||!u.order&&!!hearth&&distance(v,hearth)<3)):rival?rivalThreatGrid.nearest(u,radius,v=>v.hp>0&&distance(v,MOSS_CENTER)<=9):humanGrid.nearest(u,radius,v=>v.hp>0);
+    const radius=friendly?(u.order==='hunt'?12:u.order==='attack'?8:u.order==='hold'?range:range+(ranged?.4:2)):rival?(u.order==='defend'&&rivalId==='tallowmere'?7:5.5):u.order==='defend'?5.5:4;
+    let target:Unit|Resident|Building|undefined=friendly?playerThreatGrid.nearest(u,radius,v=>v.hp>0&&(u.order==='hunt'?distance(v,anchor)<=12:u.order==='hold'||u.order==='attack'||ranged||distance(v,anchor)<(u.order==='defend'?4:6)||!u.order&&!!hearth&&distance(v,hearth)<3)):rival&&rivalCenter?rivalThreatGrid.nearest(u,radius,v=>v.hp>0&&distance(v,rivalCenter)<=9&&(rivalId!=='tallowmere'||distance(v,anchor)<=(u.order==='patrol'?7:6))):humanGrid.nearest(u,radius,v=>v.hp>0);
     const focusedBuilding=friendly&&u.order==='attack'&&u.focus?s.buildings.find(b=>b.id===u.focus&&b.owner==='rival'&&b.hp>0):undefined;
     if(friendly&&u.order==='attack'&&u.focus){const focused=byId.get(u.focus);if(focused&&focused.hp>0&&!isFriendly(focused))target=focused;else if(focusedBuilding){const immediate=target&&'attackFlash'in target&&target.hp>0&&distance(u,target)<=range&&(ranged||clearMelee(s,u,target,nav));target=immediate?target:focusedBuilding;}else delete u.focus;}
     // Runners punish an exposed rear. A front-line soldier already in reach
@@ -128,7 +131,7 @@ export function combatStep(s: State, dt: number, separate = true,input?:Commande
       // An idle guard must help at a breach instead of watching the Hearth fall
       // from a distant rally point. Explicit move orders above still take priority.
       const defense = friendly && !u.order && breached && hearth ? nearestOpen(s, { x: hearth.x + u.id % 3 - 1, y: hearth.y + 2 },undefined,nav) : u.target;
-      const destination=friendly&&u.order==='hold'?undefined:friendly&&ranged&&u.order!=='attack'&&u.order!=='hunt'?defense:target??(friendly?defense:rival?u.anchor??u.target:u.order==='defend'?u.anchor??u.target:hearth??friendGrid.nearest(u,45,v=>v.hp>0));
+      const destination=friendly&&u.order==='hold'?undefined:friendly&&ranged&&u.order!=='attack'&&u.order!=='hunt'?defense:target??(friendly?defense:rival&&u.order==='patrol'?u.target:rival?u.anchor??u.target:u.order==='defend'?u.anchor??u.target:hearth??friendGrid.nearest(u,45,v=>v.hp>0));
       if (destination && distance(u, destination) > 0.2) {
         const blocking=move(s,u,destination,dt,isInfected(u),nav);
         if(blocking&&isInfected(u))hit(s,u,blocking,def.damage,false,friendGrid);
@@ -147,7 +150,7 @@ export function combatStep(s: State, dt: number, separate = true,input?:Commande
     if (s.effects.length < 100) s.effects.push({ id: s.nextId++, x: u.x, y: u.y, kind: 'death', ttl: 1, unit: u.kind });
     if (isFriendly(u)) { recordDeath(s,u);s.stats.lost++; log(s, `A ${UNITS[u.kind].name.toLowerCase()} has fallen.`, 'danger'); }
     else if(isRival(u)){
-      recordDeath(s,u);const war=s.march?.rival;if(war?.status==='occupied'){war.casualties++;war.remaining=Math.max(0,war.remaining-1);}
+      recordDeath(s,u);const war=rivalStronghold(s,rivalIdOf(u));if(war?.status==='occupied'){war.casualties++;war.remaining=Math.max(0,war.remaining-1);}
     } else {
       if(u.commanderCredit&&u.reanimatedFrom===undefined&&s.commander)s.commander.xp=Math.min(100,s.commander.xp+1);
       s.stats.slain++;
