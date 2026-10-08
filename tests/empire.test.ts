@@ -138,6 +138,13 @@ it('recovers command at home after a complete regional wipe without returning de
 });
 
 describe('Gloamward stronghold and multi-faction combat',()=>{
+ it('keeps Tallowmere dormant on the Mossgate route until its wayfarer report is found',()=>{
+  const s=cleared(),hero=army(s).find(u=>u.id===s.commander!.id)!;
+  Object.assign(hero,{x:32,y:42});empireStep(s,.1);
+  expect(s.march!.weirward?.status).toBe('unseen');
+  s.march!.rumors=['weirward'];empireStep(s,.1);
+  expect(s.march!.weirward?.status).toBe('occupied');
+ });
  it('retains exact fallen soldier identities after clean corpse decay and save reload',()=>{
   const s=cleared(),soldier=army(s)[0];soldier.hp=0;combatStep(s,.1,false);
   expect(army(s).some(u=>u.id===soldier.id)).toBe(false);expect(s.fallenIds).toContain(soldier.id);expect(s.corpses?.some(c=>c.personId===soldier.id)).toBe(true);
@@ -202,12 +209,12 @@ describe('Weirward Compact and Tallowmere campaign',()=>{
   const saved=reload(s);expect(saved.march!.weirward).toEqual(war);expect(rivals(saved,'tallowmere')).toHaveLength(30);expect(saved.march!.rumors).toEqual(['weirward']);
  });
  it('counts Weirward casualties once, keeps Mossgate isolated, and retains zombie bite rules',()=>{
-  let s=cleared(),hero=army(s).find(u=>u.id===s.commander!.id)!;Object.assign(hero,{x:33,y:39});empireStep(s,.1);const war=s.march!.weirward!,victim=rivals(s,'tallowmere')[0];
+  let s=cleared(),hero=army(s).find(u=>u.id===s.commander!.id)!;Object.assign(hero,{x:28,y:44});empireStep(s,.1);Object.assign(hero,{x:33,y:39});empireStep(s,.1);const war=s.march!.weirward!,victim=rivals(s,'tallowmere')[0];
   expect(strongholdCaptureError(s,'tallowmere')).toContain('remaining 150');victim.hp=0;combatStep(s,.1,false);expect(war).toMatchObject({remaining:149,reserve:120,casualties:1});expect(s.march!.rival!.remaining).toBe(100);combatStep(s,.1,false);expect(war.casualties).toBe(1);s=reload(s);expect(s.march!.weirward).toMatchObject({remaining:149,reserve:120,casualties:1});
   const commander=army(s).find(u=>u.id===s.commander!.id)!,guard=rivals(s,'tallowmere').find(u=>u.kind==='spearman')!;Object.assign(commander,{x:16,y:15,cooldown:8});Object.assign(guard,{x:35,y:36,cooldown:8,exposure:95,order:'defend',anchor:{x:35,y:36}});for(const tower of s.buildings.filter(b=>b.kind==='tower'))tower.cooldown=8;s.units=[commander,guard];const zombie=makeUnit(s,'hollow',35.8,36);combatStep(s,.1,false);expect(s.infection.some(i=>i.personId===guard.id&&i.source==='bite'&&i.sourceId===zombie.id)).toBe(true);expect(s.march!.weirward!.remaining).toBe(149);
  });
  it('migrates older March saves with no second-faction fields and blocks hostile property edits',()=>{
   const s=cleared(),hero=army(s).find(u=>u.id===s.commander!.id)!;Object.assign(hero,{x:47,y:29});empireStep(s,.1);const old=structuredClone(s);delete old.march!.weirward;delete old.march!.rumors;const migrated=reload(old);expect(migrated.march!.weirward).toMatchObject({status:'unseen',remaining:150,reserve:120,casualties:0});expect(migrated.march!.rumors).toEqual([]);
-  Object.assign(hero,{x:33,y:39});empireStep(s,.1);const gate=s.buildings.find(b=>b.name==='Causeway Gate')!;expect(command(s,{type:'repair',id:gate.id})).toMatchObject({ok:false,message:'Capture this structure before repairing or upgrading it.'});expect(command(s,{type:'relocate',id:gate.id,x:gate.x+1,y:gate.y})).toMatchObject({ok:false,message:'Capture the stronghold before moving its structures.'});expect(command(s,{type:'stronghold-capture',id:'tallowmere'}).ok).toBe(false);
+  Object.assign(hero,{x:28,y:44});empireStep(s,.1);Object.assign(hero,{x:33,y:39});empireStep(s,.1);const gate=s.buildings.find(b=>b.name==='Causeway Gate')!;expect(command(s,{type:'repair',id:gate.id})).toMatchObject({ok:false,message:'Capture this structure before repairing or upgrading it.'});expect(command(s,{type:'relocate',id:gate.id,x:gate.x+1,y:gate.y})).toMatchObject({ok:false,message:'Capture the stronghold before moving its structures.'});expect(command(s,{type:'stronghold-capture',id:'tallowmere'}).ok).toBe(false);
  });
 });

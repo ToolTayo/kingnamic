@@ -206,11 +206,11 @@ export function empireStep(s:State,dt:number):void{
   // the gate on the western approach from the southern road. Revealing at 4
   // tiles used to build a closed ring around the commander and trap them in it.
   if(hero&&war.status==='unseen'&&distance(hero,MOSS)<8)raiseMossgate(s);
-  // Weirward scouts reveal the compound at the outer causeway. The old
-  // six-tile trigger put the commander directly on the western gate when the
-  // 30-person watch deployed, causing unavoidable opening damage before the
-  // player could issue formation orders.
-  if(hero&&weirward.status==='unseen'&&distance(hero,TALLOWMERE)<8)raiseTallowmere(s);
+  // The Weirward compound is revealed only after the player finds the
+  // wayfarers' report. Without this gate, the ordinary Mossgate route wakes
+  // a second, unrelated garrison and turns that siege into an unintended
+  // two-front battle.
+  if(hero&&m.rumors?.includes('weirward')&&weirward.status==='unseen'&&distance(hero,TALLOWMERE)<8)raiseTallowmere(s);
   const relief=(garrison:RivalStronghold,center:{x:number;y:number})=>{
     if(garrison.status!=='occupied')return;
     const active=rivals(s,garrison.id).length,pressure=[...army(s),...enemies(s)].some(u=>distance(u,center)<12);

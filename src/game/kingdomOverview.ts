@@ -98,8 +98,9 @@ export function kingdomOverview(s: State): KingdomOverview {
       }
       if (site.repairs.length) alerts.push({ tone: 'warn', message: site.repairs.length + ' damaged structure' + (site.repairs.length === 1 ? '' : 's') + ' at ' + site.name + '.', action: 'repairs', settlementId: site.id });
     }
-    const war = state.march?.rival;
-    if (active && war?.status === 'occupied' && war.remaining > 0) alerts.push({ tone: 'warn', message: 'Mossgate is still contested · ' + war.remaining + ' defenders remain.', action: 'army' });
+    if (active) for (const garrison of [state.march?.rival, state.march?.weirward]) {
+      if (garrison?.status === 'occupied' && garrison.remaining > 0) alerts.push({ tone: 'warn', message: garrison.name + ' is still contested · ' + garrison.remaining + ' defenders remain.', action: 'army' });
+    }
     const completed = state.logs.find(l => l.tone === 'good' && l.text.endsWith('is ready.') && state.time - l.time < 30);
     if (completed) alerts.push({ tone: 'good', message: completed.text, action: 'settlement' });
   }

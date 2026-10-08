@@ -51,4 +51,13 @@ describe('kingdom overview derived ledger',()=>{
   expect(view.alerts.some(a=>a.settlementId===site.id&&a.message.includes('threat near Mossgate Hall'))).toBe(true);
   expect(view.alerts.some(a=>a.settlementId===site.id&&a.message.includes('damaged structure at Mossgate Hall'))).toBe(true);
  });
+
+ it('reports Tallowmere independently from the Mossgate garrison',()=>{
+  const march=withFrontier(newGame()).empire!.reserve;
+  march.march!.weirward={id:'tallowmere',name:'Tallowmere',faction:'The Weirward Compact',status:'occupied',remaining:149,reserve:120,casualties:1,warning:0,patrolVariant:0};
+  const soldier=makeUnit(march,'spearman',37,36);soldier.faction='rival';soldier.rivalId='tallowmere';
+  const view=kingdomOverview(march);
+  expect(view.alerts.some(a=>a.message==='Tallowmere is still contested · 149 defenders remain.')).toBe(true);
+  expect(view.alerts.some(a=>a.message==='Mossgate is still contested · 100 defenders remain.')).toBe(false);
+ });
 });
