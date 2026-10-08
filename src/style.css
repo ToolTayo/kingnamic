@@ -2261,3 +2261,66 @@ kbd {
 .settlement-list{display:grid;gap:8px;margin:10px 0 16px}.settlement-row{display:grid;grid-template-columns:1fr auto auto;gap:5px;align-items:center;padding:9px;border:1px solid #c2c8b7;border-radius:6px;background:#f2f1e7}.settlement-row>div{display:grid;gap:3px}.settlement-row small{font-size:10px;color:#657062}.settlement-row input{grid-column:1/-1;width:100%;min-width:0;padding:7px 8px;border:1px solid #aab4a4;border-radius:4px;background:#fffdf4;color:#253a2f}.settlement-row button{min-height:36px;padding:5px 7px;font-size:11px}.settlement-row>small{grid-column:1/-1}
 
 .war-card{margin:10px 0;padding:11px 12px;border:1px solid #b9a97e;border-left:3px solid #a4513d;border-radius:6px;background:#eee9da;color:#293c31}.war-card strong{font-family:Georgia,serif;color:#654537}.war-card p{margin:6px 0 9px;font-size:12px;line-height:1.45;color:#5d6257}
+
+/* Compact kingdom ledger: state is derived from the existing settlement and army records. */
+.kingdom-overview{margin:10px 0 18px;padding:12px;border:1px solid #b9c1ae;border-radius:7px;background:#ebeede;color:#28392f}
+.kingdom-overview-title,.kingdom-settlement-head{display:flex;align-items:flex-start;justify-content:space-between;gap:10px}
+.kingdom-overview-title h3,.kingdom-settlement-head h3{margin:2px 0 4px;font-size:17px;line-height:1.2}
+.kingdom-territory-count,.kingdom-readiness{flex:none;padding:4px 7px;border:1px solid #c2c6b4;border-radius:999px;background:#f5f2e7;color:#52614e;font-size:10px;line-height:1.3;white-space:nowrap}
+.kingdom-summary{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;margin:10px 0 7px}
+.kingdom-summary>span,.kingdom-settlement-stats>span{min-width:0;display:grid;align-content:start;gap:3px;padding:8px;border:1px solid #c8cbbb;border-radius:5px;background:#f5f3e9}
+.kingdom-summary small,.kingdom-settlement-stats small{color:#6c7466;font-size:9px;font-weight:750;letter-spacing:.07em}
+.kingdom-summary b{font-size:15px;line-height:1.15;font-variant-numeric:tabular-nums}
+.kingdom-summary em,.kingdom-settlement-stats em{display:block;overflow-wrap:anywhere;color:#6a7466;font-size:10px;font-style:normal;line-height:1.35}
+.kingdom-stores{display:flex;flex-wrap:wrap;gap:5px 12px;padding:7px 2px;color:#4e604e;font-size:10px;font-weight:650}
+.kingdom-stores .shortage{color:#9b4e3e}
+.kingdom-alerts{display:grid;gap:4px;margin:5px 0 10px}
+.kingdom-alert{display:flex;justify-content:space-between;align-items:center;gap:8px;min-height:38px;padding:6px 9px;border:1px solid #d6c6a5;border-radius:4px;background:#f5ecd9;color:#59472d;text-align:left;font-size:11px;line-height:1.35}
+.kingdom-alert.danger{border-color:#d5a99b;background:#f4e4db;color:#7e382d}
+.kingdom-alert.good{border-color:#b7c8a7;background:#eaf0e0;color:#405b3a}
+.kingdom-quiet{margin:3px 0 10px;color:#677263;font-size:11px}
+.kingdom-settlement-list{display:grid;gap:8px;margin-top:7px}
+.kingdom-settlement{min-width:0;padding:10px;border:1px solid #c2c8b7;border-radius:6px;background:#f4f2e8}
+.kingdom-settlement.remote{background:#edeee4}
+.kingdom-settlement-head{align-items:center}
+.kingdom-settlement-head .eyebrow{font-size:9px;color:#68735f}
+.kingdom-settlement-head h3{font-size:15px}
+.kingdom-settlement-head small{display:block;color:#697365;font-size:10px;line-height:1.4}
+.kingdom-readiness.ready{border-color:#b1c5a5;background:#e8efdf;color:#476341}
+.kingdom-readiness.threatened{border-color:#d6a79a;background:#f4e2da;color:#853c30}
+.kingdom-settlement-stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:5px;margin:8px 0}
+.kingdom-settlement-stats>span{padding:6px}
+.kingdom-settlement-stats b{font-size:16px;font-variant-numeric:tabular-nums}
+.kingdom-settlement-stats em{font-size:9px}
+.kingdom-work-list{display:grid;gap:5px;margin:7px 0}
+.kingdom-repair,.kingdom-build-progress{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:6px 7px;border-top:1px solid #d7d9ce;color:#465344;font-size:11px}
+.kingdom-repair>span,.kingdom-build-progress>span{display:grid;gap:2px;min-width:0}
+.kingdom-repair small,.kingdom-build-progress small{color:#758071;font-size:9px}
+.kingdom-repair button{flex:none;min-height:36px;padding:4px 7px;font-size:10px}
+.kingdom-build-progress{display:grid;grid-template-columns:1fr;gap:5px}
+.kingdom-build-progress>i,.kingdom-build-progress>i>b{display:block;height:4px;border-radius:4px}
+.kingdom-build-progress>i{overflow:hidden;background:#d6d8ca}
+.kingdom-build-progress>i>b{background:#849a6d}
+.kingdom-actions{display:flex;flex-wrap:wrap;gap:5px;margin-top:7px}
+.kingdom-actions button{min-height:38px;padding:6px 8px;font-size:10px}
+.kingdom-actions button:disabled,.kingdom-repair button:disabled{opacity:.48}
+.kingdom-travel-note{margin:7px 0 1px;color:#707969;font-size:10px;line-height:1.45}
+.kingdom-name{margin-top:7px;border-top:1px solid #d5d8cb;padding-top:6px;color:#687260;font-size:10px}
+.kingdom-name>div{display:flex;gap:5px;margin-top:6px}
+.kingdom-name input{min-width:0;flex:1;padding:7px;border:1px solid #aab4a4;border-radius:4px;background:#fffdf4;color:#253a2f}
+.kingdom-name button{min-height:38px}
+@media(max-width:620px){
+ .kingdom-overview{padding:9px;margin-top:8px}
+ .kingdom-summary{gap:4px}
+ .kingdom-summary>span{padding:6px}
+ .kingdom-summary b{font-size:13px}
+ .kingdom-summary em{font-size:9px}
+ .kingdom-settlement{padding:9px}
+ .kingdom-settlement-stats{gap:4px}
+ .kingdom-settlement-stats>span{padding:5px}
+ .kingdom-settlement-stats b{font-size:14px}
+ .kingdom-actions button{min-height:44px;flex:1 1 auto}
+ .kingdom-repair button{min-height:44px}
+ .kingdom-name button{min-height:44px}
+}
+.kingdom-blocker{flex-basis:100%;color:#924e40;font-size:9px;line-height:1.35}

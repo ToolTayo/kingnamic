@@ -21,7 +21,7 @@ import { missionRoute, defaultPatrol, readyArmy } from '../game/expedition';
 import { ambushFronts } from '../game/encounters';
 import { isFriendly } from '../game/state';
 import { waveSize } from '../game/combat';
-import { commandableIds } from '../game/army';
+import { available, commandableIds } from '../game/army';
 import { nextIllnessDeadline } from '../game/disease';
 const escape = (str: string): string => str.replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]!));
 const resourceIcon: Record<keyof Resources, string> = { wood: 'wood', stone: 'crown', food: 'wheat', herbs: 'herb' };
@@ -50,7 +50,9 @@ export class Interface {
     for (const kind of Object.keys(BUILDINGS)) this.thumbs[kind] = buildingArt(kind as BuildingKind).toDataURL();
     this.mount(); this.bind(); this.render(); this.onboard();
     rt.onChange = () => this.render(); rt.onSound = kind => this.beep(kind);
-    window.setInterval(() => this.render(), 250);
+    // Keep live derived summaries useful without replacing interactive controls
+    // several times per second. Commands still render immediately via onChange.
+    window.setInterval(() => this.render(), 1000);
   }
   private mount(): void {
     document.querySelector('#app')!.innerHTML = `
@@ -95,6 +97,19 @@ export class Interface {
       if(el.dataset.weapon){this.rt.act({type:'commander-weapon',weapon:el.dataset.weapon as 'sword'|'spear'|'bow'});return;}
       if(el.dataset.renameSettlement){const id=Number(el.dataset.renameSettlement),input=this.panel.querySelector<HTMLInputElement>(`#settlement-name-${id}`);this.rt.act({type:'settlement-rename',id,name:input?.value??''});return;}
       if(el.dataset.settlementFocus){const b=this.rt.world.buildings.find(b=>b.id===Number(el.dataset.settlementFocus));if(b){this.rt.selection={type:'building',id:b.id};this.scene().focus(b);this.render();}return;}
+      if(el.dataset.kingdomCompany){this.rt.heroMode=false;this.tab='army';this.rt.selection=null;this.rt.armyView='roster';this.render();this.panel.scrollTop=0;return;}
+      if(el.dataset.kingdomDefend){const b=this.rt.world.buildings.find(v=>v.id===Number(el.dataset.kingdomDefend)&&v.kind==='hearth'&&v.owner!=='rival');if(b)this.rt.act({type:'order',order:'defend',ids:this.rt.selectedIds,x:b.x,y:b.y});return;}
+      if(el.dataset.kingdomRecall){const b=this.rt.world.buildings.find(v=>v.id===Number(el.dataset.kingdomRecall)&&v.kind==='hearth'),hero=army(this.rt.world).find(u=>u.id===this.rt.state.commander?.id);if(!b||!hero){this.rt.notify('Recall requires an active settlement and commander.','warn');return;}const ids=army(this.rt.world).filter(u=>u.id!==hero.id&&u.origin!=='battalion'&&u.order==='defend'&&Math.hypot((u.anchor??u.target).x-b.x,(u.anchor??u.target).y-b.y)<8&&available(this.rt.world,u)).map(u=>u.id);if(!ids.length){this.rt.notify('No fit soldiers are ordered to defend this settlement.','warn');return;}this.rt.act({type:'order',order:'move',ids,x:hero.x,y:hero.y});return;}
+      if(el.dataset.kingdomRepair){this.rt.act({type:'repair',id:Number(el.dataset.kingdomRepair)});return;}
+      if(el.dataset.kingdomBuild){const b=this.rt.world.buildings.find(v=>v.id===Number(el.dataset.kingdomBuild)&&v.kind==='hearth');if(b){this.category='defense';this.tab='build';this.rt.selection=null;this.scene().focus(b);this.render();this.panel.scrollTop=0;}return;}
+      if(el.dataset.kingdomAlert){
+        const action=el.dataset.kingdomAlert,id=Number(el.dataset.settlementId),b=this.rt.world.buildings.find(v=>v.id===id),remote=this.rt.state.empire?.reserve.buildings.find(v=>v.id===id);
+        if(action==='people'){this.tab='people';this.rt.selection=null;this.render();this.panel.scrollTop=0;}
+        else if(action==='army'){this.tab='army';this.rt.selection=null;this.rt.armyView='roster';this.render();this.panel.scrollTop=0;}
+        else if(b){this.rt.selection={type:'building',id:action==='repairs'?(this.rt.world.buildings.find(v=>v.id!==b.id&&v.owner!=='rival'&&Math.hypot(v.x-b.x,v.y-b.y)<7&&v.hp<v.maxHp)?.id??b.id):b.id};this.scene().focus(b);this.render();}
+        else if(remote){this.tab='army';this.rt.selection=null;this.rt.armyView='roster';this.rt.notify('Travel to '+(remote.name??'the settlement')+' to respond.','warn');this.render();this.panel.scrollTop=0;}
+        return;
+      }
       if(id==='hero-strike'){this.rt.heroTap=true;return;}
       if(id==='choose-company'){this.rt.heroMode=false;this.tab='army';this.rt.selection=null;this.rt.armyView='roster';this.render();return;}
       if(id==='gather-road'){const ids=[...new Set([...this.rt.selectedIds,...(this.rt.state.commander?[this.rt.state.commander.id]:[])])];this.rt.act({type:'gather-company',ids});this.scene().focus(ROAD_EXIT);return;}
