@@ -16,7 +16,7 @@ test('guided first-time opening staffs production, equips soldiers and survives 
   await page.locator('#pause').click(); await expect(page.locator('#next-action')).toHaveText('Assign traders →'); await page.locator('#next-action').click();
   for (let n = 0; n < 3; n++) await page.locator('#job-miners-plus').click();
   await page.locator('#next-action').click(); await expect(page.locator('#panel')).toContainText('The Hearthguard');
-  await page.locator('#army-recruit').click();await page.locator('#recruit-warden').click(); await page.locator('#army-recruit').click();await page.locator('#recruit-ranger').click();
+  await page.locator('#army-recruit').click();await page.locator('#recruit-warden').click(); await page.locator('#army-recruit').click();await page.locator('#recruit-class-ranger').click();await page.locator('#recruit-ranger').click();
   await page.locator('#army-orders').click();await page.locator('#formation-line').click(); await page.locator('#army-orders').click();await page.locator('#rally-gate').click();
   await page.locator('#tab-build').click(); await page.locator('#category-settlement').click();await page.locator('#build-infirmary').click(); await page.locator('#world canvas').click({ position: await tile(page, 18, 15) });
   await page.locator('#speed-2').click(); await expect.poll(async () => (await read(page)).buildings.find((b: any) => b.kind === 'infirmary')?.progress, { timeout: 20000 }).toBe(1);
@@ -59,7 +59,7 @@ async function finishMission(page: Page, label: string) {
 test('experienced river patrol chooses its terrain, changes formation, reloads in combat and enlists finite survivors',async({page})=>{
   const errors:string[]=[];page.on('pageerror',e=>errors.push(e.message));
   await page.goto('/');await page.locator('#start').click();await page.locator('#pause').click();
-  await page.locator('#tab-army').click();await page.locator('#army-recruit').click();await page.locator('#recruit-warden').click();await page.locator('#army-recruit').click();await page.locator('#recruit-ranger').click();await fundExpedition(page);await page.locator('#open-expedition').click();
+  await page.locator('#tab-army').click();await page.locator('#army-recruit').click();await page.locator('#recruit-warden').click();await page.locator('#army-recruit').click();await page.locator('#recruit-class-ranger').click();await page.locator('#recruit-ranger').click();await fundExpedition(page);await page.locator('#open-expedition').click();
   await page.locator('#approach-ford').click();await expect(page.locator('#approach-ford')).toHaveAttribute('aria-pressed','true');
   const before=(await read(page)).resources; await page.locator('#expedition-launch').click();
   const deployed=await read(page);expect(deployed.expedition.approach).toBe('ford');expect(deployed.resources.wood).toBe(before.wood);expect(deployed.resources.food).toBe(before.food-30);expect(deployed.resources.stone).toBe(before.stone-80);

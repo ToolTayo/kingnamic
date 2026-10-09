@@ -6,7 +6,7 @@ import { command } from '../../src/game/commands';
 const read = (page: Page) => page.evaluate(() => JSON.parse(JSON.stringify((window as any).__KINGNAMIC__.runtime.state)));
 async function prepare(page: Page) {
   await page.goto('/'); await page.locator('#start').click(); await page.locator('#pause').click();
-  await page.locator('#tab-army').click(); await page.locator('#army-recruit').click();await page.locator('#recruit-warden').click(); await page.locator('#army-recruit').click();await page.locator('#recruit-ranger').click();
+  await page.locator('#tab-army').click(); await page.locator('#army-recruit').click();await page.locator('#recruit-warden').click(); await page.locator('#army-recruit').click();await page.locator('#recruit-class-ranger').click();await page.locator('#recruit-ranger').click();
   await fundExpedition(page);await page.locator('#open-expedition').click();
   const selected = await page.locator('[data-patrol][aria-pressed="true"]').first().getAttribute('id');
   await page.locator(`#${selected}`).click(); await expect(page.locator('#expedition-launch')).toBeDisabled();

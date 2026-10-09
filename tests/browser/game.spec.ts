@@ -17,7 +17,7 @@ test('desktop: construction, jobs, recruitment, rally, upgrades, pause and save/
   await expect.poll(async () => (await state(page)).buildings.find((b: any) => b.kind === 'quarry').progress, { timeout: 12000 }).toBe(1);
   await page.locator('#tab-people').click(); await page.locator('#job-miners-plus').click(); await page.locator('#job-miners-plus').click();
   expect((await state(page)).jobs.miners).toBe(2);
-  await page.locator('#tab-army').click(); await page.locator('#army-recruit').click();await page.locator('#recruit-warden').click(); await page.locator('#army-recruit').click();await page.locator('#recruit-ranger').click();
+  await page.locator('#tab-army').click(); await page.locator('#army-recruit').click();await page.locator('#recruit-warden').click(); await page.locator('#army-recruit').click();await page.locator('#recruit-class-ranger').click();await page.locator('#recruit-ranger').click();
   expect((await state(page)).units.filter((u: any) => ['warden', 'ranger'].includes(u.kind))).toHaveLength(5);
   await page.locator('#army-orders').click();await page.locator('#rally').click(); await tile(page, 15, 16);
   await page.locator('#army-orders').click();await page.locator('#formation-loose').click(); expect((await state(page)).formation).toBe('loose');
@@ -55,7 +55,7 @@ test('live night: combat, bite-only infection, treatment and territory consequen
   test.setTimeout(100000);
   const errors: string[] = []; page.on('pageerror', e => errors.push(e.message));
   await start(page); await page.locator('#tab-army').click();
-  await page.locator('#army-recruit').click();await page.locator('#recruit-warden').click(); await page.locator('#army-recruit').click();await page.locator('#recruit-ranger').click(); await page.locator('#speed-2').click();
+  await page.locator('#army-recruit').click();await page.locator('#recruit-warden').click(); await page.locator('#army-recruit').click();await page.locator('#recruit-class-ranger').click();await page.locator('#recruit-ranger').click(); await page.locator('#speed-2').click();
   await expect.poll(async () => (await state(page)).phase, { timeout: 45000, intervals: [1000] }).toBe('night');
   await page.waitForFunction(() => (window as any).__KINGNAMIC__.scene.fallen.size > 0, null, { timeout: 22000 });
   expect((await state(page)).stats.slain).toBeGreaterThan(0);

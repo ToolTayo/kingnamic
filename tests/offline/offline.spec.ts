@@ -92,7 +92,7 @@ test('production expedition survives an offline reload and extracts without dupl
   const funded=newGame();funded.resources.stone=200;
   await page.addInitScript(raw=>{if(!localStorage.getItem('kingnamic.save.v2'))localStorage.setItem('kingnamic.save.v2',raw);},JSON.stringify(funded));
   await page.goto('/'); await page.locator('#start').click(); await page.locator('#pause').click();
-  await page.locator('#tab-army').click(); await page.locator('#army-recruit').click();await page.locator('#recruit-warden').click(); await page.locator('#army-recruit').click();await page.locator('#recruit-ranger').click();
+  await page.locator('#tab-army').click(); await page.locator('#army-recruit').click();await page.locator('#recruit-warden').click(); await page.locator('#army-recruit').click();await page.locator('#recruit-class-ranger').click();await page.locator('#recruit-ranger').click();
   await page.locator('#open-expedition').click(); await page.locator('#expedition-launch').click(); await page.locator('#pause').click();
   await page.locator('#save').click(); await expect(page.locator('#save-status')).toHaveText('Saved on this device');
   await page.evaluate(() => navigator.serviceWorker.ready); await page.waitForFunction(() => navigator.serviceWorker.controller !== null);
