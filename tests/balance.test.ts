@@ -1,7 +1,7 @@
 import { afterAll, expect, it } from 'vitest';
 import { writeFileSync } from 'node:fs';
 import { command } from '../src/game/commands';
-import { STEP } from '../src/game/config';
+import { BUILDINGS, STEP } from '../src/game/config';
 import { decode } from '../src/game/persistence';
 import { step } from '../src/game/simulation';
 import { army, newGame } from '../src/game/state';
@@ -10,6 +10,19 @@ import type { BuildingKind } from '../src/game/types';
 // Diagnostic policy sweep, not a substitute for human difficulty testing.
 // Commands obey normal costs, capacity, prerequisites and combat restrictions.
 const results: object[] = [];
+it('makes a new watchtower a deliberate timber investment', () => {
+  const s = newGame(), site = { x: 10, y: 13 };
+  s.resources.wood = BUILDINGS.tower.cost.wood! - 1;
+  s.resources.stone = 100;
+  expect(command(s, { type: 'build', kind: 'tower', ...site }).ok).toBe(false);
+  expect(s.buildings.some(b => b.kind === 'tower' && b.x === site.x && b.y === site.y)).toBe(false);
+
+  s.resources.wood++;
+  expect(command(s, { type: 'build', kind: 'tower', ...site }).ok).toBe(true);
+  expect(s.resources.wood).toBe(0);
+  expect(s.buildings.find(b => b.kind === 'tower' && b.x === site.x && b.y === site.y)?.progress).toBe(0);
+  expect(BUILDINGS.tower.time).toBe(20);
+});
 for (const seed of [74019, 1701, 9042]) for (const policy of ['mixed-3s', 'mixed-10s', 'rangers-3s', 'no-medicine-3s']) {
   it(`records a valid campaign under ${policy}, seed ${seed}`, () => {
     const s = newGame(seed), interval = policy === 'mixed-10s' ? 100 : 30;
