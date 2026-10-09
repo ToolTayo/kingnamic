@@ -10,6 +10,7 @@ if(process.env.KINGNAMIC_HARDWARE_PROFILE==='1')test.use({launchOptions:{args:['
 
 const read=(page:Page)=>page.evaluate(()=>JSON.parse(JSON.stringify((window as any).__KINGNAMIC__.runtime.state)));
 const clickLive=(page:Page,selector:string)=>page.evaluate((sel:string)=>new Promise<void>((resolve,reject)=>{let frames=0;const attempt=()=>{const button=document.querySelector<HTMLButtonElement>(sel);if(button&&!button.disabled){button.click();resolve();return;}if(++frames>600){reject(new Error(`${sel} stayed unavailable for 10 seconds`));return;}requestAnimationFrame(attempt);};attempt();}),selector);
+async function selectRosterUnit(page:Page,id:number,total:number){let unit=page.locator('#unit-'+id);for(let i=0;i<Math.ceil(total/12)&&!await unit.count();i++){await expect(page.locator('#roster-next')).toBeEnabled();await page.locator('#roster-next').click();}await expect(unit).toHaveCount(1);await unit.click();}
 const waitRegion=(page:Page,region:'march'|'heartmere')=>expect.poll(async()=>{const s=await read(page);return s.region??'heartmere';},{timeout:45000,intervals:[100,250,500]}).toBe(region);
 const forceSize=180;
 test('a prepared 180-soldier company naturally defeats and settles Tallowmere, then saves and revisits it',async({page})=>{
@@ -109,12 +110,30 @@ test('a prepared 180-soldier company naturally defeats and settles Tallowmere, t
  const returnCandidates=state.units.filter((u:any)=>commandable.has(u.id)&&u.id!==heroId&&u.hp>0&&!garrison.includes(u.id)).map((u:any)=>u.id);let retreatIds=[heroId,...returnCandidates.slice(0,5)],replacementCommander:number|undefined;
  const fitReturnParty=async()=>{
   let current=await read(page),leader=current.units.find((u:any)=>u.id===current.commander?.id&&u.hp>0&&!u.injury&&!current.infection?.some((i:any)=>i.personId===u.id));
-  if(!leader){
-   const available=new Set(commandableIds(current,returnCandidates)),next=returnCandidates.find(id=>available.has(id)&&!current.infection?.some((i:any)=>i.personId===id));
-   expect(next,'A fit surviving expedition soldier must remain available to lead the return journey.').toBeDefined();
-   const appointed=await page.evaluate((id:number)=>(window as any).__KINGNAMIC__.runtime.act({type:'commander-appoint',id}),next!);
-   expect(appointed.ok,`Appoint the living expedition survivor after the commander falls: ${appointed.message}`).toBe(true);replacementCommander=next!;current=await read(page);leader=current.units.find((u:any)=>u.id===current.commander?.id&&u.hp>0&&!u.injury&&!current.infection?.some((i:any)=>i.personId===u.id));
-  }
+   if(!leader){
+    const incumbentId=current.commander?.id,incumbent=current.units.find((u:any)=>u.id===incumbentId&&u.hp>0);
+    if(incumbent){
+     if(current.infection?.some((i:any)=>i.personId===incumbent.id)){
+      await page.locator('#tab-army').click();await page.locator('#army-orders').click();await page.locator('#select-none').click();await page.locator('#army-roster').click();await selectRosterUnit(page,incumbent.id,current.units.length);
+      await expect(page.locator('#treat-selected')).toBeEnabled();await page.locator('#treat-selected').click();current=await read(page);
+      expect(current.infection?.some((i:any)=>i.personId===incumbent.id),"The living commander must be treated through the Army roster before travelling.").toBe(false);
+     }
+     let recovered=current.units.find((u:any)=>u.id===incumbentId&&u.hp>0&&!u.injury&&!current.infection?.some((i:any)=>i.personId===u.id));
+     if(!recovered&&current.units.some((u:any)=>u.id===incumbentId&&u.hp>0&&u.injury)){
+      if(!current.speed)await page.locator('#speed-2').click();
+      await expect.poll(async()=>{const latest=await read(page),u=latest.units.find((v:any)=>v.id===incumbentId&&v.hp>0);return !u||!u.injury;},{timeout:120000,intervals:[500,1000,2000]}).toBe(true);
+      const latest=await read(page);if(latest.speed)await page.locator('#pause').click();current=await read(page);
+      recovered=current.units.find((u:any)=>u.id===incumbentId&&u.hp>0&&!u.injury&&!current.infection?.some((i:any)=>i.personId===u.id));
+     }
+     leader=recovered;
+     expect(leader,"A living commander must recover or receive treatment; do not appoint over the serving commander.").toBeTruthy();
+    }else{
+     const available=new Set(commandableIds(current,returnCandidates)),next=returnCandidates.find(id=>available.has(id)&&!current.infection?.some((i:any)=>i.personId===id));
+     expect(next,"A fit surviving expedition soldier must remain available to lead the return journey.").toBeDefined();
+     const appointed=await page.evaluate((id:number)=>(window as any).__KINGNAMIC__.runtime.act({type:'commander-appoint',id}),next!);
+     expect(appointed.ok,`Appoint the expedition survivor after the commander falls: ${appointed.message}`).toBe(true);replacementCommander=next!;current=await read(page);leader=current.units.find((u:any)=>u.id===current.commander?.id&&u.hp>0&&!u.injury&&!current.infection?.some((i:any)=>i.personId===u.id));
+    }
+   }
   expect(leader,'The return convoy needs a living, fit, uninfected commander.').toBeTruthy();
   const available=new Set(commandableIds(current,returnCandidates)),party=[leader!.id,...returnCandidates.filter(id=>id!==leader!.id&&available.has(id)&&!current.infection?.some((i:any)=>i.personId===id)).slice(0,5)];
   expect(party).toHaveLength(6);retreatIds=party;await page.evaluate((ids:number[])=>(window as any).__KINGNAMIC__.runtime.selectUnits(ids),party);return current;
