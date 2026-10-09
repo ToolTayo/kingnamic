@@ -65,7 +65,7 @@ export function sceneryArt(kind: 'forest' | 'rock' | 'marsh', variant = 0): HTML
   if (kind === 'marsh') for (let i = 0; i < 4; i++) line(c, [x + i * 3, y, x + i * 3 - 2, y - 12 - i % 2 * 4], '#4a6854', 1.5);
   return cv;
 }
-export type LandmarkArtKind='village'|'grove'|'ruin'|'ford'|'shrine'|'homestead'|'camp'|'watch'|'keep'|'quarry';
+export type LandmarkArtKind='village'|'grove'|'ruin'|'ford'|'shrine'|'homestead'|'camp'|'watch'|'keep'|'quarry'|'cairn';
 export function landmarkArt(kind:LandmarkArtKind):HTMLCanvasElement{
  const [cv,c]=canvas(112,128),x=56,y=106;
  ellipse(c,x,y,42,13,'#172d2730');
@@ -97,6 +97,14 @@ export function landmarkArt(kind:LandmarkArtKind):HTMLCanvasElement{
    poly(c,[x-9,y+5,x-9,y-15,x,y-22,x+9,y-15,x+9,y+7],'#514b3d','#b19d6b');
    line(c,[x-38,y-1,x-25,y+3,x-13,y-1],'#85917a',2);line(c,[x+14,y-1,x+27,y+3,x+39,y-1],'#85917a',2);
    banner(c,x+2,y-60,'#c2a66d');ellipse(c,x-27,y-33,4,3,'#e7bd70');ellipse(c,x+27,y-33,4,3,'#e7bd70');
+ }else if(kind==='cairn'){
+   // A heath-way marker: stacked river stones and a weathered red watch-cloth.
+   ellipse(c,x,y+8,35,10,'#806d4c55');
+   poly(c,[x-20,y+7,x-15,y-4,x-4,y-10,x+8,y-5,x+13,y+7],'#969884','#606958');
+   poly(c,[x-14,y-5,x-10,y-17,x+1,y-22,x+11,y-15,x+14,y-4],'#b2ad94','#737565');
+   poly(c,[x-8,y-17,x-4,y-28,x+3,y-34,x+10,y-27,x+11,y-16],'#c0b89e','#77796b');
+   line(c,[x+24,y+7,x+24,y-42],'#705b43',3);banner(c,x+24,y-40,'#9a594b');
+   line(c,[x-11,y-13,x-5,y-14,x-1,y-11],'#80634e',2);
  }else if(kind==='quarry'){
    // Compact original canvas art: stepped Greybank cut, stone face and hoist.
    poly(c,[x-43,y+9,x-35,y-22,x-17,y-41,x+13,y-32,x+39,y-14,x+41,y+11],'#707c6d','#48594e');

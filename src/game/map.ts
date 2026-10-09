@@ -1,6 +1,6 @@
 import { MAP_H, MAP_W } from './config';
 import type { Point, Terrain, TerritoryId, Tile, State } from './types';
-export const STRONGHOLD_CENTERS={mossgate:{x:47,y:29},tallowmere:{x:37,y:36},stonewake:{x:50,y:9},alderwatch:{x:10,y:42}} as const;
+export const STRONGHOLD_CENTERS={mossgate:{x:47,y:29},tallowmere:{x:37,y:36},stonewake:{x:50,y:9},alderwatch:{x:10,y:42},redwater:{x:36,y:21}} as const;
 export function hash(x: number, y: number): number { return ((Math.imul(x + 63, 374761393) ^ Math.imul(y + 71, 668265263)) >>> 0) / 4294967296; }
 export function territoryAt(x: number, y: number): TerritoryId | 'wild' {
   if (x >= 9 && x <= 20 && y >= 7 && y <= 18) return 'hearthmere';
@@ -19,6 +19,9 @@ function followsRoad(x:number,y:number,points:Point[],width=.58):boolean{
 }
 const homeRoad:Point[]=[{x:14,y:24},{x:14,y:31},{x:19,y:37},{x:30,y:41},{x:40,y:40},{x:48,y:33},{x:51,y:24},{x:48,y:17},{x:41,y:14},{x:29,y:14}];
 const marchRoad:Point[]=[{x:14,y:24},{x:14,y:32},{x:21,y:38},{x:29,y:39},{x:32,y:42},{x:41,y:42},{x:44,y:38},{x:43,y:34},{x:49,y:27},{x:49,y:18},{x:43,y:14},{x:29,y:14}];
+const redwaterWay:Point[]=[{x:33,y:24},{x:33,y:22},{x:34,y:21},{x:36,y:21},{x:39,y:20},{x:40,y:18},{x:43,y:16},{x:43,y:14}];
+const redwaterCairnRoad:Point[]=[{x:43,y:14},{x:40,y:14},{x:37,y:14},{x:35,y:14}];
+const redwaterEastRoad:Point[]=[{x:43,y:16},{x:44,y:18},{x:45,y:20},{x:46,y:23},{x:46,y:24}];
 export const TILES: Tile[] = Array.from({ length: MAP_W * MAP_H }, (_, i) => {
   const x = i % MAP_W, y = Math.floor(i / MAP_W), n = hash(x, y), territory = territoryAt(x, y);
   let terrain: Terrain = 'grass';
@@ -88,12 +91,22 @@ export const MARCH_TILES:Tile[]=TILES.map(t=>{
   const alderArea=t.x>=4&&t.x<=18&&t.y>=33&&t.y<=47,alderFort=t.x>=6&&t.x<=15&&t.y>=38&&t.y<=46;
   const westRavine=Math.abs(t.x-(4.5+(t.y-33)*.12+Math.sin(t.y*.42)*.4))<.9;
   const eastRavine=Math.abs(t.x-(17.5-(t.y-33)*.1+Math.sin(t.y*.31)*.35))<.9;
+  const redwaterArea=t.x>=31&&t.x<=47&&t.y>=14&&t.y<=30&&!(t.x>=44&&t.y>=25)&&!(t.x>=46&&t.y<=14),reachRoad=followsRoad(t.x,t.y,redwaterWay,.62)||followsRoad(t.x,t.y,redwaterCairnRoad,.62)||followsRoad(t.x,t.y,redwaterEastRoad,.62),ravine=Math.abs(t.x-(42+1.3*Math.sin((t.y-10)*.3))),redwaterKeep=Math.hypot(t.x-STRONGHOLD_CENTERS.redwater.x,t.y-STRONGHOLD_CENTERS.redwater.y);
   if(pass||establishedRoad||abbeyRoad||splitwaterRoad)terrain='road';
   else if(alderFort)terrain='grass';
   else if(alderArea)terrain=westRavine||eastRavine?'rock':n>.18?'forest':terrain;
+  if(redwaterArea){
+    terrain='heath';
+    if(((t.x<35&&t.y<21)||(t.x>44&&t.y>25))&&n>.72)terrain='forest';
+    if(ravine<.38)terrain='water';else if(ravine<1.08)terrain='rock';
+    if(redwaterKeep<4.8&&terrain!=='water')terrain='grass';
+  }
+  if(reachRoad)terrain='road';
   const westPost=Math.hypot(t.x-8,t.y-39)<2.8,eastPost=Math.hypot(t.x-13,t.y-39)<2.8;
-  const height=pass||establishedRoad?.7:alderFort?(westPost||eastPost?1.85:1.05):alderArea&&(westRavine||eastRavine)?1.45:enclosure?(t.x>=51&&t.y<9?1.8:1.1):stonewake<8.7?1.55:t.y<9?1:keep<2.4?1.2:keep<4?.65:causeway?.35:0;
-  return {...t,terrain,territory:'hearthmere',variant:n,height};
+  const height=pass||establishedRoad?.7:enclosure?(t.x>=51&&t.y<9?1.8:1.1):stonewake<8.7?1.55:t.y<9?1:keep<2.4?1.2:keep<4?.65:causeway?.35:0;
+  const alderHeight=pass||establishedRoad||abbeyRoad||splitwaterRoad?.7:alderFort?(westPost||eastPost?1.85:1.05):alderArea&&(westRavine||eastRavine)?1.45:height;
+  const redwaterHeight=redwaterArea?(redwaterKeep<4.8?1.1:ravine<.38?-.45:ravine<1.08?1.04:Math.hypot(t.x-40,t.y-14)<2.7?.86:Math.hypot(t.x-45,t.y-22)<2.7?.78:Math.hypot(t.x-35,t.y-14)<2.4?.84:reachRoad?.22:.16):alderHeight;
+  return {...t,terrain,territory:'hearthmere',variant:n,height:redwaterHeight};
 });
 export const tilesFor=(s?:{region?:State['region']})=>s?.region==='march'?MARCH_TILES:TILES;
 export function tileAt(x: number, y: number,s?:{region?:State['region']}): Tile | undefined { if(x<0||y<0||x>=MAP_W||y>=MAP_H)return undefined;return tilesFor(s)[Math.floor(y)*MAP_W+Math.floor(x)]; }

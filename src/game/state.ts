@@ -25,7 +25,7 @@ export const army = (s: State): Unit[] => s.units.filter(u => isFriendly(u) && u
 export const enemies = (s: State): Unit[] => s.units.filter(u => isInfected(u) && u.hp > 0);
 // Old March saves have no rivalId: those soldiers and buildings are Mossgate.
 export const rivalIdOf = (u: Unit | Building): StrongholdId => u.rivalId ?? 'mossgate';
-export const rivalStronghold = (s: State, id: StrongholdId) => id === 'tallowmere' ? s.march?.weirward : id === 'stonewake' ? s.march?.stonewake : id === 'alderwatch' ? s.march?.alderwatch : s.march?.rival;
+export const rivalStronghold = (s: State, id: StrongholdId) => id === 'tallowmere' ? s.march?.weirward : id === 'stonewake' ? s.march?.stonewake : id === 'alderwatch' ? s.march?.alderwatch : id === 'redwater' ? s.march?.redwater : s.march?.rival;
 export const rivals = (s: State, id?: StrongholdId): Unit[] => s.units.filter(u => isRival(u) && u.hp > 0 && (id === undefined || rivalIdOf(u) === id));
 export const hostiles = (s: State): Unit[] => [...enemies(s), ...rivals(s)];
 export function newGame(seed = 74019): State {
