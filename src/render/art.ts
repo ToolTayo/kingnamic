@@ -65,7 +65,7 @@ export function sceneryArt(kind: 'forest' | 'rock' | 'marsh', variant = 0): HTML
   if (kind === 'marsh') for (let i = 0; i < 4; i++) line(c, [x + i * 3, y, x + i * 3 - 2, y - 12 - i % 2 * 4], '#4a6854', 1.5);
   return cv;
 }
-export type LandmarkArtKind='village'|'grove'|'ruin'|'ford'|'shrine'|'homestead'|'camp'|'watch'|'keep';
+export type LandmarkArtKind='village'|'grove'|'ruin'|'ford'|'shrine'|'homestead'|'camp'|'watch'|'keep'|'quarry';
 export function landmarkArt(kind:LandmarkArtKind):HTMLCanvasElement{
  const [cv,c]=canvas(112,128),x=56,y=106;
  ellipse(c,x,y,42,13,'#172d2730');
@@ -97,6 +97,16 @@ export function landmarkArt(kind:LandmarkArtKind):HTMLCanvasElement{
    poly(c,[x-9,y+5,x-9,y-15,x,y-22,x+9,y-15,x+9,y+7],'#514b3d','#b19d6b');
    line(c,[x-38,y-1,x-25,y+3,x-13,y-1],'#85917a',2);line(c,[x+14,y-1,x+27,y+3,x+39,y-1],'#85917a',2);
    banner(c,x+2,y-60,'#c2a66d');ellipse(c,x-27,y-33,4,3,'#e7bd70');ellipse(c,x+27,y-33,4,3,'#e7bd70');
+ }else if(kind==='quarry'){
+   // Compact original canvas art: stepped Greybank cut, stone face and hoist.
+   poly(c,[x-43,y+9,x-35,y-22,x-17,y-41,x+13,y-32,x+39,y-14,x+41,y+11],'#707c6d','#48594e');
+   poly(c,[x-34,y+3,x-25,y-20,x-4,y-33,x+19,y-25,x+34,y-10,x+34,y+5],'#8b927f','#5c685b');
+   poly(c,[x-22,y+3,x-16,y-12,x+1,y-22,x+20,y-15,x+27,y-4,x+27,y+6],'#a7a58d','#6c7566');
+   poly(c,[x-12,y+7,x-8,y-2,x+3,y-10,x+16,y-3,x+20,y+9],'#484f48','#817e68');
+   line(c,[x-29,y-14,x-17,y-34,x-9,y-37,x-7,y-12],'#9f9f85',2);
+   line(c,[x+6,y-43,x+6,y-18,x+33,y-18,x+33,y-5],'#886b4c',3);line(c,[x+1,y-43,x+12,y-43],'#9b7b55',3);
+   line(c,[x+4,y-38,x-4,y-30,x+4,y-23],'#bb9963',2);box(c,x-3,y-28,8,7,5,['#a89974','#75664e','#bdad86']);
+   banner(c,x+39,y-27,'#929b82');
  }else if(kind==='shrine'){
    poly(c,[x-19,y+7,x-15,y-34,x-5,y-51,x+6,y-40,x+10,y+5],'#aaa991','#626a5a');
    line(c,[x-4,y-28,x+2,y-35,x+8,y-28],'#d1c59f',2);

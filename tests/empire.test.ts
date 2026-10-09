@@ -218,3 +218,31 @@ describe('Weirward Compact and Tallowmere campaign',()=>{
   Object.assign(hero,{x:28,y:44});empireStep(s,.1);Object.assign(hero,{x:33,y:39});empireStep(s,.1);const gate=s.buildings.find(b=>b.name==='Causeway Gate')!;expect(command(s,{type:'repair',id:gate.id})).toMatchObject({ok:false,message:'Capture this structure before repairing or upgrading it.'});expect(command(s,{type:'relocate',id:gate.id,x:gate.x+1,y:gate.y})).toMatchObject({ok:false,message:'Capture the stronghold before moving its structures.'});expect(command(s,{type:'stronghold-capture',id:'tallowmere'}).ok).toBe(false);
  });
 });
+
+
+describe('Stonewake Hold and Greybank quarry siege',()=>{
+ it('reveals only after the quarry road report and builds its deterministic 125-defender ridge keep',()=>{
+  const s=cleared(),hero=army(s).find(u=>u.id===s.commander!.id)!;Object.assign(hero,{x:45,y:12,target:{x:45,y:12},path:[]});
+  expect(findPath(s,{x:43,y:14},STRONGHOLD_CENTERS.stonewake,false,navigation(s),'player').length).toBeGreaterThan(0);
+  expect(tileAt(45,12,s)?.terrain).toBe('road');expect(tileAt(51,16,s)?.terrain).toBe('road');expect(tileAt(50,2,s)?.terrain).toBe('rock');
+  empireStep(s,.1);expect(s.march!.seen).toContain('stonewake-quarry');expect(s.march!.rumors).toContain('stonewake');expect(s.march!.stonewake!.status).toBe('unseen');
+  const recovered=s.resources.stone;empireStep(s,.1);const war=s.march!.stonewake!;
+  expect(war).toMatchObject({id:'stonewake',name:'Stonewake',faction:'The Stonewake Hold',status:'occupied',remaining:125,reserve:100,casualties:0});expect(rivals(s,'stonewake')).toHaveLength(25);expect(s.march!.rival!.status).toBe('unseen');expect(s.march!.weirward!.status).toBe('unseen');
+  expect(s.resources.stone).toBe(recovered);expect(s.buildings.filter(b=>b.owner==='rival'&&b.rivalId==='stonewake')).toHaveLength(39);
+  const composition=Object.fromEntries(['warden','spearman','ranger','scout'].map(kind=>[kind,rivals(s,'stonewake').filter(u=>u.kind===kind).length]));expect(composition).toEqual({warden:2,spearman:11,ranger:8,scout:4});
+  expect(rivals(s,'stonewake').filter(u=>u.kind==='scout'&&u.order==='patrol')).toHaveLength(4);const ranger=rivals(s,'stonewake').find(u=>u.kind==='ranger')!;expect(tileAt(ranger.x,ranger.y,s)!.height).toBeGreaterThan(tileAt(45,12,s)!.height);
+  const gates=s.buildings.filter(b=>b.name==='West Quarry Gate'||b.name==='South Cut Gate'),nav=navigation(s);expect(gates).toHaveLength(2);
+  expect(findPath(s,{x:45,y:9},{x:47,y:9},false,nav,'player')).toHaveLength(0);expect(findPath(s,{x:45,y:9},{x:47,y:9},false,nav,'rival').length).toBeGreaterThan(0);
+  expect(findPath(s,{x:51,y:15},{x:51,y:13},false,nav,'player')).toHaveLength(0);expect(findPath(s,{x:51,y:15},{x:51,y:13},false,nav,'rival').length).toBeGreaterThan(0);
+  expect(strongholdCaptureError(s,'stonewake')).toContain('remaining 125');expect(decode(JSON.stringify(s))!.march!.stonewake).toEqual(war);
+ });
+ it('records the signal objective before tower cleanup and persists the longer finite warning',()=>{
+  const s=cleared(),hero=army(s).find(u=>u.id===s.commander!.id)!;Object.assign(hero,{x:49,y:10,target:{x:49,y:10},path:[],cooldown:8});empireStep(s,.1);Object.assign(hero,{x:45,y:12,target:{x:45,y:12},path:[]});empireStep(s,.1);empireStep(s,.1);const war=s.march!.stonewake!,tower=s.buildings.find(b=>b.id===war.signalTowerId)!;expect(tower.name).toBe('Stonewake Signal Tower');tower.hp=1;
+  const attacker=army(s).find(u=>u.id!==hero.id)!;for(const hostile of s.units.filter(u=>u.id!==attacker.id&&(u.faction==='rival'||['hollow','runner','brute'].includes(u.kind))))Object.assign(hostile,{x:15,y:22,target:{x:15,y:22},path:[]});Object.assign(attacker,{x:tower.x+1,y:tower.y,target:{x:tower.x,y:tower.y},path:[],cooldown:0,order:'attack',focus:tower.id});expect(command(s,{type:'order',order:'attack',ids:[attacker.id],focus:tower.id,x:tower.x,y:tower.y}).ok).toBe(true);combatStep(s,.1,false);
+  expect(s.buildings.some(b=>b.id===tower.id)).toBe(false);expect(war).toMatchObject({signalDisabled:true,warning:20,remaining:125,reserve:100,casualties:0});const restored=reload(s);expect(restored.march!.stonewake).toMatchObject({signalDisabled:true,warning:20,signalTowerId:tower.id});
+  expect(command(restored,{type:'stronghold-capture',id:'stonewake'}).ok).toBe(false);expect(restored.march!.stonewake!.status).toBe('occupied');
+ });
+ it('migrates an older March save without quarry discovery or a Stonewake record',()=>{
+  const old=structuredClone(cleared());delete old.march!.stonewake;delete old.march!.weirward;delete old.march!.rumors;old.march!.seen=old.march!.seen.filter(id=>id!=='stonewake-quarry');const loaded=decode(JSON.stringify(old));expect(loaded).not.toBeNull();expect(loaded!.march!.stonewake).toMatchObject({id:'stonewake',status:'unseen',remaining:125,reserve:100,casualties:0});expect(loaded!.march!.seen).not.toContain('stonewake-quarry');expect(decode(JSON.stringify(loaded))).not.toBeNull();
+ });
+});

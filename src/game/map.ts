@@ -1,6 +1,6 @@
 import { MAP_H, MAP_W } from './config';
 import type { Point, Terrain, TerritoryId, Tile, State } from './types';
-export const STRONGHOLD_CENTERS={mossgate:{x:47,y:29},tallowmere:{x:37,y:36}} as const;
+export const STRONGHOLD_CENTERS={mossgate:{x:47,y:29},tallowmere:{x:37,y:36},stonewake:{x:50,y:9}} as const;
 export function hash(x: number, y: number): number { return ((Math.imul(x + 63, 374761393) ^ Math.imul(y + 71, 668265263)) >>> 0) / 4294967296; }
 export function territoryAt(x: number, y: number): TerritoryId | 'wild' {
   if (x >= 9 && x <= 20 && y >= 7 && y <= 18) return 'hearthmere';
@@ -71,7 +71,16 @@ export const MARCH_TILES:Tile[]=TILES.map(t=>{
   const keep=Math.hypot(t.x-STRONGHOLD_CENTERS.tallowmere.x,t.y-STRONGHOLD_CENTERS.tallowmere.y),causeway=followsRoad(t.x,t.y,[{x:27,y:39},{x:30,y:39},{x:33,y:39}],.7);
   if(keep<5.8&&terrain!=='road'&&terrain!=='water')terrain=keep>3.5&&n>.58?'field':'grass';
   else if(keep>=5.8&&keep<8.5&&t.y>37&&terrain==='grass'&&n>.38)terrain='marsh';
-  const height=t.y<9?1:keep<2.4?1.2:keep<4?.65:causeway?.35:0;
+  // Greybank's quarry hold sits above two narrow roads cut through the ridge.
+  // Keep the approaches deterministic so pathfinding, combat and saves agree.
+  const stonewake=Math.hypot(t.x-STRONGHOLD_CENTERS.stonewake.x,t.y-STRONGHOLD_CENTERS.stonewake.y);
+  const westPass=followsRoad(t.x,t.y,[{x:43,y:14},{x:44,y:14},{x:45,y:14},{x:45,y:13},{x:45,y:12},{x:45,y:11},{x:45,y:10},{x:45,y:9},{x:46,y:9}],.48);
+  const southPass=followsRoad(t.x,t.y,[{x:49,y:18},{x:50,y:18},{x:51,y:18},{x:51,y:17},{x:51,y:16},{x:51,y:15},{x:51,y:14}],.48);
+  const pass=westPass||southPass,enclosure=t.x>=46&&t.x<=54&&t.y>=4&&t.y<=14;
+  if(enclosure)terrain='grass';
+  else if(stonewake>4.8&&stonewake<8.7&&!pass)terrain='rock';
+  if(pass)terrain='road';
+  const height=enclosure?(t.x>=51&&t.y<9?1.8:1.1):pass?.7:stonewake<8.7?1.55:t.y<9?1:keep<2.4?1.2:keep<4?.65:causeway?.35:0;
   return {...t,terrain,territory:'hearthmere',variant:n,height};
 });
 export const tilesFor=(s?:{region?:State['region']})=>s?.region==='march'?MARCH_TILES:TILES;

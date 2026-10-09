@@ -9,7 +9,7 @@ export type ExpeditionApproach = 'ridge' | 'ford';
 export type Formation = 'line' | 'protected' | 'loose' | 'column';
 export type UnitKind = SoldierKind | 'hollow' | 'runner' | 'brute';
 export type TerritoryId = 'hearthmere' | 'pinewatch' | 'greybank' | 'fen';
-export type StrongholdId = 'mossgate' | 'tallowmere';
+export type StrongholdId = 'mossgate' | 'tallowmere' | 'stonewake';
 export type Terrain = 'grass' | 'forest' | 'rock' | 'water' | 'road' | 'marsh' | 'heath' | 'field';
 export interface Point { x: number; y: number }
 export interface Tile extends Point { terrain: Terrain; territory: TerritoryId | 'wild'; height: number; variant: number }
@@ -36,8 +36,8 @@ export interface Effect extends Point { id: number; kind: 'hit' | 'arrow' | 'hea
 export interface Stats { slain: number; lost: number; built: number; nights: number; cured: number; claimed: number }
 export interface Commander { id:number; weapon:'sword'|'spear'|'bow'; xp:number }
 export interface CommanderInput { walk:Point; attack:boolean; aim?:Point }
-export interface RivalStronghold { id:StrongholdId; name:string; faction:string; status:'unseen'|'occupied'|'captured'; remaining:number; reserve:number; casualties:number; warning:number; leaderId?:number; patrolVariant?:0|1|2 }
-export interface March { seen:string[]; rescued?:string[]; rumors?:string[]; secured:boolean; rewarded:boolean; incursion:number; warning:number; rival?:RivalStronghold; weirward?:RivalStronghold }
+export interface RivalStronghold { id:StrongholdId; name:string; faction:string; status:'unseen'|'occupied'|'captured'; remaining:number; reserve:number; casualties:number; warning:number; leaderId?:number; patrolVariant?:0|1|2; signalTowerId?:number; signalDisabled?:boolean }
+export interface March { seen:string[]; rescued?:string[]; rumors?:string[]; secured:boolean; rewarded:boolean; incursion:number; warning:number; rival?:RivalStronghold; weirward?:RivalStronghold; stonewake?:RivalStronghold }
 export interface Empire { reserve:State; elapsed:number }
 export interface State {
   version: 2; seed: number; rng: number; time: number; day: number; phaseTime: number;

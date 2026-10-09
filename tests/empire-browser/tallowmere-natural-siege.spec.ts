@@ -16,7 +16,7 @@ const forceSize=180;
 test('a prepared 180-soldier company naturally defeats and settles Tallowmere, then saves and revisits it',async({page})=>{
  test.setTimeout(900000);const errors:string[]=[];page.on('pageerror',e=>errors.push(e.message));
  const s=newGame(604271);s.speed=0;s.resources={wood:2200,stone:5200,food:10000,herbs:160};
- const barracks=s.buildings.find(b=>b.kind==='barracks')!;barracks.level=3;makeBuilding(s,'barracks',19,10,true).level=3;makeBuilding(s,'barracks',21,10,true).level=3;addResidents(s,210);
+ const barracks=s.buildings.find(b=>b.kind==='barracks')!;barracks.level=3;makeBuilding(s,'barracks',19,10,true).level=3;makeBuilding(s,'barracks',21,10,true).level=3;for(const [x,y] of [[23,9],[25,9],[27,9]])makeBuilding(s,'farm',x,y,true);s.jobs.farmers=20;addResidents(s,210);
  const startingIds=new Set(army(s).map(u=>u.id)),recruitment:[SoldierKind,number][]=[['warden',55],['spearman',60],['ranger',41],['scout',24]],results:string[]=[];
  for(const [kind,count]of recruitment){const r=command(s,{type:'recruit',kind,count});if(!r.ok)throw Error(`Normal recruitment of ${count} ${kind} failed: ${r.message}`);results.push(r.message);}
  const force=army(s),commander=force.find(u=>u.kind==='warden')!,company=force.filter(u=>!startingIds.has(u.id));expect(company).toHaveLength(forceSize);expect(command(s,{type:'commander-appoint',id:commander.id}).ok).toBe(true);

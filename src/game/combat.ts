@@ -59,7 +59,7 @@ export function combatStep(s: State, dt: number, separate = true,input?:Commande
   const nav=navigation(s),friendGrid=new SpatialGrid(friends),rivalGrid=new SpatialGrid(rivalTroops),playerThreatGrid=new SpatialGrid<Unit>([...foes,...rivalTroops]),rivalThreatGrid=new SpatialGrid<Unit>([...friends,...foes]),humanGrid=new SpatialGrid<Unit|Resident>([...friends,...rivalTroops,...(s.residents??[])]);
   // Quiet garrisons stay dormant outside their visible local threat radius.
   // Reserves are ledger entries, not 120 extra pathfinding agents.
-  const activeRivalZones=new Set<StrongholdId>((['mossgate','tallowmere'] as const).filter(id=>rivalStronghold(s,id)?.status==='occupied'&&!!rivalThreatGrid.nearest(STRONGHOLD_CENTERS[id],12,u=>u.hp>0)));
+  const activeRivalZones=new Set<StrongholdId>((Object.keys(STRONGHOLD_CENTERS) as StrongholdId[]).filter(id=>rivalStronghold(s,id)?.status==='occupied'&&!!rivalThreatGrid.nearest(STRONGHOLD_CENTERS[id],12,u=>u.hp>0)));
   const illnesses=new Map(s.infection.map(i=>[i.personId,i]));
   const isolated=new Map<number,Point>();
   if(s.quarantine&&illnesses.size){
@@ -104,7 +104,7 @@ export function combatStep(s: State, dt: number, separate = true,input?:Commande
     if(friendly&&u.order==='escort'){const escorted=byId.get(u.focus!);if(escorted&&escorted.hp>0){if(distance(u.target,escorted)>2){u.target=nearestOpen(s,{x:escorted.x+(u.id%3-1),y:escorted.y+1},undefined,nav);u.repath=0;}}else{u.order='defend';delete u.focus;}}
     const elevation = tileAt(u.x, u.y,s)?.height ?? 0;
     const range = def.range + (ranged ? elevation * 0.8 + ((u.formation??s.formation) === 'loose' ? 0.6 : 0) : 0);
-    const radius=friendly?(u.order==='hunt'?12:u.order==='attack'?8:u.order==='hold'?range:range+(ranged?.4:2)):rival?(u.order==='defend'&&rivalId==='tallowmere'?7:5.5):u.order==='defend'?5.5:4;
+    const radius=friendly?(u.order==='hunt'?12:u.order==='attack'?8:u.order==='hold'?range:range+(ranged?.4:2)):rival?(u.order==='defend'&&rivalId==='tallowmere'?7:u.order==='defend'&&rivalId==='stonewake'&&ranged?8:5.5):u.order==='defend'?5.5:4;
     let target:Unit|Resident|Building|undefined=friendly?playerThreatGrid.nearest(u,radius,v=>v.hp>0&&(u.order==='hunt'?distance(v,anchor)<=12:u.order==='hold'||u.order==='attack'||ranged||distance(v,anchor)<(u.order==='defend'?4:6)||!u.order&&!!hearth&&distance(v,hearth)<3)):rival&&rivalCenter?rivalThreatGrid.nearest(u,radius,v=>v.hp>0&&distance(v,rivalCenter)<=9&&(rivalId!=='tallowmere'||distance(v,anchor)<=(u.order==='patrol'?7:6))):humanGrid.nearest(u,radius,v=>v.hp>0);
     const focusedBuilding=friendly&&u.order==='attack'&&u.focus?s.buildings.find(b=>b.id===u.focus&&b.owner==='rival'&&b.hp>0):undefined;
     if(friendly&&u.order==='attack'&&u.focus){const focused=byId.get(u.focus);if(focused&&focused.hp>0&&!isFriendly(focused))target=focused;else if(focusedBuilding){const immediate=target&&'attackFlash'in target&&target.hp>0&&distance(u,target)<=range&&(ranged||clearMelee(s,u,target,nav));target=immediate?target:focusedBuilding;}else delete u.focus;}
@@ -171,6 +171,7 @@ export function combatStep(s: State, dt: number, separate = true,input?:Commande
   s.units = s.units.filter(u => u.hp > 0);
   if(separate)separateCrowd(s, s.units, dt);
   for (const b of s.buildings) if (b.hp <= 0) {
+    const signal=s.march?.stonewake;if(signal?.status==='occupied'&&!signal.signalDisabled&&signal.signalTowerId===b.id){signal.signalDisabled=true;signal.warning=Math.max(signal.warning,20);log(s,'Stonewake Signal Tower is down. Relay runners must carry the call; the next reserve warning lasts 20 seconds.','good');}
     log(s, `${b.kind === 'hearth' ? 'The Last Hearth' : 'Your ' + b.kind} has fallen.`, 'danger');
     if (b.kind !== 'wall' && b.kind !== 'gate' && b.kind !== 'tower') for(const r of [...(s.residents??[])].sort((a,c)=>distance(a,b)-distance(c,b)).slice(0,2))r.hp=0;
     for (const u of s.units) u.repath = 0;
