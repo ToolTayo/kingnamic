@@ -133,6 +133,10 @@ The sustained suite includes three minutes of live browser play at each of 10, 5
 
 See the latest [gameplay correctness review](docs/CORRECTNESS_REVIEW.md), [Empire expansion review](docs/EMPIRE_REVIEW.md), [Hearth renewal review](docs/HEARTH_RENEWAL_REVIEW.md), [sustained battlefield review](docs/SUSTAINED_REVIEW.md), [army and plague verification](docs/LEGIONS_REVIEW.md), [tactics and replayability review](docs/TACTICS_REVIEW.md), [original Lost Battalions milestone](docs/LOST_BATTALIONS.md), [play-experience review](docs/EXPERIENCE.md), [previous studio review](docs/REVIEW.md), [first milestone verification](docs/QA.md), [design and risks](docs/DESIGN.md), and [asset provenance](docs/ASSETS.md).
 
+## Release preparation
+
+See [the V1 production checklist, hosting requirements, known issues and rollback steps](docs/release/V1_PRODUCTION_READINESS.md) before publishing a static build.
+
 ## Next priorities
 
 1. Attribute remaining intermittent frame stalls and validate repeated travel on modest physical hardware. The commander and first connected region are now playable.
