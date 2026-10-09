@@ -1,6 +1,6 @@
 import { defineConfig } from '@playwright/test';
 const port = process.env.KINGNAMIC_TEST_PORT ?? '5173';
-export default defineConfig({
+export default defineConfig({globalSetup: './tests/helpers/prepare-evidence.ts',
   testDir: './tests/campaign', outputDir: './test-results/campaign', timeout: 900000, workers: 1,
   // Long runs use snapshots and structured evidence. Full DOM tracing embeds
   // procedural thumbnails on every action and is unnecessarily memory-heavy.

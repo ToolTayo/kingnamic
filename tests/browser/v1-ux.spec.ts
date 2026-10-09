@@ -76,7 +76,9 @@ test('touch players can recruit, issue a map order, save, and reload without acc
     await page.locator('#tab-army').tap();
     await page.locator('#army-recruit').tap();
     const before = await soldiers(page);
-    await page.locator('#recruit-warden').tap();
+    await page.locator('#recruit-class-ranger').tap();
+    await expect(page.locator('.compact-recruit h3')).toHaveText('Ranger');
+    await page.locator('#recruit-ranger').tap();
     await expect.poll(async () => (await soldiers(page)).length).toBe(before.length + 1);
     await page.locator('#army-orders').tap();
     await expect(page.locator('.army-help').first()).toContainText('Tap Set rally point');

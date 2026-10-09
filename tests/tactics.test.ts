@@ -1,5 +1,6 @@
 import { afterAll, describe, expect, it } from 'vitest';
-import { writeFileSync } from 'node:fs';
+import { mkdirSync, writeFileSync } from 'node:fs';
+mkdirSync('docs/evidence', { recursive: true });
 import { command } from '../src/game/commands';
 import { combatStep } from '../src/game/combat';
 import { ambushFronts, ambushRoster } from '../src/game/encounters';

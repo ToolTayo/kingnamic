@@ -1,5 +1,6 @@
 import { describe,it,expect } from 'vitest';
-import { readFileSync,writeFileSync } from 'node:fs';
+import { mkdirSync,readFileSync,writeFileSync } from 'node:fs';
+mkdirSync('docs/evidence', { recursive: true });
 import { army,enemies,makeBuilding,makeUnit,newGame } from '../src/game/state';
 import { command } from '../src/game/commands';
 import { combatStep, waveSize } from '../src/game/combat';

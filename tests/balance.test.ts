@@ -1,5 +1,6 @@
 import { afterAll, expect, it } from 'vitest';
-import { writeFileSync } from 'node:fs';
+import { mkdirSync, writeFileSync } from 'node:fs';
+mkdirSync('docs/evidence', { recursive: true });
 import { command } from '../src/game/commands';
 import { BUILDINGS, STEP } from '../src/game/config';
 import { decode } from '../src/game/persistence';
@@ -11,6 +12,7 @@ import type { BuildingKind } from '../src/game/types';
 // Commands obey normal costs, capacity, prerequisites and combat restrictions.
 const results: object[] = [];
 it('makes a new watchtower a deliberate timber investment', () => {
+  expect(BUILDINGS.tower.cost).toEqual({ wood: 70, stone: 30 });
   const s = newGame(), site = { x: 10, y: 13 };
   s.resources.wood = BUILDINGS.tower.cost.wood! - 1;
   s.resources.stone = 100;
@@ -20,6 +22,7 @@ it('makes a new watchtower a deliberate timber investment', () => {
   s.resources.wood++;
   expect(command(s, { type: 'build', kind: 'tower', ...site }).ok).toBe(true);
   expect(s.resources.wood).toBe(0);
+  expect(s.resources.stone).toBe(70);
   expect(s.buildings.find(b => b.kind === 'tower' && b.x === site.x && b.y === site.y)?.progress).toBe(0);
   expect(BUILDINGS.tower.time).toBe(20);
 });

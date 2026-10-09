@@ -1,5 +1,6 @@
 import {it,expect} from 'vitest';
-import {writeFileSync} from 'node:fs';
+import {mkdirSync,writeFileSync} from 'node:fs';
+mkdirSync('docs/evidence', { recursive: true });
 import {command,buildError} from '../src/game/commands';
 import {army,enemies,newGame} from '../src/game/state';
 import {canAfford,capacity,idle,jobCapacity,rates} from '../src/game/economy';
