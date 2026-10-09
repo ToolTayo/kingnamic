@@ -10,7 +10,7 @@ if(process.env.KINGNAMIC_HARDWARE_PROFILE==='1')test.use({launchOptions:{args:['
 
 const read=(page:Page)=>page.evaluate(()=>JSON.parse(JSON.stringify((window as any).__KINGNAMIC__.runtime.state)));
 const clickLive=(page:Page,selector:string)=>page.evaluate((sel:string)=>new Promise<void>((resolve,reject)=>{let frames=0;const attempt=()=>{const button=document.querySelector<HTMLButtonElement>(sel);if(button&&!button.disabled){button.click();resolve();return;}if(++frames>600){reject(new Error(`${sel} stayed unavailable for 10 seconds`));return;}requestAnimationFrame(attempt);};attempt();}),selector);
-async function selectRosterUnit(page:Page,id:number,total:number){let unit=page.locator('#unit-'+id);for(let i=0;i<Math.ceil(total/12)&&!await unit.count();i++){await expect(page.locator('#roster-next')).toBeEnabled();await page.locator('#roster-next').click();}await expect(unit).toHaveCount(1);await unit.click();}
+async function selectRosterUnit(page:Page,id:number,total:number){let unit=page.locator('#unit-'+id);const pages=Math.ceil(total/12),previous=page.locator('#roster-prev');for(let i=0;i<pages&&await previous.isEnabled();i++)await previous.click();for(let i=0;i<pages&&!await unit.count();i++){const next=page.locator('#roster-next');if(!await next.isEnabled())break;await next.click();}await expect(unit,`Soldier ${id} should be present after checking all ${pages} roster pages.`).toHaveCount(1);await unit.click();}
 const waitRegion=(page:Page,region:'march'|'heartmere')=>expect.poll(async()=>{const s=await read(page);return s.region??'heartmere';},{timeout:45000,intervals:[100,250,500]}).toBe(region);
 const forceSize=180;
 test('a prepared 180-soldier company naturally defeats and settles Tallowmere, then saves and revisits it',async({page})=>{
