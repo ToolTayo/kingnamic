@@ -6,6 +6,7 @@ import {addResidents,assignResidentJobs,removeResident} from './population';
 import {rebalanceJobs} from './economy';
 import {credit} from './treasury';
 import {MAP_W,MAX_UNITS} from './config';
+import {wildernessStep} from './wilderness';
 import type {BuildingKind,CommandResult,Resource,Resources,RivalStronghold,State,StrongholdId,UnitKind} from './types';
 export const ROAD_EXIT={x:14,y:24};
 export interface Landmark {id:string;name:string;x:number;y:number;art:'village'|'grove'|'ruin'|'ford'|'shrine'|'homestead'|'camp'|'watch'|'keep'|'quarry';reward:Partial<Resources>;hostiles?:UnitKind[];survivors?:number}
@@ -13,11 +14,12 @@ export const STRONGHOLDS={
  mossgate:{id:'mossgate',name:'Mossgate',faction:'The Gloamward',center:STRONGHOLD_CENTERS.mossgate,total:100,initialGarrison:20},
  tallowmere:{id:'tallowmere',name:'Tallowmere',faction:'The Weirward Compact',center:STRONGHOLD_CENTERS.tallowmere,total:150,initialGarrison:30},
  stonewake:{id:'stonewake',name:'Stonewake',faction:'The Stonewake Hold',center:STRONGHOLD_CENTERS.stonewake,total:125,initialGarrison:25},
+ alderwatch:{id:'alderwatch',name:'Alderwatch',faction:'The Abbey Wardens',center:STRONGHOLD_CENTERS.alderwatch,total:160,initialGarrison:32},
 } as const satisfies Record<StrongholdId,{id:StrongholdId;name:string;faction:string;center:{x:number;y:number};total:number;initialGarrison:number}>;
 export function ensureStronghold(s:State,id:StrongholdId):RivalStronghold{
  const known=rivalStronghold(s,id);if(known)return known;
  const info=STRONGHOLDS[id],w:RivalStronghold={id,name:info.name,faction:info.faction,status:'unseen',remaining:info.total,reserve:info.total-info.initialGarrison,casualties:0,warning:0,patrolVariant:((s.seed>>>4)%3) as 0|1|2};
- if(id==='mossgate')s.march!.rival=w;else if(id==='tallowmere')s.march!.weirward=w;else s.march!.stonewake=w;return w;
+ if(id==='mossgate')s.march!.rival=w;else if(id==='tallowmere')s.march!.weirward=w;else if(id==='stonewake')s.march!.stonewake=w;else s.march!.alderwatch=w;return w;
 }
 export const LANDMARKS:Landmark[]=[
  {id:'village',name:'Briar village',x:14,y:11,art:'village',reward:{food:18}},
@@ -32,10 +34,11 @@ export const LANDMARKS:Landmark[]=[
  {id:'tallowmere',name:'Tallowmere Hall',x:37,y:36,art:'keep',reward:{wood:12,stone:12}},
  {id:'northwatch',name:'Northwatch bell tower',x:52,y:35,art:'watch',reward:{stone:12},hostiles:['hollow','hollow','runner','brute']},
  {id:'stonewake-quarry',name:'Greybank quarry road',x:45,y:12,art:'quarry',reward:{wood:14,stone:16},hostiles:['hollow','runner','hollow','hollow']},
+ {id:'abbey-road',name:'The abbey road',x:8,y:35,art:'shrine',reward:{food:12,herbs:3}},
 ];
 export const empireArmy=(s:State)=>army(s).length+(s.empire?army(s.empire.reserve).length:0);
 export function createMarch(s:State):State{
-  const w=newGame(s.seed);w.region='march';w.march={seen:[],rescued:[],rumors:[],secured:false,rewarded:false,incursion:0,warning:0,rival:{id:'mossgate',name:'Mossgate',faction:'The Gloamward',status:'unseen',remaining:100,reserve:80,casualties:0,warning:0},weirward:{id:'tallowmere',name:'Tallowmere',faction:'The Weirward Compact',status:'unseen',remaining:150,reserve:120,casualties:0,warning:0,patrolVariant:((s.seed>>>4)%3) as 0|1|2},stonewake:{id:'stonewake',name:'Stonewake',faction:'The Stonewake Hold',status:'unseen',remaining:125,reserve:100,casualties:0,warning:0,patrolVariant:((s.seed>>>7)%3) as 0|1|2}};
+  const w=newGame(s.seed);w.region='march';w.march={seen:[],rescued:[],rumors:[],secured:false,rewarded:false,incursion:0,warning:0,roadAmbushes:[],rival:{id:'mossgate',name:'Mossgate',faction:'The Gloamward',status:'unseen',remaining:100,reserve:80,casualties:0,warning:0},weirward:{id:'tallowmere',name:'Tallowmere',faction:'The Weirward Compact',status:'unseen',remaining:150,reserve:120,casualties:0,warning:0,patrolVariant:((s.seed>>>4)%3) as 0|1|2},stonewake:{id:'stonewake',name:'Stonewake',faction:'The Stonewake Hold',status:'unseen',remaining:125,reserve:100,casualties:0,warning:0,patrolVariant:((s.seed>>>7)%3) as 0|1|2},alderwatch:{id:'alderwatch',name:'Alderwatch',faction:'The Abbey Wardens',status:'unseen',remaining:160,reserve:128,casualties:0,warning:0,patrolVariant:((s.seed>>>11)%3) as 0|1|2}};
   w.units=[];w.buildings=[];w.residents=[];w.population=0;w.infection=[];w.corpses=[];w.logs=[];w.effects=[];w.completed=[];
   w.jobs={farmers:0,woodcutters:0,miners:0,builders:0,healers:0};w.nextId=s.nextId;w.resources=s.resources;w.squads=s.squads;w.speed=0;
   for(const [x,y]of [[12,10],[16,10],[21,7]]){const b=makeBuilding(w,'cottage',x,y,true);b.hp=60;}
@@ -85,7 +88,7 @@ function exchangeRegions(s:State,ids:number[]):CommandResult{
   parked.resources=resources;parked.squads=squads;parked.nextId=nextId;
   const reserved=new Set([...s.units,...(s.residents??[])].map(key));
   for(const u of party){const p=nearestOpen(s,ROAD_EXIT,reserved);reserved.add(key(p));Object.assign(u,p,{target:{...p},anchor:{...p},path:[],repath:0,order:'hold'});delete u.patrol;delete u.focus;delete u.muster;s.units.push(u);}
-  log(s,s.region?'You reached Briar March. Explore the frontier, discover nine places, clear infected sites and establish a settlement.':'The company returned to Hearthmere. Its defenders and buildings remain in place.','good');
+  log(s,s.region?'Explore Briar March, follow its forest roads, discover new places and clear infected sites.':'The company returned to Hearthmere. Its defenders and buildings remain in place.','good');
   return {ok:true,message:`${party.length} travellers arrived. Other soldiers stayed at their posts. Time is paused.`};
 }
 export function outpostError(s:State,x:number,y:number):string|null{
@@ -122,9 +125,9 @@ export function accessError(s:State,x:number,y:number,kind:BuildingKind):string|
   return buildings.filter(b=>!['wall','gate'].includes(b.kind)).every(b=>[{x:b.x+1,y:b.y},{x:b.x-1,y:b.y},{x:b.x,y:b.y+1},{x:b.x,y:b.y-1}].some(p=>seen.has(key(p))))?null:'Keep a passable doorway from each building to the southern road; include gates in enclosed walls.';
 }
 function stronghold(s:State,id:StrongholdId='mossgate'):RivalStronghold {return ensureStronghold(s,id);}
-const MOSS=STRONGHOLDS.mossgate.center,TALLOWMERE=STRONGHOLDS.tallowmere.center,STONEWAKE=STRONGHOLDS.stonewake.center;
+const MOSS=STRONGHOLDS.mossgate.center,TALLOWMERE=STRONGHOLDS.tallowmere.center,STONEWAKE=STRONGHOLDS.stonewake.center,ALDERWATCH=STRONGHOLDS.alderwatch.center;
 function deployRivals(s:State,war:RivalStronghold,count:number,startAt?:number):number{
-  const roster:UnitKind[]=war.id==='mossgate'?['warden','warden','warden','warden','spearman','spearman','ranger','ranger','scout']:war.id==='stonewake'?['spearman','spearman','spearman','ranger','ranger','scout','warden','scout','spearman','ranger']:
+  const roster:UnitKind[]=war.id==='mossgate'?['warden','warden','warden','warden','spearman','spearman','ranger','ranger','scout']:war.id==='stonewake'?['spearman','spearman','spearman','ranger','ranger','scout','warden','scout','spearman','ranger']:war.id==='alderwatch'?['warden','spearman','spearman','warden','ranger','spearman','ranger','scout','warden','spearman','ranger','scout']:
     ['spearman','spearman','spearman','spearman','warden','warden','warden','ranger','ranger','scout'];
   const yard:{x:number;y:number}[]=[];
   if(war.id==='mossgate'){
@@ -134,13 +137,18 @@ function deployRivals(s:State,war:RivalStronghold,count:number,startAt?:number):
     // Courtyard posts stay inside Tallowmere's two-gate wall. The rear east
     // parapet protects the Compact's bow line; spears hold the causeway side.
     for(let y=33;y<=39;y++)for(let x=34;x<=40;x++)if(tileAt(x,y,s)&&!s.buildings.some(b=>b.hp>0&&b.x===x&&b.y===y))yard.push({x,y});
+  }else if(war.id==='alderwatch'){
+    // The Abbey Wardens' two watch-post terraces overlook a broad, gated yard.
+    for(let y=39;y<=45;y++)for(let x=7;x<=14;x++)if(tileAt(x,y,s)&&!s.buildings.some(b=>b.hp>0&&b.x===x&&b.y===y))yard.push({x,y});
   }else{
     // Keep the initial pass guard inside the quarry wall; reserves use its
     // cleared interior posts as casualties open space.
     for(let y=5;y<=13;y++)for(let x=47;x<=53;x++)if(tileAt(x,y,s)&&!s.buildings.some(b=>b.hp>0&&b.x===x&&b.y===y))yard.push({x,y});
   }
-  const meleePosts=[...yard].sort((a,b)=>war.id==='stonewake'?Math.min(distance(a,{x:46,y:9}),distance(a,{x:51,y:14}))-Math.min(distance(b,{x:46,y:9}),distance(b,{x:51,y:14})):Math.hypot(a.x-(war.id==='mossgate'?MOSS.x:34),a.y-(war.id==='mossgate'?MOSS.y:38))-Math.hypot(b.x-(war.id==='mossgate'?MOSS.x:34),b.y-(war.id==='mossgate'?MOSS.y:38))||a.y-b.y||a.x-b.x);
-  const rangedPosts=[...yard].sort((a,b)=>war.id==='mossgate'?b.x-a.x||Math.abs(a.y-MOSS.y)-Math.abs(b.y-MOSS.y):war.id==='stonewake'?(tileAt(b.x,b.y,s)!.height-tileAt(a.x,a.y,s)!.height)||distance(a,{x:52,y:7})-distance(b,{x:52,y:7}):a.y-b.y||b.x-a.x);
+  const center=STRONGHOLDS[war.id].center;
+  const meleeCenter=war.id==='tallowmere'?{x:34,y:38}:center;
+  const meleePosts=[...yard].sort((a,b)=>war.id==='stonewake'?Math.min(distance(a,{x:46,y:9}),distance(a,{x:51,y:14}))-Math.min(distance(b,{x:46,y:9}),distance(b,{x:51,y:14})):distance(a,meleeCenter)-distance(b,meleeCenter)||a.y-b.y||a.x-b.x);
+  const rangedPosts=[...yard].sort((a,b)=>war.id==='mossgate'?b.x-a.x||Math.abs(a.y-MOSS.y)-Math.abs(b.y-MOSS.y):war.id==='stonewake'?(tileAt(b.x,b.y,s)!.height-tileAt(a.x,a.y,s)!.height)||distance(a,{x:52,y:7})-distance(b,{x:52,y:7}):war.id==='alderwatch'?(tileAt(b.x,b.y,s)!.height-tileAt(a.x,a.y,s)!.height)||Math.min(distance(a,{x:8,y:39}),distance(a,{x:13,y:39}))-Math.min(distance(b,{x:8,y:39}),distance(b,{x:13,y:39})):a.y-b.y||b.x-a.x);
   const occupied=new Set(rivals(s,war.id).map(u=>key(u.anchor??u))),deployedBefore=startAt??war.remaining+war.casualties-war.reserve;
   let deployed=0;
   for(;deployed<count&&s.units.length<MAX_UNITS;deployed++){
@@ -152,6 +160,9 @@ function deployRivals(s:State,war:RivalStronghold,count:number,startAt?:number):
       u.order='patrol';u.patrol={...lane,leg:0};u.target={...lane.a};
     }else if(war.id==='stonewake'&&kind==='scout'){
       const lanes=[{a:{x:44,y:14},b:{x:45,y:11}},{a:{x:49,y:18},b:{x:51,y:15}}],lane=lanes[((war.patrolVariant??0)+deployedBefore+deployed)%lanes.length];
+      u.order='patrol';u.patrol={...lane,leg:0};u.target={...lane.a};
+    }else if(war.id==='alderwatch'&&kind==='scout'){
+      const lanes=[{a:{x:5,y:36},b:{x:8,y:39}},{a:{x:16,y:42},b:{x:13,y:45}}],lane=lanes[((war.patrolVariant??0)+deployedBefore+deployed)%lanes.length];
       u.order='patrol';u.patrol={...lane,leg:0};u.target={...lane.a};
     }
     if(!war.leaderId){war.leaderId=u.id;u.maxHp=Math.round(u.maxHp*1.7);u.hp=u.maxHp;}
@@ -186,6 +197,15 @@ function raiseStonewake(s:State):void{
  const deployed=deployRivals(s,w,25,0);w.reserve=125-deployed;w.remaining=125;
  log(s,`The Stonewake Hold commands the Greybank quarry. Scouts count 125 defenders: ${deployed} hold the pass, high ground and flanks while ${w.reserve} remain in reserve. The signal tower is calling them in.`,'danger');
 }
+function raiseAlderwatch(s:State):void{
+ const w=stronghold(s,'alderwatch');if(w.status!=='unseen')return;w.status='occupied';
+ const own=(kind:BuildingKind,x:number,y:number,name?:string)=>{const b=makeBuilding(s,kind,x,y,true);b.owner='rival';b.rivalId='alderwatch';if(name)b.name=name;return b;};
+ for(let x=6;x<=15;x++){own(x===10?'gate':'wall',x,38,x===10?'Abbey Gate':undefined);own('wall',x,46);}
+ for(let y=39;y<=45;y++){own('wall',6,y);own(y===42?'gate':'wall',15,y,y===42?'Ravine Gate':undefined);}
+ own('tower',8,39,'West Abbey Watch');own('tower',13,39,'East Abbey Watch');own('barracks',11,41,'Alderwatch Muster Hall');own('cottage',8,44);own('farm',12,44);own('hearth',10,42,'Alderwatch Hall');
+ const deployed=deployRivals(s,w,32,0);w.reserve=160-deployed;w.remaining=160;
+ log(s,`The Abbey Wardens hold Alderwatch. The abbey ledger counts 160 defenders: ${deployed} guard two watch posts and the hall while ${w.reserve} remain in finite reserve. Scout patrols cover both ravine roads.`,'danger');
+}
 export function strongholdCaptureError(s:State,id:StrongholdId='mossgate'):string|null{
  const info=STRONGHOLDS[id];if(!s.region||!s.march)return `${info.name} can only be secured from the Briar March.`;const w=stronghold(s,id),hero=army(s).find(u=>u.id===s.commander?.id);
  if(s.outcome!=='playing')return 'Continue the watch before capturing '+info.name+'.';
@@ -199,13 +219,18 @@ export function captureStronghold(s:State,id:StrongholdId='mossgate'):CommandRes
  const error=strongholdCaptureError(s,id);if(error)return{ok:false,message:error};const w=stronghold(s,id),info=STRONGHOLDS[id];
  w.status='captured';w.warning=0;w.leaderId=undefined;s.march!.secured=true;
  for(const b of s.buildings)if(b.owner==='rival'&&rivalIdOf(b)===id){b.owner='player';delete b.rivalId;}
- const hearth=s.buildings.find(b=>b.kind==='hearth'&&b.name===`${info.name} Hall`);if(hearth)hearth.hp=Math.max(1,Math.floor(hearth.maxHp*.72));
- const farmAt=id==='mossgate'?{x:45,y:32}:id==='tallowmere'?{x:37,y:39}:{x:49,y:12},cottageAt=id==='mossgate'?{x:47,y:32}:id==='tallowmere'?{x:36,y:39}:{x:51,y:12};
+ let hearth=s.buildings.find(b=>b.kind==='hearth'&&b.name===`${info.name} Hall`);
+ // A keep hall can be destroyed during a natural siege. Conquest still grants
+ // a settlement, so restore its named hearth as a damaged, repairable ruin.
+ if(!hearth){hearth=makeBuilding(s,'hearth',info.center.x,info.center.y,true);hearth.name=`${info.name} Hall`;}
+ hearth.owner='player';delete hearth.rivalId;hearth.hp=Math.max(1,Math.floor(hearth.maxHp*.72));
+ const farmAt=id==='mossgate'?{x:45,y:32}:id==='tallowmere'?{x:37,y:39}:id==='stonewake'?{x:49,y:12}:{x:9,y:44},cottageAt=id==='mossgate'?{x:47,y:32}:id==='tallowmere'?{x:36,y:39}:id==='stonewake'?{x:51,y:12}:{x:11,y:44};
  for(const [kind,p]of [['farm',farmAt],['cottage',cottageAt]] as const)if(!s.buildings.some(b=>b.x===p.x&&b.y===p.y)){const b=makeBuilding(s,kind,p.x,p.y,true);b.owner='player';}
- const survivors=id==='mossgate'?4:id==='tallowmere'?6:6;addResidents(s,survivors);s.jobs.farmers=id==='mossgate'?2:3;s.jobs.builders=id==='mossgate'?2:3;assignResidentJobs(s);
- const timber=id==='mossgate'?45:id==='tallowmere'?60:80,crowns=id==='mossgate'?25:id==='tallowmere'?35:45;s.resources.wood+=timber;s.resources.stone+=crowns;
+ const survivors=id==='mossgate'?4:6;addResidents(s,survivors);s.jobs.farmers=id==='mossgate'?2:3;s.jobs.builders=id==='mossgate'?2:3;assignResidentJobs(s);
+ const timber=id==='mossgate'?45:id==='tallowmere'?60:id==='stonewake'?80:75,crowns=id==='mossgate'?25:id==='tallowmere'?35:id==='stonewake'?45:40;s.resources.wood+=timber;s.resources.stone+=crowns;
  if(id==='tallowmere')log(s,'Tallowmere is secured. Six Compact families return to the hall; the causeway ledger and stores are yours. +60 Timber · +35 Crowns.','good');
  else if(id==='stonewake')log(s,'Stonewake is secured. Six quarry families return to the hall; its finite stores are yours. +80 Timber · +45 Crowns.','good');
+ else if(id==='alderwatch')log(s,'Alderwatch is secured. Six abbey families return to the hall; the watch posts and finite stores are yours. +75 Timber · +40 Crowns.','good');
  else log(s,'Mossgate is secured. Four survivors begin repairs and tend the new croft. +45 Timber · +25 Crowns.','good');
  return{ok:true,message:`${info.name} secured. Repair the damaged hall, develop its croft and station a garrison.`};
 }
@@ -222,7 +247,7 @@ export function empireStep(s:State,dt:number):void{
     e.reserve.nextId=s.nextId;
   }
   const m=s.march;if(!s.region||!m)return;
-  const hero=army(s).find(u=>u.id===s.commander?.id),war=stronghold(s),weirward=stronghold(s,'tallowmere'),stonewake=stronghold(s,'stonewake');
+  const hero=army(s).find(u=>u.id===s.commander?.id),war=stronghold(s),weirward=stronghold(s,'tallowmere'),stonewake=stronghold(s,'stonewake'),alderwatch=stronghold(s,'alderwatch');
   // Reveal the garrison before the commander reaches the perimeter, and put
   // the gate on the western approach from the southern road. Revealing at 4
   // tiles used to build a closed ring around the commander and trap them in it.
@@ -233,6 +258,10 @@ export function empireStep(s:State,dt:number):void{
   // two-front battle.
   if(hero&&m.rumors?.includes('weirward')&&weirward.status==='unseen'&&distance(hero,TALLOWMERE)<8)raiseTallowmere(s);
   if(hero&&m.rumors?.includes('stonewake')&&stonewake.status==='unseen'&&distance(hero,STONEWAKE)<8)raiseStonewake(s);
+  // Reveal Alderwatch from outside both watch-post ranges so the player can
+  // scout the garrison before the commander enters the Wardens' firing lanes.
+  const alderwatchWatches=[{x:8,y:39},{x:13,y:39}];
+  if(hero&&m.rumors?.includes('alderwatch')&&alderwatch.status==='unseen'&&distance(hero,ALDERWATCH)<10&&alderwatchWatches.every(watch=>distance(hero,watch)>6))raiseAlderwatch(s);
   if(stonewake.status==='occupied'&&!stonewake.signalDisabled&&stonewake.signalTowerId!==undefined&&s.buildings.some(b=>b.id===stonewake.signalTowerId&&b.hp<=0)){stonewake.signalDisabled=true;if(stonewake.warning>0)stonewake.warning=Math.max(stonewake.warning,20);log(s,'Stonewake Signal Tower is down. Relay runners must carry the call; the next reserve warning lasts 20 seconds.','good');}
   const relief=(garrison:RivalStronghold,center:{x:number;y:number})=>{
     if(garrison.status!=='occupied')return;
@@ -240,7 +269,7 @@ export function empireStep(s:State,dt:number):void{
     if(garrison.warning>0){garrison.warning=Math.max(0,garrison.warning-dt);if(!garrison.warning&&garrison.reserve){const n=Math.min(12,garrison.reserve),deployed=deployRivals(s,garrison,n);garrison.reserve-=deployed;log(s,`${garrison.faction} relief reaches ${garrison.name}. ${garrison.remaining} defenders still stand${deployed<n?' · remaining relief is delayed by battlefield capacity':''}.`,'danger');}}
     else if(garrison.reserve>0&&active<=8&&pressure){const delay=garrison.id==='stonewake'&&garrison.signalDisabled?20:5;garrison.warning=delay;log(s,`${garrison.faction} relief company is forming behind ${garrison.name}'s walls. ${delay} seconds.`,'warn');}
   };
-  relief(war,MOSS);relief(weirward,TALLOWMERE);relief(stonewake,STONEWAKE);
+  relief(war,MOSS);relief(weirward,TALLOWMERE);relief(stonewake,STONEWAKE);relief(alderwatch,ALDERWATCH);
   m.rumors??=[];
   if(hero)for(const site of LANDMARKS)if(!m.seen.includes(site.id)&&distance(hero,site)<4){
     m.seen.push(site.id);const found=Object.entries(site.reward).filter((entry):entry is [Resource,number]=>typeof entry[1]==='number');
@@ -254,11 +283,13 @@ export function empireStep(s:State,dt:number):void{
   }
   if(m.seen.includes('wayfarer-camp')&&!m.rumors.includes('weirward')){m.rumors.push('weirward');log(s,'A charcoal tally at the wayfarers’ camp names the Weirward Compact: 150 defenders, a causeway gate, an eastern postern, and relief held behind the walls.','info');}
   if(m.seen.includes('stonewake-quarry')&&!m.rumors.includes('stonewake')){m.rumors.push('stonewake');log(s,'Fresh cart tracks climb into the Greybank ridge. Scouts count 125 Stonewake defenders; a signal tower can summon their reserve companies.','warn');}
+  if(m.seen.includes('abbey-road')&&!m.rumors.includes('alderwatch')){m.rumors.push('alderwatch');log(s,'The abbey ledger names Alderwatch: 160 Wardens, two ravine watch posts, bow cover above the road and a finite reserve inside the hall.','warn');}
   m.rescued??=[];
   for(const site of LANDMARKS)if(site.survivors&&!m.rescued.includes(site.id)&&m.seen.includes(site.id)&&!hostiles(s).some(z=>distance(z,site)<6)){
     const home=s.empire?.reserve;if(!home)continue;home.nextId=Math.max(home.nextId,s.nextId);const joined=addResidents(home,site.survivors).length;s.nextId=home.nextId;m.rescued.push(site.id);
     log(s,`${joined} survivors from ${site.name} join your people${joined?' at Hearthmere':''}.`,'good');
   }
+  wildernessStep(s,dt,hero);
   if(m.secured&&!s.buildings.some(b=>b.kind==='hearth')){m.secured=false;log(s,'The last outpost beacon fell. Clear the land and re-establish your position.','danger');}
   if(!m.secured)return;
   m.incursion+=dt;

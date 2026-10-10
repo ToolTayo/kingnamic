@@ -3,7 +3,7 @@ import {army,enemies,hostiles,rivals,newGame,makeUnit,makeBuilding} from '../src
 import {command,buildError} from '../src/game/commands';
 import {armyCapacity} from '../src/game/army';
 import {capacity} from '../src/game/economy';
-import {ROAD_EXIT,empireArmy,empireStep,strongholdCaptureError,travelError} from '../src/game/empire';
+import {ROAD_EXIT,captureStronghold,empireArmy,empireStep,strongholdCaptureError,travelError} from '../src/game/empire';
 import {decode} from '../src/game/persistence';
 import {combatStep} from '../src/game/combat';
 import {advance} from '../src/game/simulation';
@@ -221,6 +221,12 @@ describe('Weirward Compact and Tallowmere campaign',()=>{
 
 
 describe('Stonewake Hold and Greybank quarry siege',()=>{
+ it('restores a damaged Stonewake Hall if siege combat destroyed it before capture',()=>{
+  const s=cleared(),hero=army(s).find(u=>u.id===s.commander!.id)!;Object.assign(hero,{x:45,y:12,target:{x:45,y:12},path:[]});s.march!.seen=['stonewake-quarry'];s.march!.rumors=['stonewake'];empireStep(s,.1);
+  const war=s.march!.stonewake!;expect(war.status).toBe('occupied');s.units=s.units.filter(u=>u.rivalId!=='stonewake');Object.assign(war,{remaining:0,reserve:0,casualties:125});s.buildings=s.buildings.filter(b=>b.name!=='Stonewake Hall');
+  expect(captureStronghold(s,'stonewake').ok).toBe(true);const hall=s.buildings.find(b=>b.name==='Stonewake Hall');expect(hall).toMatchObject({owner:'player',x:50,y:9});expect(hall!.hp).toBeLessThan(hall!.maxHp);expect(s.buildings.filter(b=>b.name==='Stonewake Hall')).toHaveLength(1);expect(decode(JSON.stringify(s))).not.toBeNull();
+ });
+
  it('reveals only after the quarry road report and builds its deterministic 125-defender ridge keep',()=>{
   const s=cleared(),hero=army(s).find(u=>u.id===s.commander!.id)!;Object.assign(hero,{x:45,y:12,target:{x:45,y:12},path:[]});
   expect(findPath(s,{x:43,y:14},STRONGHOLD_CENTERS.stonewake,false,navigation(s),'player').length).toBeGreaterThan(0);

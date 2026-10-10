@@ -13,6 +13,7 @@ import { indexActorsByScreenY, obscuresActor } from './visibility';
 import {LANDMARKS,ROAD_EXIT} from '../game/empire';
 import { commandableIds, formationFacing, formationSlots, SQUAD_COLORS } from '../game/army';
 import { pickSoldier } from './battlefield';
+import { ROAD_AMBUSHES } from '../game/wilderness';
 interface CommandGesture { start:Point; end:Point; started:number; right:boolean; touch:boolean; active:boolean; cancelled:boolean }
 function groveDensity(x:number,y:number):number{
   const gx=x/4,gy=y/4,ix=Math.floor(gx),iy=Math.floor(gy),u=(gx-ix)**2*(3-2*(gx-ix)),v=(gy-iy)**2*(3-2*(gy-iy));
@@ -343,6 +344,7 @@ export class WorldScene extends Phaser.Scene {
     const corpseIds=new Set((s.corpses??[]).map(c=>c.id));for(const[id,sprite]of this.remains)if(!corpseIds.has(id)){sprite.destroy();this.remains.delete(id);}
     for(const corpse of s.corpses??[]){const p=iso(corpse.x,corpse.y);let sprite=this.remains.get(corpse.id);if(!sprite){sprite=this.add.image(p.x,p.y,`unit-${corpse.kind==='resident'?'idle':corpse.kind}-0`).setOrigin(.5,43/52);this.remains.set(corpse.id,sprite);}const stirring=corpse.tainted?Math.max(0,1-corpse.remaining/2):0;sprite.setPosition(p.x,p.y-2).setDepth(p.y+.2).setRotation(-1.45+stirring*.35).setAlpha(corpse.tainted?.8:.4).setTint(corpse.tainted?0xb9bb7a:0x9c9e88);this.ground.lineStyle(2,corpse.tainted?0xeab081:0xb4b7a5,.85).strokeEllipse(p.x,p.y,25,12);if(corpse.tainted){this.overlay.lineStyle(2,0xf0ad78,.9).beginPath().arc(p.x,p.y-7,12,-Math.PI/2,-Math.PI/2+Math.PI*2*Math.min(1,corpse.remaining/8)).strokePath();if(stirring)this.overlay.lineStyle(1,0xffb587,.65).strokeEllipse(p.x,p.y,28+stirring*8,14+stirring*4);}}
     this.drawWorkers(flowing, blend, illnesses);
+    if(s.region&&s.march?.roadWarning){const route=ROAD_AMBUSHES.find(r=>r.id===s.march!.roadWarning!.id);if(route)this.diamond(this.overlay,route.point.x,route.point.y,0xf0a174,.55+Math.sin(s.time*4)*.35);}
     if (s.theatre) {
       const e = this.rt.state.expedition;
       const route = missionRoute(e!);

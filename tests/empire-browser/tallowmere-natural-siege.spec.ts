@@ -10,7 +10,15 @@ if(process.env.KINGNAMIC_HARDWARE_PROFILE==='1')test.use({launchOptions:{args:['
 
 const read=(page:Page)=>page.evaluate(()=>JSON.parse(JSON.stringify((window as any).__KINGNAMIC__.runtime.state)));
 const clickLive=(page:Page,selector:string)=>page.evaluate((sel:string)=>new Promise<void>((resolve,reject)=>{let frames=0;const attempt=()=>{const button=document.querySelector<HTMLButtonElement>(sel);if(button&&!button.disabled){button.click();resolve();return;}if(++frames>600){reject(new Error(`${sel} stayed unavailable for 10 seconds`));return;}requestAnimationFrame(attempt);};attempt();}),selector);
-async function selectRosterUnit(page:Page,id:number,total:number){let unit=page.locator('#unit-'+id);const pages=Math.ceil(total/12),previous=page.locator('#roster-prev');for(let i=0;i<pages&&await previous.isEnabled();i++)await previous.click();for(let i=0;i<pages&&!await unit.count();i++){const next=page.locator('#roster-next');if(!await next.isEnabled())break;await next.click();}await expect(unit,`Soldier ${id} should be present after checking all ${pages} roster pages.`).toHaveCount(1);await unit.click();}
+async function selectRosterUnit(page:Page,id:number){
+ const current=await read(page),troops=army(current).filter((u:any)=>u.origin!=='battalion'),index=troops.findIndex((u:any)=>u.id===id),unit=page.locator('#unit-'+id);
+ expect(index,`Living commander #${id} should be available in the Army roster: ${JSON.stringify(current.units.find((u:any)=>u.id===id))}`).toBeGreaterThanOrEqual(0);
+ const pages=Math.max(1,Math.ceil(troops.length/12)),target=Math.floor(index/12),label=page.locator('.section-label').filter({hasText:'SOLDIERS'}).locator('span');
+ const shown=await label.textContent(),match=shown?.match(/(\d+)\s*\/\s*(\d+)/);expect(match,`Army roster page label should be readable: ${shown}`).toBeTruthy();let currentPage=Number(match![1])-1;
+ while(currentPage>target){await page.locator('#roster-prev').click();currentPage--;await expect(label).toHaveText(`${currentPage+1} / ${pages}`);}
+ while(currentPage<target){await page.locator('#roster-next').click();currentPage++;await expect(label).toHaveText(`${currentPage+1} / ${pages}`);}
+ await expect(unit).toHaveCount(1);await unit.click();
+}
 const waitRegion=(page:Page,region:'march'|'heartmere')=>expect.poll(async()=>{const s=await read(page);return s.region??'heartmere';},{timeout:45000,intervals:[100,250,500]}).toBe(region);
 const forceSize=180;
 test('a prepared 180-soldier company naturally defeats and settles Tallowmere, then saves and revisits it',async({page})=>{
@@ -114,7 +122,7 @@ test('a prepared 180-soldier company naturally defeats and settles Tallowmere, t
     const incumbentId=current.commander?.id,incumbent=current.units.find((u:any)=>u.id===incumbentId&&u.hp>0);
     if(incumbent){
      if(current.infection?.some((i:any)=>i.personId===incumbent.id)){
-      await page.locator('#tab-army').click();await page.locator('#army-orders').click();await page.locator('#select-none').click();await page.locator('#army-roster').click();await selectRosterUnit(page,incumbent.id,current.units.length);
+      await page.locator('#tab-army').click();await page.locator('#army-orders').click();await page.locator('#select-none').click();await page.locator('#army-roster').click();await selectRosterUnit(page,incumbent.id);
       await expect(page.locator('#treat-selected')).toBeEnabled();await page.locator('#treat-selected').click();current=await read(page);
       expect(current.infection?.some((i:any)=>i.personId===incumbent.id),"The living commander must be treated through the Army roster before travelling.").toBe(false);
      }

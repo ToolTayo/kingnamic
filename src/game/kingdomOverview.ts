@@ -98,7 +98,7 @@ export function kingdomOverview(s: State): KingdomOverview {
       }
       if (site.repairs.length) alerts.push({ tone: 'warn', message: site.repairs.length + ' damaged structure' + (site.repairs.length === 1 ? '' : 's') + ' at ' + site.name + '.', action: 'repairs', settlementId: site.id });
     }
-    for (const garrison of [state.march?.rival, state.march?.weirward, state.march?.stonewake]) {
+    for (const garrison of [state.march?.rival, state.march?.weirward, state.march?.stonewake, state.march?.alderwatch]) {
       if (garrison?.status === 'occupied' && garrison.remaining > 0) alerts.push({ tone: 'warn', message: active ? garrison.name + ' is still contested · ' + garrison.remaining + ' defenders remain.' : garrison.name + ' remains contested in Briar March · travel there to respond.', action: 'army' });
     }
     const completed = state.logs.find(l => l.tone === 'good' && l.text.endsWith('is ready.') && state.time - l.time < 30);

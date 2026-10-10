@@ -100,11 +100,11 @@ export function combatStep(s: State, dt: number, separate = true,input?:Commande
       continue;
     }
     const anchor=u.anchor??u.target;
-    if((friendly||rival)&&u.order==='patrol'&&u.patrol&&distance(u,u.target)<.35){u.patrol.leg=u.patrol.leg?0:1;u.target={...(u.patrol.leg?u.patrol.b:u.patrol.a)};u.path=[];u.repath=0;}
+    if((friendly||rival||isInfected(u))&&u.order==='patrol'&&u.patrol&&distance(u,u.target)<.35){u.patrol.leg=u.patrol.leg?0:1;u.target={...(u.patrol.leg?u.patrol.b:u.patrol.a)};u.path=[];u.repath=0;}
     if(friendly&&u.order==='escort'){const escorted=byId.get(u.focus!);if(escorted&&escorted.hp>0){if(distance(u.target,escorted)>2){u.target=nearestOpen(s,{x:escorted.x+(u.id%3-1),y:escorted.y+1},undefined,nav);u.repath=0;}}else{u.order='defend';delete u.focus;}}
     const elevation = tileAt(u.x, u.y,s)?.height ?? 0;
     const range = def.range + (ranged ? elevation * 0.8 + ((u.formation??s.formation) === 'loose' ? 0.6 : 0) : 0);
-    const radius=friendly?(u.order==='hunt'?12:u.order==='attack'?8:u.order==='hold'?range:range+(ranged?.4:2)):rival?(u.order==='defend'&&rivalId==='tallowmere'?7:u.order==='defend'&&rivalId==='stonewake'&&ranged?8:5.5):u.order==='defend'?5.5:4;
+    const radius=friendly?(u.order==='hunt'?12:u.order==='attack'?8:u.order==='hold'?range:range+(ranged?.4:2)):rival?(u.order==='defend'&&rivalId==='tallowmere'?7:u.order==='defend'&&rivalId==='stonewake'&&ranged?8:u.order==='defend'&&rivalId==='alderwatch'&&ranged?8:5.5):u.order==='defend'?5.5:4;
     let target:Unit|Resident|Building|undefined=friendly?playerThreatGrid.nearest(u,radius,v=>v.hp>0&&(u.order==='hunt'?distance(v,anchor)<=12:u.order==='hold'||u.order==='attack'||ranged||distance(v,anchor)<(u.order==='defend'?4:6)||!u.order&&!!hearth&&distance(v,hearth)<3)):rival&&rivalCenter?rivalThreatGrid.nearest(u,radius,v=>v.hp>0&&distance(v,rivalCenter)<=9&&(rivalId!=='tallowmere'||distance(v,anchor)<=(u.order==='patrol'?7:6))):humanGrid.nearest(u,radius,v=>v.hp>0);
     const focusedBuilding=friendly&&u.order==='attack'&&u.focus?s.buildings.find(b=>b.id===u.focus&&b.owner==='rival'&&b.hp>0):undefined;
     if(friendly&&u.order==='attack'&&u.focus){const focused=byId.get(u.focus);if(focused&&focused.hp>0&&!isFriendly(focused))target=focused;else if(focusedBuilding){const immediate=target&&'attackFlash'in target&&target.hp>0&&distance(u,target)<=range&&(ranged||clearMelee(s,u,target,nav));target=immediate?target:focusedBuilding;}else delete u.focus;}
@@ -131,7 +131,7 @@ export function combatStep(s: State, dt: number, separate = true,input?:Commande
       // An idle guard must help at a breach instead of watching the Hearth fall
       // from a distant rally point. Explicit move orders above still take priority.
       const defense = friendly && !u.order && breached && hearth ? nearestOpen(s, { x: hearth.x + u.id % 3 - 1, y: hearth.y + 2 },undefined,nav) : u.target;
-      const destination=friendly&&u.order==='hold'?undefined:friendly&&ranged&&u.order!=='attack'&&u.order!=='hunt'?defense:target??(friendly?defense:rival&&u.order==='patrol'?u.target:rival?u.anchor??u.target:u.order==='defend'?u.anchor??u.target:hearth??friendGrid.nearest(u,45,v=>v.hp>0));
+      const destination=friendly&&u.order==='hold'?undefined:friendly&&ranged&&u.order!=='attack'&&u.order!=='hunt'?defense:target??(friendly?defense:(rival||isInfected(u))&&u.order==='patrol'?u.target:rival?u.anchor??u.target:u.order==='defend'?u.anchor??u.target:hearth??friendGrid.nearest(u,45,v=>v.hp>0));
       if (destination && distance(u, destination) > 0.2) {
         const blocking=move(s,u,destination,dt,isInfected(u),nav);
         if(blocking&&isInfected(u))hit(s,u,blocking,def.damage,false,friendGrid);

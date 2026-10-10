@@ -1,6 +1,6 @@
 import { MAP_H, MAP_W } from './config';
 import type { Point, Terrain, TerritoryId, Tile, State } from './types';
-export const STRONGHOLD_CENTERS={mossgate:{x:47,y:29},tallowmere:{x:37,y:36},stonewake:{x:50,y:9}} as const;
+export const STRONGHOLD_CENTERS={mossgate:{x:47,y:29},tallowmere:{x:37,y:36},stonewake:{x:50,y:9},alderwatch:{x:10,y:42}} as const;
 export function hash(x: number, y: number): number { return ((Math.imul(x + 63, 374761393) ^ Math.imul(y + 71, 668265263)) >>> 0) / 4294967296; }
 export function territoryAt(x: number, y: number): TerritoryId | 'wild' {
   if (x >= 9 && x <= 20 && y >= 7 && y <= 18) return 'hearthmere';
@@ -45,7 +45,7 @@ export const TILES: Tile[] = Array.from({ length: MAP_W * MAP_H }, (_, i) => {
   return { x, y, terrain, territory, height: territory === 'greybank' ? 1 : 0, variant: n };
 });
 export const MARCH_TILES:Tile[]=TILES.map(t=>{
-  const n=hash(t.x+81,t.y+37);let terrain:Terrain='grass';
+  const n=hash(t.x+81,t.y+37);let terrain:Terrain='grass',establishedRoad=false;
   if(t.x<30&&t.y<26){
     if((t.x<5||t.x>24||t.y<5)&&n>.35)terrain='forest';
     if(t.x>20&&t.y<9&&n>.7)terrain='rock';
@@ -63,7 +63,8 @@ export const MARCH_TILES:Tile[]=TILES.map(t=>{
     if(t.x>25&&t.x<42&&t.y>22&&t.y<35&&n>.2)terrain='field';
     if(t.x>30&&t.y<13&&n>.3)terrain='heath';
     if(Math.abs(t.x-riverX)<1.35&&t.y>20&&t.y<45)terrain='water';
-    if(followsRoad(t.x,t.y,marchRoad)||followsRoad(t.x,t.y,[{x:29,y:39},{x:28,y:44}],.56))terrain='road';
+    establishedRoad=followsRoad(t.x,t.y,marchRoad)||followsRoad(t.x,t.y,[{x:29,y:39},{x:28,y:44}],.56);
+    if(establishedRoad)terrain='road';
   }
   // The causeway rises over the southern reed-river; Tallowmere sits on a
   // dry knoll just beyond it. Keep its approaches legible and buildable while
@@ -80,7 +81,18 @@ export const MARCH_TILES:Tile[]=TILES.map(t=>{
   if(enclosure)terrain='grass';
   else if(stonewake>4.8&&stonewake<8.7&&!pass)terrain='rock';
   if(pass)terrain='road';
-  const height=enclosure?(t.x>=51&&t.y<9?1.8:1.1):pass?.7:stonewake<8.7?1.55:t.y<9?1:keep<2.4?1.2:keep<4?.65:causeway?.35:0;
+  // Alderwatch sits south of the established Tallowmere campaign road. Its
+  // abbey branch and ravines leave the old road clear for its existing siege.
+  const abbeyRoad=followsRoad(t.x,t.y,[{x:14,y:24},{x:14,y:29},{x:12,y:32},{x:9,y:35},{x:8,y:38},{x:10,y:37}],.68);
+  const splitwaterRoad=followsRoad(t.x,t.y,[{x:27,y:24},{x:30,y:24},{x:33,y:24},{x:36,y:23}],.62);
+  const alderArea=t.x>=4&&t.x<=18&&t.y>=33&&t.y<=47,alderFort=t.x>=6&&t.x<=15&&t.y>=38&&t.y<=46;
+  const westRavine=Math.abs(t.x-(4.5+(t.y-33)*.12+Math.sin(t.y*.42)*.4))<.9;
+  const eastRavine=Math.abs(t.x-(17.5-(t.y-33)*.1+Math.sin(t.y*.31)*.35))<.9;
+  if(pass||establishedRoad||abbeyRoad||splitwaterRoad)terrain='road';
+  else if(alderFort)terrain='grass';
+  else if(alderArea)terrain=westRavine||eastRavine?'rock':n>.18?'forest':terrain;
+  const westPost=Math.hypot(t.x-8,t.y-39)<2.8,eastPost=Math.hypot(t.x-13,t.y-39)<2.8;
+  const height=pass||establishedRoad?.7:alderFort?(westPost||eastPost?1.85:1.05):alderArea&&(westRavine||eastRavine)?1.45:enclosure?(t.x>=51&&t.y<9?1.8:1.1):stonewake<8.7?1.55:t.y<9?1:keep<2.4?1.2:keep<4?.65:causeway?.35:0;
   return {...t,terrain,territory:'hearthmere',variant:n,height};
 });
 export const tilesFor=(s?:{region?:State['region']})=>s?.region==='march'?MARCH_TILES:TILES;
