@@ -25,7 +25,7 @@ const atCamp=(u:any,c:{x:number;y:number})=>Math.hypot((u.anchor??u).x-c.x,(u.an
 
 test('a naturally recruited company clears Redwater camps, defeats its warned reserves, captures and revisits the keep',async({page})=>{
  test.setTimeout(900000);const errors:string[]=[];page.on('pageerror',e=>errors.push(e.message));
- const s=newGame(905211);s.speed=0;s.resources={wood:2200,stone:5200,food:10100,herbs:160};
+ const s=newGame(905211);s.speed=0;s.resources={wood:2200,stone:5200,food:10100,herbs:160};const initialInfectedSlain=s.stats.slain;
  const originalIds=new Set(army(s).map(u=>u.id));
  const barracks=s.buildings.find(b=>b.kind==='barracks')!;barracks.level=3;
  makeBuilding(s,'barracks',19,10,true).level=3;makeBuilding(s,'barracks',21,10,true).level=3;
@@ -50,24 +50,33 @@ test('a naturally recruited company clears Redwater camps, defeats its warned re
  const homeGuards=[...originalIds].filter(id=>id!==commander.id);let state=await read(page);
  expect(state.units.filter((u:any)=>companyTravel.includes(u.id))).toHaveLength(198);
  expect(state.empire.reserve.units.filter((u:any)=>homeGuards.includes(u.id)&&u.hp>0&&u.order==='defend')).toHaveLength(2);
+ if(state.speed!==2)await page.locator('#speed-2').click();
+ await expect.poll(async()=> (await read(page)).speed,{timeout:10000}).toBe(2);
  // Keep the company at a safe west-heath staging point while the commander
  // scouts Redwater; otherwise a full 200-person formation can breach its
  // central gates before the test reaches the deliberate gate-order step.
  const march=await issue(page,companyIds,'move',29,29);expect(march.ok,march.message).toBe(true);
+ const vanguardIds=companyIds.slice(0,50),screen=await issue(page,vanguardIds,'defend',33,16);expect(screen.ok,screen.message).toBe(true);
+ await expect.poll(async()=>{const v=await read(page);return v.units.filter((u:any)=>vanguardIds.includes(u.id)&&Math.hypot(u.x-33,u.y-16)<6).length;},{timeout:120000,intervals:[500,1000]}).toBeGreaterThan(35);
  const hero=await issue(page,[commander.id],'move',35,14);expect(hero.ok,hero.message).toBe(true);
  if(state.speed===0)await page.locator('#speed-2').click();
- await expect.poll(async()=>{const v=await read(page);return v.march.seen.includes('redwater-cairn')&&v.march.rumors.includes('redwater')&&v.march.redwater.status==='occupied';},{timeout:180000,intervals:[500,1000]}).toBe(true);
+ await expect.poll(async()=>{const v=await read(page);return v.march.seen.includes('redwater-cairn')&&v.march.rumors.includes('redwater')&&v.march.redwater.status==='occupied'&&v.units.some((u:any)=>u.id===commander.id&&u.hp>0);},{timeout:180000,intervals:[500,1000]}).toBe(true);
  state=await read(page);expect(state.march.redwater.remaining+state.march.redwater.casualties).toBe(160);
  expect(state.march.redwater.reserve).toBe(120);expect(state.units.filter((u:any)=>u.faction==='rival'&&u.rivalId==='redwater')).toHaveLength(state.march.redwater.remaining-state.march.redwater.reserve);
+ expect(state.stats.slain).toBeGreaterThan(initialInfectedSlain);expect(state.units.find((u:any)=>u.id===commander.id)?.hp).toBeGreaterThan(0);
  await page.locator('#pause').click();await page.locator('#tab-empire').click();await expect(page.locator('#panel')).toContainText('REDWATER REACH');
  await page.screenshot({path:'docs/evidence/redwater-discovery.png'});
 
  const camps=REDWATER_CAMPS.map(camp=>({name:camp.name,point:{x:camp.x,y:camp.y}}));
  const reserveCalls:{remaining:number;deployed:number}[]=[],reserveWarnings:{reserve:number;remainingWarning:number}[]=[],seenWarnings=new Set<number>();let reserveBefore=120,maxActiveRivals=40,maxBattleUnits=state.units.length;
  let lastReport=Date.now()+15000,started=Date.now(),targetId:number|undefined;
+ const campGateNames=['Westcut Camp Gate','Heath Camp Gate','Ravine Camp Gate'];
  await page.locator('#speed-2').click();
  for(let index=0;index<camps.length;index++){
   const camp=camps[index];
+  state=await read(page);const campGate=state.buildings.find((b:any)=>b.name===campGateNames[index]);expect(campGate,'The '+camp.name+' approach must have its authored gate.').toBeTruthy();
+  const breach=await issue(page,await livingCompany(page,companyIds),'attack',campGate.x,campGate.y,campGate.id);expect(breach.ok,breach.message).toBe(true);
+  await expect.poll(async()=>{const v=await read(page);return v.buildings.find((b:any)=>b.id===campGate.id)?.hp??0;},{timeout:180000,intervals:[500,1000]}).toBeLessThanOrEqual(0);
   const approach=await issue(page,companyIds,'move',camp.point.x,camp.point.y);expect(approach.ok,approach.message).toBe(true);
   const stageStart=Date.now();
   while(Date.now()-stageStart<240000){
@@ -159,7 +168,10 @@ test('a naturally recruited company clears Redwater camps, defeats its warned re
  const garrison=await issue(page,stationed,'defend',36,21);expect(garrison.ok,garrison.message).toBe(true);
  const stationedIds=stationed;
  await expect.poll(async()=>{const v=await read(page);return stationedIds.every(id=>{const u=v.units.find((unit:any)=>unit.id===id);return u?.order==='defend'&&Math.hypot(u.x-36,u.y-21)<5.5;});},{timeout:120000,intervals:[500,1000]}).toBe(true);
+ state=await read(page);console.log('Redwater garrison before save',JSON.stringify(state.units.filter((u:any)=>stationedIds.includes(u.id)).map((u:any)=>({id:u.id,order:u.order,hp:u.hp,x:u.x,y:u.y,target:u.target}))));
  await page.locator('#save').click();await expect(page.locator('#save-status')).toHaveText('Saved on this device');await page.reload();await page.locator('#start').click();state=await read(page);
+ if(state.speed>0){await page.locator('#pause').click();state=await read(page);}
+ console.log('Redwater garrison after reload',JSON.stringify(state.units.filter((u:any)=>stationedIds.includes(u.id)).map((u:any)=>({id:u.id,order:u.order,hp:u.hp,x:u.x,y:u.y,target:u.target}))));
  expect(state.march.redwater.status).toBe('captured');expect(state.buildings.find((b:any)=>b.id===hall.id)?.hp).toBe(state.buildings.find((b:any)=>b.id===hall.id)?.maxHp);
  expect(state.buildings.some((b:any)=>b.x===site.x&&b.y===site.y)).toBe(true);
  expect(state.units.filter((u:any)=>stationedIds.includes(u.id)&&u.hp>0)).toHaveLength(stationedIds.length);

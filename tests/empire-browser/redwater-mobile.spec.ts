@@ -14,11 +14,13 @@ test('touch Empire panel keeps the Redwater campaign readable at a phone viewpor
   const hero=s.units.find(u=>u.id===s.commander!.id)!;Object.assign(hero,{x:36,y:21,target:{x:36,y:21},anchor:{x:36,y:21},path:[],order:'hold'});empireStep(s,.1);
   expect(decode(JSON.stringify(s))).not.toBeNull();
   await page.goto('/');await page.evaluate(raw=>localStorage.setItem('kingnamic.save.v2',raw),JSON.stringify(s));await page.reload();await page.locator('#start').tap();await page.locator('#tab-empire').tap();
+  await page.evaluate(()=>{const app=(window as any).__KINGNAMIC__;app.scene.focus({x:36,y:21});});await page.waitForTimeout(400);
   await expect(page.locator('#panel')).toContainText('REDWATER REACH · THE REDWATER WATCH');
   await expect(page.locator('#panel')).toContainText('Redwater Reach is contested');
   await expect(page.locator('#panel')).toContainText('160 of 160 defenders remain');
   await expect(page.locator('#panel')).toContainText('0/3 outer camps cleared');
   await expect(page.locator('#objectives')).toContainText('Clear Redwater outer camps');
+  await expect(page.locator('#objectives')).toContainText('Breach each outer camp gate before clearing its garrison.');
   await expect(page.locator('#objectives')).toContainText('120 finite reserves wait behind the camps.');
   const capture=page.locator('#capture-redwater');await expect(capture).toBeDisabled();await expect(page.locator('#panel')).toContainText('Clear all three Redwater outer camps before securing the keep.');
   await capture.scrollIntoViewIfNeeded();const bounds=await capture.boundingBox();expect(bounds).toBeTruthy();expect(bounds!.x).toBeGreaterThanOrEqual(0);expect(bounds!.x+bounds!.width).toBeLessThanOrEqual(390);expect(bounds!.width).toBeGreaterThan(0);

@@ -321,7 +321,8 @@ export class Interface {
       const war=s.march.redwater,camps=war.campsCleared??0;
       frontierTitle=camps<3?'Clear Redwater outer camps':'Break the Redwater keep';
       const relief=camps<3?`${war.reserve} finite reserves wait behind the camps.`:war.reserve?'Nearby pressure draws a finite reserve wave after an 8-second warning.':'No reserve companies remain.';
-      frontierDetail=`${war.remaining} Redwater defenders remain · ${camps}/3 outer camps cleared. Breach a ravine gate. ${relief} Right-click soldiers or gates to focus your army.`;
+      const approach=camps<3?'Breach each outer camp gate before clearing its garrison.':'Breach a ravine gate to reach the keep.';
+      frontierDetail=`${war.remaining} Redwater defenders remain · ${camps}/3 outer camps cleared. ${approach} ${relief} Right-click soldiers or gates to focus your army.`;
     }else if(s.march?.alderwatch?.status==='occupied'){
       frontierTitle='Secure Alderwatch Hall';frontierDetail=`${s.march.alderwatch.remaining} Abbey Wardens remain. Two raised watch posts cover the ravines; scout patrols guard both roads and finite reserve waves.`;
     }else if(s.march?.stonewake?.status==='occupied'){

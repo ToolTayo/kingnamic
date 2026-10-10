@@ -45,6 +45,7 @@ describe('Redwater Reach campaign',()=>{
   expect(tileAt(45,12,s)?.terrain).toBe('road');expect(tileAt(43,16,s)?.terrain).toBe('road');expect(tileAt(35,14,s)?.terrain).toBe('road');expect(tileAt(46,24,s)?.terrain).toBe('road');expect(tileAt(47,14,s)?.terrain).not.toBe('heath');
   expect(tileAt(36,21,s)?.height).toBeGreaterThan(.8);expect(tileAt(35,14,s)?.height).toBeGreaterThan(.7);expect(STRONGHOLD_CENTERS.redwater).toEqual({x:36,y:21});
   expect(findPath(s,ROAD_EXIT,{x:35,y:14},false,navigation(s),'player').length).toBeGreaterThan(0);
+  expect(findPath(s,ROAD_EXIT,{x:18,y:22},false,navigation(s),'player').length).toBeGreaterThan(0);
   expect(findPath(s,ROAD_EXIT,{x:32,y:22},false,navigation(s),'player').length).toBeGreaterThan(0);
   expect(decode(JSON.stringify(s))!.march!.redwater).toMatchObject({id:'redwater',status:'unseen',remaining:160,reserve:120,campsCleared:0});
  });
