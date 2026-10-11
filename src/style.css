@@ -2333,3 +2333,33 @@ kbd {
 .recruit-classes button{min-width:0;min-height:38px;padding:6px 3px;font-size:10px;white-space:nowrap}
 .recruit-classes button.active,.recruit-classes button[aria-pressed=true]{background:#d4e1c8;box-shadow:inset 0 -2px #63836a;color:#294c3c}
 @media(max-width:620px){.recruit-classes{margin:6px 0}.recruit-classes button{min-height:44px;padding:4px 1px;font-size:9px}}
+.world-conquest{--gold:#aa8b48;--ink:#294536}
+#conquest-local{min-height:44px;margin:6px 0;font-size:11px;text-align:left}
+.conquest-index{display:grid;grid-template-columns:1fr 1fr;gap:5px;margin-top:10px}.conquest-index button{display:flex;align-items:center;gap:6px;min-height:44px;padding:7px;font-size:11px;text-align:left;border:1px solid #c5ceba;border-radius:4px;background:#f7f7eb;color:#36563d}.conquest-index button span{font-size:10px;color:#8c835d}.conquest-index button[aria-pressed=true]{background:#dfe7d1;border-color:#a28d53}
+.world-breadcrumb{display:flex;align-items:center;justify-content:space-between;gap:5px;padding:9px 6px;border-block:1px solid #c9cebb;font-size:10px;color:#6a7864}
+.world-breadcrumb .here{color:var(--ink);font-weight:bold}.world-breadcrumb .here:before{content:'● ';color:#a48447}
+.conquest-intro{font-size:12px;line-height:1.6;margin:12px 0}
+.conquest-atlas{position:relative;aspect-ratio:60/48;border:1px solid #4e6958;border-radius:8px;overflow:hidden;background:#7f9471;isolation:isolate}
+.conquest-atlas svg{display:block;width:100%;height:100%}
+.atlas-compass{position:absolute;right:8px;top:8px;pointer-events:none;color:#f4efcc;background:#213b32b8;border-radius:3px;padding:4px;font-size:8px;letter-spacing:.05em}
+.atlas-entry{position:absolute;color:#fff4d1;font-size:9px;font-weight:bold;text-shadow:0 1px 3px #172c21;transform:translate(-50%,5px);pointer-events:none}
+.atlas-pin{position:absolute;z-index:2;transform:translate(-50%,-50%);width:44px;height:44px;min-height:44px;border:none;border-radius:50%;background:transparent;color:#fff6dd;font-weight:bold;font-size:14px;text-shadow:0 1px 2px #223629}
+.atlas-pin:before{content:'';position:absolute;z-index:-1;inset:7px;border-radius:50%;background:#273e33e8;border:1px solid #dccc97}
+.atlas-pin.besieged:before{background:#7d483b}.atlas-pin.secured:before{background:#496b44}.atlas-pin.chosen:before{border:3px solid #ffe1a0;box-shadow:0 0 0 3px #2a423799}
+.atlas-pin:focus-visible{outline:2px solid #ffedae;outline-offset:-3px}.atlas-you{position:absolute;z-index:3;transform:translate(-50%,-50%);color:#ffefb4;text-shadow:0 1px 2px #18352a;font-size:17px;pointer-events:none}
+.atlas-note{font-size:10px;color:#697861;line-height:1.5;margin:8px 0 12px}
+.conquest-progress{display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid #c7ceba;padding:12px 0;color:#52654b;font-size:10px;gap:8px}.conquest-progress strong{font-size:13px;color:var(--ink)}
+.conquest-list{display:grid;gap:10px;margin:12px 0 22px}
+.conquest-card{padding:12px;border:1px solid #b8c4a7;border-radius:7px;background:#faf9ef}
+.conquest-card header{display:flex;align-items:flex-start;gap:8px}.conquest-card h3{font:17px Georgia,serif;color:var(--ink);margin:1px 0 4px}.conquest-region{font-size:9px;color:#73826d;display:block;line-height:1.5}
+.kingdom-number{display:grid;place-items:center;flex:none;width:24px;height:24px;border:1px solid #b4bb9d;border-radius:50%;font:13px Georgia,serif;color:#697457}
+.conquest-status{margin-left:auto;font-size:8px;text-transform:uppercase;letter-spacing:.05em;color:#707c64;white-space:nowrap;line-height:22px}.besieged .conquest-status{color:#944e3e}.secured .conquest-status{color:#4c7747}
+.conquest-card>p{font-size:11px;line-height:1.6;margin:10px 0}.conquest-strength{font-size:10px;color:#6d784f;border-top:1px solid #dfe2d0;padding-top:8px;font-variant-numeric:tabular-nums}
+.conquest-details{font-size:10px;margin:9px 0;color:#56684d}.conquest-details summary{cursor:pointer;padding:7px 0}.conquest-details p{font-size:11px;line-height:1.65}
+.conquest-actions{display:flex;gap:6px;flex-wrap:wrap;margin-top:9px}.conquest-actions button{min-height:44px;flex:1;padding:8px;font-size:11px}.conquest-actions button:disabled{opacity:.5}
+.conquest-blocker{color:#895347;font-size:10px!important;padding-top:4px;margin-bottom:0!important}
+.conquest-route{background:#e1e8d4;border:1px solid #9faf8f;border-left:3px solid var(--gold);border-radius:6px;padding:12px;margin:12px 0}.conquest-route header{display:flex;align-items:center;justify-content:space-between}.conquest-route h3{font:18px Georgia,serif;color:var(--ink);margin:0 0 8px}.conquest-route .route-next{font-weight:bold;color:#6c673e;font-size:12px}.conquest-route p{font-size:11px;line-height:1.6}.conquest-route header button{min-width:44px;min-height:44px;padding:0;font-size:21px}.conquest-route .fine-print{font-size:10px}
+.conquest-shortcut{display:grid;gap:5px;text-align:left;background:#dfe7d1;border:1px solid #afbea0;border-radius:6px;padding:12px;margin:12px 0}.conquest-shortcut strong{font:17px Georgia,serif;color:#304d36}.conquest-shortcut span{font-size:10px;color:#6c7b60}
+.local-marches-note{border-top:1px solid #bec8af;padding-top:14px;margin-top:18px}.local-marches-note h3{font:18px Georgia,serif}.local-marches-note p{font-size:11px;line-height:1.6}
+.minimap-title b{font:inherit}
+@media(max-width:620px){.conquest-card{padding:10px}.conquest-card h3{font-size:17px}.world-breadcrumb{font-size:10px}.conquest-status{font-size:8px}.conquest-route{padding:10px}.conquest-intro{font-size:12px}}
