@@ -92,7 +92,13 @@ export class WorldScene extends Phaser.Scene {
       if(touches.length>=2){const a=touches[0],b=touches[1],d=Phaser.Math.Distance.Between(a.x,a.y,b.x,b.y);if(this.pinchDistance>1)this.zoom(this.cameras.main.zoom*(d/this.pinchDistance-1),{x:(a.x+b.x)/2,y:(a.y+b.y)/2});this.pinchDistance=d;this.dragged=true;this.commandGesture=undefined;return;}
       const wp=this.cameras.main.getWorldPoint(p.x,p.y),t=uniso(wp.x,wp.y);this.hoverTile={x:Math.round(t.x),y:Math.round(t.y)};this.rt.heroAim={x:t.x,y:t.y};
       const gesture=this.commandGesture;
-      if(gesture&&p.isDown&&!gesture.cancelled){gesture.end=t;const moved=this.dragStart?Math.hypot(p.x-this.dragStart.x,p.y-this.dragStart.y):0;
+      if(gesture&&p.isDown&&!gesture.cancelled){
+        // Keep the last destination that had a visible preview. Phaser still
+        // delivers pointermove while a drag is outside the canvas; accepting
+        // those coordinates made pointerupoutside commit a different tile
+        // from the one the player saw.
+        if(p.x>=0&&p.y>=0&&p.x<=this.scale.width&&p.y<=this.scale.height)gesture.end=t;
+        const moved=this.dragStart?Math.hypot(p.x-this.dragStart.x,p.y-this.dragStart.y):0;
         if(gesture.touch&&!gesture.active&&moved>8&&performance.now()-gesture.started<450){gesture.cancelled=true;this.commandGesture=undefined;}
         else if(gesture.right||performance.now()-gesture.started>=450){gesture.active=true;this.showCommandPreview(true);this.dragged=true;return;}
       }

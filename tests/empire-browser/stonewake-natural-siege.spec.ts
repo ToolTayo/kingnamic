@@ -16,7 +16,7 @@ async function livingCompany(page:Page,ids:number[]){return page.evaluate((ids:n
 
 test('a naturally recruited company discovers, breaches, disables, defeats, captures and revisits Stonewake',async({page})=>{
  test.setTimeout(900000);const errors:string[]=[];page.on('pageerror',e=>errors.push(e.message));
- // The starting army is preserved. The 180 expedition soldiers are recruited
+ // The starting army is preserved. The expedition soldiers are recruited
  // through the production command using eligible residents and legal barracks.
  const s=newGame(604271);s.speed=0;s.resources={wood:2200,stone:5200,food:10100,herbs:160};
  const barracks=s.buildings.find(b=>b.kind==='barracks')!;barracks.level=3;makeBuilding(s,'barracks',19,10,true).level=3;makeBuilding(s,'barracks',21,10,true).level=3;for(const [x,y] of [[23,9],[25,9],[27,9]])makeBuilding(s,'farm',x,y,true);s.jobs.farmers=20;addResidents(s,210);
@@ -30,17 +30,21 @@ test('a naturally recruited company discovers, breaches, disables, defeats, capt
  await page.goto('/');await page.evaluate(raw=>localStorage.setItem('kingnamic.save.v2',raw),JSON.stringify(s));await page.reload();await page.locator('#start').click();await expect.poll(async()=>(await read(page)).units.filter((u:any)=>companyIds.includes(u.id)).length).toBe(197);
  await page.locator('#tab-army').click();await page.evaluate((ids:number[])=>(window as any).__KINGNAMIC__.runtime.selectUnits(ids),companyIds);await page.locator('#tab-empire').click();await page.locator('#gather-road').click();await page.locator('#speed-2').click();await expect(page.locator('#travel-region')).toBeEnabled({timeout:90000});await page.locator('#travel-region').click();await waitRegion(page,'march');
  let state=await read(page);const travellingIds=[...companyIds,commander.id],homeGuardIds=[...originalIds].filter(id=>id!==commander.id);expect(state.units.filter((u:any)=>travellingIds.includes(u.id))).toHaveLength(198);expect(state.empire.reserve.units.filter((u:any)=>homeGuardIds.includes(u.id)&&u.hp>0&&u.order==='defend')).toHaveLength(2);
- // Explore with the actual commander and send his company to the quarry road.
- const roadOrder=await issue(page,companyIds,'move',45,12);expect(roadOrder.ok,roadOrder.message).toBe(true);const heroOrder=await issue(page,[commander.id],'move',44,13);expect(heroOrder.ok,heroOrder.message).toBe(true);await page.locator('#speed-2').click();
- await expect.poll(async()=>{const v=await read(page);return v.march.seen.includes('stonewake-quarry')&&v.march.rumors.includes('stonewake')&&v.march.stonewake.status==='occupied';},{timeout:120000,intervals:[500,1000,1500]}).toBe(true);
+ // Stage the company on the northwest ridge, then let the commander approach
+ // the quarry from outside the west wall. This road avoids Redwater's clue and
+ // keeps the army outside Stonewake until the natural fort reveal.
+ const companyOrder=await issue(page,companyIds,'move',40,9);expect(companyOrder.ok,companyOrder.message).toBe(true);const heroOrder=await issue(page,[commander.id],'move',40,9);expect(heroOrder.ok,heroOrder.message).toBe(true);await page.locator('#speed-2').click();
+ await expect.poll(async()=>{const v=await read(page),hero=v.units.find((u:any)=>u.id===commander.id),companyState=v.units.filter((u:any)=>companyIds.includes(u.id)),nearby=companyState.filter((u:any)=>Math.hypot(u.x-40,u.y-9)<12).length;return !!hero&&Math.hypot(hero.x-40,hero.y-9)<1.2&&nearby>=30&&v.march.redwater.status==='unseen';},{timeout:120000,intervals:[500,1000,1500]}).toBe(true);
+ const quarryOrder=await issue(page,[commander.id],'move',45,12);expect(quarryOrder.ok,quarryOrder.message).toBe(true);
+ await expect.poll(async()=>{const v=await read(page);return v.march.seen.includes('stonewake-quarry')&&v.march.rumors.includes('stonewake')&&v.march.stonewake.status==='occupied'&&v.march.redwater.status==='unseen';},{timeout:120000,intervals:[500,1000,1500]}).toBe(true);
  // The Greybank track shares Stonewake's scout patrol. Respect the visible warning and pull the commander out while the company handles the garrison.
  state=await read(page);if(state.march.roadWarning?.id==='greybank-track')await expect(page.locator('#alert-banner')).toContainText('Greybank quarry track ambush in');
  expect(state.march.seen).toContain('stonewake-quarry');expect(state.march.stonewake.remaining+state.march.stonewake.casualties).toBe(125);expect(state.march.stonewake.reserve).toBe(100);expect(state.march.stonewake.signalDisabled).toBe(false);
  const startRoster=state.units.filter((u:any)=>u.rivalId==='stonewake');expect(startRoster.length).toBe(state.march.stonewake.remaining-state.march.stonewake.reserve);
  const west=state.buildings.find((b:any)=>b.name==='West Quarry Gate')!,south=state.buildings.find((b:any)=>b.name==='South Cut Gate')!,signalId=state.march.stonewake.signalTowerId;
  expect(west&&south&&signalId).toBeTruthy();
- const retreat=await issue(page,[commander.id],'move',37,22);expect(retreat.ok,retreat.message).toBe(true);
- await expect.poll(async()=>{const v=await read(page),hero=v.units.find((u:any)=>u.id===commander.id);return !!hero&&Math.hypot(hero.x-37,hero.y-22)<1.2&&!v.march.roadWarning;},{timeout:60000,intervals:[500,1000,2000]}).toBe(true);
+ const retreat=await issue(page,[commander.id],'move',35,9);expect(retreat.ok,retreat.message).toBe(true);
+ try{await expect.poll(async()=>{const v=await read(page),hero=v.units.find((u:any)=>u.id===commander.id);return !!hero&&Math.hypot(hero.x-35,hero.y-9)<1.2&&!v.march.roadWarning;},{timeout:30000,intervals:[500,1000,2000]}).toBe(true);}catch(error){state=await read(page);const hero=state.units.find((u:any)=>u.id===commander.id);console.error('Stonewake withdrawal diagnostic',JSON.stringify({time:state.time,speed:state.speed,hero:hero&&{x:hero.x,y:hero.y,hp:hero.hp,injury:hero.injury,order:hero.order,target:hero.target,path:hero.path?.slice(0,8),pathLength:hero.path?.length,repath:hero.repath},warning:state.march.roadWarning,stonewake:{remaining:state.march.stonewake.remaining,reserve:state.march.stonewake.reserve,casualties:state.march.stonewake.casualties,active:state.units.filter((u:any)=>u.rivalId==='stonewake'&&u.hp>0).length},companyAlive:state.units.filter((u:any)=>companyIds.includes(u.id)&&u.hp>0).length,dead:state.stats.lost,ambushes:state.march.roadAmbushes}));throw error;}
  state=await read(page);const opened=state.march.stonewake;expect(opened.remaining+opened.casualties).toBe(125);expect(opened.reserve).toBeLessThanOrEqual(opened.remaining);expect(state.units.filter((u:any)=>u.rivalId==='stonewake'&&u.hp>0)).toHaveLength(opened.remaining-opened.reserve);
  // Split the real company across the two narrow cuts. The groups must breach
  // actual gates; normal combat, casualties and reserve deployment settle the siege.

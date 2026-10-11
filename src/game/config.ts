@@ -3,7 +3,9 @@ import type { BuildingDef, BuildingKind, Job, Resources, TerritoryId, UnitKind }
 // This is a single connected play space rather than a zoomed-out board of maps.
 export const MAP_W = 60, MAP_H = 48, STEP = 0.1;
 export const LEGACY_MAP_W = 30, LEGACY_MAP_H = 26;
-export const DAY_LENGTH = 72, NIGHT_LENGTH = 38, MAX_ARMY = 200, MAX_HOSTILES = 200, MAX_UNITS = 400, MAX_BUILDINGS = 180, MAX_RESIDENTS = 1000;
+// Five March strongholds occupy 202 valid rival structures when all are
+// revealed. Leave room for the player's frontier construction in a saved run.
+export const DAY_LENGTH = 72, NIGHT_LENGTH = 38, MAX_ARMY = 200, MAX_HOSTILES = 200, MAX_UNITS = 400, MAX_BUILDINGS = 256, MAX_RESIDENTS = 1000;
 export const BUILDINGS: Record<BuildingKind, BuildingDef> = {
   hearth: { name: 'The Last Hearth', subtitle: 'Heart of your kingdom', description: 'Keep the beacon burning. If the Hearth falls, Hearthmere is lost. Shelters 12 villagers.', cost: {}, hp: 1000, time: 1, category: 'settlement', icon: 'crown' },
   cottage: { name: 'Cottage', subtitle: '+6 population capacity', description: 'A warm roof for new arrivals. Two survivors arrive each dawn if food and housing are available.', cost: { wood: 35 }, hp: 180, time: 10, category: 'settlement', icon: 'home' },

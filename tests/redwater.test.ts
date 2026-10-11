@@ -7,7 +7,8 @@ import {combatStep} from '../src/game/combat';
 import {infect,plagueStep} from '../src/game/disease';
 import {findPath,navigation} from '../src/game/navigation';
 import {STRONGHOLD_CENTERS,tileAt} from '../src/game/map';
-import type {State} from '../src/game/types';
+import {MAX_BUILDINGS} from '../src/game/config';
+import type {Point,State} from '../src/game/types';
 
 function depart(seed=90521){
  const s=newGame(seed);command(s,{type:'commander-appoint'});
@@ -29,6 +30,14 @@ function approach(seed=90521){
 const reload=(s:State)=>{const loaded=decode(JSON.stringify(s));expect(loaded).not.toBeNull();return loaded!;};
 
 describe('Redwater Reach campaign',()=>{
+ it('finds a safe outside approach to Stonewake without crossing Redwater',()=>{
+  const s=depart(),nav=navigation(s),path=(start:Point,target:Point)=>findPath(s,start,target,false,nav,'player'),nearest=(points:Point[],center:Point)=>Math.min(...points.map(p=>Math.hypot(p.x-center.x,p.y-center.y)));
+  const staging=path(ROAD_EXIT,{x:40,y:9}),approach=path({x:40,y:9},{x:45,y:12}),escape=path({x:45,y:12},{x:35,y:9});
+  expect(staging.length).toBeGreaterThan(0);expect(nearest(staging,STRONGHOLD_CENTERS.redwater)).toBeGreaterThan(8);expect(nearest(staging,{x:35,y:14})).toBeGreaterThan(4);expect(nearest(staging,{x:45,y:12})).toBeGreaterThan(4);expect(nearest(staging,{x:44,y:14})).toBeGreaterThan(4.5);
+  expect(approach.length).toBeGreaterThan(0);expect(nearest(approach,STRONGHOLD_CENTERS.redwater)).toBeGreaterThan(8);
+  const discovery=approach.find(p=>Math.hypot(p.x-45,p.y-12)<4);expect(discovery).toBeTruthy();expect(discovery!.x).toBeLessThan(46);
+  expect(escape.length).toBeGreaterThan(0);expect(nearest(escape,STRONGHOLD_CENTERS.redwater)).toBeGreaterThan(8);expect(nearest(escape.slice(-1),{x:44,y:14})).toBeGreaterThan(10);
+ });
  it('connects the heath, ravine crossing, clue, and keep without changing the old quarry road',()=>{
   const s=depart(),heath=[] as string[],ravine=[] as string[];
   for(let y=14;y<=30;y++)for(let x=31;x<=47;x++){const t=tileAt(x,y,s)!;if(t.terrain==='heath')heath.push(x+','+y);if(t.terrain==='water')ravine.push(x+','+y);}
@@ -38,6 +47,22 @@ describe('Redwater Reach campaign',()=>{
   expect(findPath(s,ROAD_EXIT,{x:35,y:14},false,navigation(s),'player').length).toBeGreaterThan(0);
   expect(findPath(s,ROAD_EXIT,{x:32,y:22},false,navigation(s),'player').length).toBeGreaterThan(0);
   expect(decode(JSON.stringify(s))!.march!.redwater).toMatchObject({id:'redwater',status:'unseen',remaining:160,reserve:120,campsCleared:0});
+ });
+ it('keeps five independently occupied rival ledgers and all their structures saveable together',()=>{
+  const s=depart(90526),hero=army(s).find(u=>u.id===s.commander!.id)!;
+  s.march!.seen.push('wayfarer-camp','stonewake-quarry','abbey-road','redwater-cairn');
+  s.march!.rumors=['weirward','stonewake','alderwatch','redwater'];
+  for(const point of [{x:47,y:29},{x:37,y:36},{x:50,y:9},{x:10,y:49},{x:36,y:21}]){
+   Object.assign(hero,point,{target:{...point},anchor:{...point},path:[],order:'hold'});
+   empireStep(s,.1);
+  }
+  expect([s.march!.rival!.status,s.march!.weirward!.status,s.march!.stonewake!.status,s.march!.alderwatch!.status,s.march!.redwater!.status]).toEqual(['occupied','occupied','occupied','occupied','occupied']);
+  expect(s.buildings.filter(b=>b.owner==='rival')).toHaveLength(202);
+  expect(s.buildings.length).toBeLessThanOrEqual(MAX_BUILDINGS);
+  expect(decode(JSON.stringify(s))).not.toBeNull();
+  const restored=decode(JSON.stringify(s))!;
+  expect(restored.march!.alderwatch).toMatchObject({remaining:160,reserve:128,casualties:0});
+  expect(restored.march!.redwater).toMatchObject({remaining:160,reserve:120,casualties:0,campsCleared:0});
  });
  it('uses a bounded save-seeded patrol pattern that replays exactly and varies between seeds',()=>{
   const first=approach(90521),replay=approach(90521),variant=approach(91545),routes=(s:State)=>rivals(s,'redwater').filter(u=>u.order==='patrol'&&u.patrol).map(u=>u.patrol);

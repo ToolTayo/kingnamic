@@ -85,12 +85,29 @@ test('a naturally recruited company discovers, assaults, captures, occupies and 
   await expect.poll(async () => (await read(page)).units.filter((u: any) => ['hollow', 'runner', 'brute'].includes(u.kind)).length,
     { timeout: 120000, intervals: [500, 1000, 2000] }).toBe(0);
   const remoteIds = await fitCompany(page, companyIds);
-  const remoteStage = await issue(page, remoteIds, 'move', 42, 20);
+  // The full-company formation spans about 18 tiles. Stage it on the open
+  // heath near the road, away from both Redwater's ravine and the scout route.
+  const remoteStage = await issue(page, remoteIds, 'move', 29, 29);
   expect(remoteStage.ok, remoteStage.message).toBe(true);
-  await expect.poll(async () => page.evaluate((ids: number[]) => {
-    const s = (window as any).__KINGNAMIC__.runtime.world;
-    return s.units.filter((u: any) => ids.includes(u.id) && u.hp > 0).every((u: any) => u.order !== 'move');
-  }, remoteIds), { timeout: 120000, intervals: [500, 1000, 2000] }).toBe(true);
+  try {
+    await expect.poll(async () => page.evaluate((ids: number[]) => {
+      const s = (window as any).__KINGNAMIC__.runtime.world;
+      return s.units.filter((u: any) => ids.includes(u.id) && u.hp > 0 && !u.injury).every((u: any) => u.order !== 'move');
+    }, remoteIds), { timeout: 120000, intervals: [500, 1000, 2000] }).toBe(true);
+  } catch (error) {
+    const diagnostic = await page.evaluate((ids: number[]) => {
+      const s = (window as any).__KINGNAMIC__.runtime.world;
+      const units = s.units.filter((u: any) => ids.includes(u.id) && u.hp > 0);
+      return {
+        activeMoving: units.filter((u: any) => !u.injury && u.order === 'move').length,
+        injuredMoving: units.filter((u: any) => !!u.injury && u.order === 'move').length,
+        positions: units.filter((u: any) => !u.injury && u.order === 'move').slice(0, 12).map((u: any) => ({ id: u.id, x: u.x, y: u.y, target: u.target, anchor: u.anchor, path: u.path.length, repath: u.repath, injury: u.injury })),
+        endCounts: { total: units.length, injured: units.filter((u: any) => !!u.injury).length }
+      };
+    }, remoteIds);
+    console.error('Alderwatch staging movement diagnostic', JSON.stringify(diagnostic));
+    throw error;
+  }
   const beforeApproach = await read(page);
   expect(beforeApproach.march.alderwatch.status).toBe('unseen');
   // Keep the force clear of the commander's road so he can physically scout

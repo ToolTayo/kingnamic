@@ -240,6 +240,7 @@ describe('Stonewake Hold and Greybank quarry siege',()=>{
   const gates=s.buildings.filter(b=>b.name==='West Quarry Gate'||b.name==='South Cut Gate'),nav=navigation(s);expect(gates).toHaveLength(2);
   expect(findPath(s,{x:45,y:9},{x:47,y:9},false,nav,'player')).toHaveLength(0);expect(findPath(s,{x:45,y:9},{x:47,y:9},false,nav,'rival').length).toBeGreaterThan(0);
   expect(findPath(s,{x:51,y:15},{x:51,y:13},false,nav,'player')).toHaveLength(0);expect(findPath(s,{x:51,y:15},{x:51,y:13},false,nav,'rival').length).toBeGreaterThan(0);
+  const retreat=findPath(s,{x:45,y:12},{x:35,y:9},false,nav,'player'),minimumRedwaterDistance=Math.min(...retreat.map(p=>Math.hypot(p.x-36,p.y-21)));expect(retreat.length).toBeGreaterThan(0);expect(Math.hypot(retreat.at(-1)!.x-44,retreat.at(-1)!.y-14)).toBeGreaterThan(10);expect(minimumRedwaterDistance).toBeGreaterThan(8);
   expect(strongholdCaptureError(s,'stonewake')).toContain('remaining 125');expect(decode(JSON.stringify(s))!.march!.stonewake).toEqual(war);
  });
  it('records the signal objective before tower cleanup and persists the longer finite warning',()=>{
