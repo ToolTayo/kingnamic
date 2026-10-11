@@ -7,7 +7,7 @@ import {combatStep} from '../src/game/combat';
 import {CivilianSystem} from '../src/game/civilians';
 import {decode} from '../src/game/persistence';
 import {findPath,navigation,navigationMetrics,NAV_FIELD_LIMIT} from '../src/game/navigation';
-import {TILES,distance} from '../src/game/map';
+import {TILES,distance,tileAt} from '../src/game/map';
 import {advance} from '../src/game/simulation';
 import {pickSoldier} from '../src/render/battlefield';
 import {Runtime} from '../src/game/runtime';
@@ -55,6 +55,14 @@ describe('battlefield polish regressions',()=>{
     const s=empty(),u=makeUnit(s,'warden',10,10),z=makeUnit(s,'hollow',10,10),project=()=>({x:100,y:100});
     expect(pickSoldier([u],{x:100,y:80},project,.6,true)?.id).toBe(u.id);expect(pickSoldier([u,z],{x:100,y:100},project,1,false,'attack')?.id).toBe(z.id);
     expect(pickSoldier([u,z],{x:100,y:100},project,1,false,'escort')?.id).toBe(u.id);expect(pickSoldier([u],{x:150,y:80},project,.6,true)).toBeUndefined();
+  });
+  it('accepts a focused attack on a river-edge hostile and routes the soldier to open ground',()=>{
+    const s=empty();let water:{x:number;y:number}|undefined;
+    for(let y=0;y<26&&!water;y++)for(let x=0;x<30&&!water;x++)if(tileAt(x,y,s)?.terrain==='water')water={x,y};
+    expect(water).toBeTruthy();const attacker=makeUnit(s,'warden',10,10),hostile=makeUnit(s,'hollow',water!.x,water!.y);
+    const result=command(s,{type:'order',order:'attack',ids:[attacker.id],focus:hostile.id});
+    expect(result.ok,result.message).toBe(true);expect(attacker.order).toBe('attack');expect(attacker.focus).toBe(hostile.id);
+    expect(tileAt(Math.round(attacker.target.x),Math.round(attacker.target.y),s)?.terrain).not.toBe('water');expect(decode(JSON.stringify(s))).not.toBeNull();
   });
   it('does not render an outbreak beyond the first 64 residents as an invisible case',()=>{
     const s=newGame();const first=s.residents![0];for(let i=0;i<70;i++)s.residents!.push({...structuredClone(first),id:s.nextId++,sick:false});s.population=s.residents!.length;const last=s.residents!.at(-1)!;last.sick=true;

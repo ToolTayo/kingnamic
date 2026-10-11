@@ -73,6 +73,11 @@ export function orderArmy(s:State,ids:number[],order:ArmyOrder,p?:Point,focus?:n
   if(order==='retreat')p=s.theatre?{x:10,y:16}:{x:14,y:15};
   if(order==='regroup')p={x:troops.reduce((n,u)=>n+u.x,0)/troops.length,y:troops.reduce((n,u)=>n+u.y,0)/troops.length};
   p??=target??targetBuilding??{x:troops[0].x,y:troops[0].y};
-  const t=tileAt(Math.round(p.x),Math.round(p.y),s);if(!t||t.terrain==='water')return{ok:false,message:'Choose passable ground.'};
+  let t=tileAt(Math.round(p.x),Math.round(p.y),s);
+  // Hostiles can be displaced onto a river edge. Keep the focus target, but
+  // stage the army on the nearest open bank tile so a valid attack is not
+  // rejected by the ground-placement check used for ordinary movement.
+  if((!t||t.terrain==='water')&&order==='attack'&&target){p=nearestOpen(s,p,new Set(),navigation(s));t=tileAt(Math.round(p.x),Math.round(p.y),s);}
+  if(!t||t.terrain==='water')return{ok:false,message:'Choose passable ground.'};
   assignDestinations(s,troops,p,order,focus,heading);return{ok:true,message:`${ORDER_NAMES[order]}: ${troops.length} soldiers received the order. Other soldiers retain their orders.`};
 }
