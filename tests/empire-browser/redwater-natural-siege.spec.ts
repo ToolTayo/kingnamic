@@ -56,9 +56,9 @@ test('a naturally recruited company clears Redwater camps, defeats its warned re
  // scouts Redwater; otherwise a full 200-person formation can breach its
  // central gates before the test reaches the deliberate gate-order step.
  const march=await issue(page,companyIds,'move',29,29);expect(march.ok,march.message).toBe(true);
- const vanguardIds=companyIds.slice(0,50),screen=await issue(page,vanguardIds,'defend',33,16);expect(screen.ok,screen.message).toBe(true);
- await expect.poll(async()=>{const v=await read(page);return v.units.filter((u:any)=>vanguardIds.includes(u.id)&&Math.hypot(u.x-33,u.y-16)<6).length;},{timeout:120000,intervals:[500,1000]}).toBeGreaterThan(35);
- const hero=await issue(page,[commander.id],'move',35,14);expect(hero.ok,hero.message).toBe(true);
+ const vanguardIds=companyIds.slice(0,50),screen=await issue(page,vanguardIds,'defend',40,17);expect(screen.ok,screen.message).toBe(true);
+ await expect.poll(async()=>{const v=await read(page);return v.units.filter((u:any)=>vanguardIds.includes(u.id)&&Math.hypot(u.x-40,u.y-17)<6).length;},{timeout:120000,intervals:[500,1000]}).toBeGreaterThan(35);
+ const hero=await issue(page,[commander.id],'move',43,16);expect(hero.ok,hero.message).toBe(true);
  if(state.speed===0)await page.locator('#speed-2').click();
  await expect.poll(async()=>{const v=await read(page);return v.march.seen.includes('redwater-cairn')&&v.march.rumors.includes('redwater')&&v.march.redwater.status==='occupied'&&v.units.some((u:any)=>u.id===commander.id&&u.hp>0);},{timeout:180000,intervals:[500,1000]}).toBe(true);
  state=await read(page);expect(state.march.redwater.remaining+state.march.redwater.casualties).toBe(160);
@@ -175,7 +175,7 @@ test('a naturally recruited company clears Redwater camps, defeats its warned re
  expect(state.march.redwater.status).toBe('captured');expect(state.buildings.find((b:any)=>b.id===hall.id)?.hp).toBe(state.buildings.find((b:any)=>b.id===hall.id)?.maxHp);
  expect(state.buildings.some((b:any)=>b.x===site.x&&b.y===site.y)).toBe(true);
  expect(state.units.filter((u:any)=>stationedIds.includes(u.id)&&u.hp>0)).toHaveLength(stationedIds.length);
- expect(state.units.filter((u:any)=>stationedIds.includes(u.id)).every((u:any)=>u.order==='defend'&&Math.hypot(u.x-36,u.y-21)<5.5)).toBe(true);
+ expect(state.units.filter((u:any)=>stationedIds.includes(u.id)).every((u:any)=>u.order==='defend'&&Math.hypot((u.anchor??u.target??u).x-36,(u.anchor??u.target??u).y-21)<5.5)).toBe(true);
  await page.screenshot({path:'docs/evidence/redwater-occupation.png'});
 
  const survivors=await livingCompany(page,companyIds),fit=[activeCommanderId,...survivors.filter(id=>id!==activeCommanderId&& !stationedIds.includes(id))],returnParty=fit.slice(0,8);

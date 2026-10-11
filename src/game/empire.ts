@@ -277,7 +277,11 @@ export function empireStep(s:State,dt:number):void{
   // scout the garrison before the commander enters the Wardens' firing lanes.
   const alderwatchWatches=[{x:8,y:39},{x:13,y:39}];
   if(hero&&m.rumors?.includes('alderwatch')&&alderwatch.status==='unseen'&&distance(hero,ALDERWATCH)<10&&alderwatchWatches.every(watch=>distance(hero,watch)>6))raiseAlderwatch(s);
-  if(hero&&m.rumors?.includes('redwater')&&redwater.status==='unseen'&&distance(hero,STRONGHOLD_CENTERS.redwater)<8)raiseRedwater(s);
+  // Splitwater Ford is a required early wilderness route and lies beside the
+  // southern track. Keep its ordinary infected encounter clear; the cairn
+  // report raises Redwater when the commander approaches from the signed
+  // north/east ravine road, before entering the defenders' firing lanes.
+  if(hero&&m.rumors?.includes('redwater')&&redwater.status==='unseen'&&hero.x>=40&&hero.y<=20&&distance(hero,STRONGHOLD_CENTERS.redwater)<10)raiseRedwater(s);
   if(stonewake.status==='occupied'&&!stonewake.signalDisabled&&stonewake.signalTowerId!==undefined&&s.buildings.some(b=>b.id===stonewake.signalTowerId&&b.hp<=0)){stonewake.signalDisabled=true;if(stonewake.warning>0)stonewake.warning=Math.max(stonewake.warning,20);log(s,'Stonewake Signal Tower is down. Relay runners must carry the call; the next reserve warning lasts 20 seconds.','good');}
   updateRedwaterCamps(s,redwater);
   const relief=(garrison:RivalStronghold,center:{x:number;y:number})=>{

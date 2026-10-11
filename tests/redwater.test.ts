@@ -24,12 +24,21 @@ function approach(seed=90521){
  expect(s.march!.seen).toContain('redwater-cairn');
  expect(s.march!.rumors).toContain('redwater');
  expect(s.march!.redwater!.status).toBe('unseen');
+ Object.assign(hero,{x:43,y:16,target:{x:43,y:16},anchor:{x:43,y:16},path:[],order:'hold'});
  empireStep(s,.1);
+ expect(s.march!.redwater!.status).toBe('occupied');
  return s;
 }
 const reload=(s:State)=>{const loaded=decode(JSON.stringify(s));expect(loaded).not.toBeNull();return loaded!;};
 
 describe('Redwater Reach campaign',()=>{
+ it('keeps the Splitwater Ford route clear until the commander follows the warned north-east approach',()=>{
+  const s=depart(90528),hero=army(s).find(u=>u.id===s.commander!.id)!;s.march!.seen.push('redwater-cairn');s.march!.rumors.push('redwater');
+  Object.assign(hero,{x:33,y:24,target:{x:33,y:24},anchor:{x:33,y:24},path:[],order:'hold'});empireStep(s,.1);
+  expect(s.march!.redwater!.status).toBe('unseen');expect(rivals(s,'redwater')).toHaveLength(0);
+  Object.assign(hero,{x:43,y:16,target:{x:43,y:16},anchor:{x:43,y:16},path:[],order:'hold'});empireStep(s,.1);
+  expect(s.march!.redwater!.status).toBe('occupied');expect(rivals(s,'redwater')).toHaveLength(40);expect(decode(JSON.stringify(s))).not.toBeNull();
+ });
  it('finds a safe outside approach to Stonewake without crossing Redwater',()=>{
   const s=depart(),nav=navigation(s),path=(start:Point,target:Point)=>findPath(s,start,target,false,nav,'player'),nearest=(points:Point[],center:Point)=>Math.min(...points.map(p=>Math.hypot(p.x-center.x,p.y-center.y)));
   const staging=path(ROAD_EXIT,{x:40,y:9}),approach=path({x:40,y:9},{x:45,y:12}),escape=path({x:45,y:12},{x:35,y:9});
@@ -53,7 +62,7 @@ describe('Redwater Reach campaign',()=>{
   const s=depart(90526),hero=army(s).find(u=>u.id===s.commander!.id)!;
   s.march!.seen.push('wayfarer-camp','stonewake-quarry','abbey-road','redwater-cairn');
   s.march!.rumors=['weirward','stonewake','alderwatch','redwater'];
-  for(const point of [{x:47,y:29},{x:37,y:36},{x:50,y:9},{x:10,y:49},{x:36,y:21}]){
+  for(const point of [{x:47,y:29},{x:37,y:36},{x:50,y:9},{x:10,y:49},{x:43,y:16}]){
    Object.assign(hero,point,{target:{...point},anchor:{...point},path:[],order:'hold'});
    empireStep(s,.1);
   }

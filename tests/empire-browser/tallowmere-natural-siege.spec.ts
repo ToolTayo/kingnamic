@@ -7,6 +7,10 @@ import {command} from '../../src/game/commands';
 import {decode} from '../../src/game/persistence';
 import type {SoldierKind} from '../../src/game/types';
 if(process.env.KINGNAMIC_HARDWARE_PROFILE==='1')test.use({launchOptions:{args:['--enable-gpu','--use-gl=angle','--use-angle=d3d11']}});
+// This long battle emits its own structured campaign report and screenshots.
+// Keep trace finalization from intermittently failing on resource files after
+// the repeated region and save reloads in a full-suite run.
+test.use({trace:'off'});
 
 const read=(page:Page)=>page.evaluate(()=>JSON.parse(JSON.stringify((window as any).__KINGNAMIC__.runtime.state)));
 const clickLive=(page:Page,selector:string)=>page.evaluate((sel:string)=>new Promise<void>((resolve,reject)=>{let frames=0;const attempt=()=>{const button=document.querySelector<HTMLButtonElement>(sel);if(button&&!button.disabled){button.click();resolve();return;}if(++frames>600){reject(new Error(`${sel} stayed unavailable for 10 seconds`));return;}requestAnimationFrame(attempt);};attempt();}),selector);

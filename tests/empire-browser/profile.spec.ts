@@ -10,7 +10,7 @@ test(`attribute 200-soldier ${profileRegion} combat across UI, scene, simulation
   const s=newGame();s.resources={wood:4000,stone:3000,food:4000,herbs:100};command(s,{type:'commander-appoint'});
   if(region==='march'||region==='redwater'){
    for(const u of army(s))Object.assign(u,{x:14,y:24});command(s,{type:'travel',ids:army(s).map((u:any)=>u.id)});
-   if(region==='redwater'){const hero=army(s).find((u:any)=>u.id===s.commander.id);Object.assign(hero,{x:35,y:14,target:{x:35,y:14},anchor:{x:35,y:14},path:[],order:'hold'});s.march.seen.push('redwater-cairn');s.march.rumors.push('redwater');empireStep(s,.1);}
+   if(region==='redwater'){const hero=army(s).find((u:any)=>u.id===s.commander.id);Object.assign(hero,{x:43,y:16,target:{x:43,y:16},anchor:{x:43,y:16},path:[],order:'hold'});s.march.seen.push('redwater-cairn');s.march.rumors.push('redwater');empireStep(s,.1);}
    else{s.units=army(s);command(s,{type:'build',kind:'hearth',x:16,y:21});}
   }
   s.units=region==='redwater'?s.units.filter((u:any)=>isRival(u)||isInfected(u)):[];const reserved=new Set<number>([...s.units,...s.residents].map(key));

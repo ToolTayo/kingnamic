@@ -1,8 +1,10 @@
 import {describe,expect,it} from 'vitest';
 import {army,makeBuilding,makeUnit,newGame} from '../src/game/state';
 import {kingdomOverview} from '../src/game/kingdomOverview';
+import {empirePanel} from '../src/ui/empirePanel';
 import {decode} from '../src/game/persistence';
 import type {State} from '../src/game/types';
+import type {Runtime} from '../src/game/runtime';
 
 function withFrontier(s:State):State{
  const reserve=structuredClone(s);reserve.region='march';reserve.march={seen:[],rescued:[],secured:true,rewarded:true,incursion:0,warning:0,rival:{id:'mossgate',name:'Mossgate',faction:'The Gloamward',status:'captured',remaining:0,reserve:0,casualties:100,warning:0}};
@@ -50,6 +52,16 @@ describe('kingdom overview derived ledger',()=>{
   expect(frontier.active).toBe(false);expect(frontier.threats).toBe(1);expect(frontier.repairs.some(b=>b.id===tower.id)).toBe(true);
   expect(view.alerts.some(a=>a.settlementId===site.id&&a.message.includes('threat near Mossgate Hall'))).toBe(true);
   expect(view.alerts.some(a=>a.settlementId===site.id&&a.message.includes('damaged structure at Mossgate Hall'))).toBe(true);
+ });
+
+ it('renders remote Stonewake and Redwater discoveries while Heartmere has no local March state',()=>{
+  const s=withFrontier(newGame()),remote=s.empire!.reserve,march=remote.march!;
+  march.seen=['stonewake-quarry','redwater-cairn'];march.rumors=[];
+  march.stonewake={id:'stonewake',name:'Stonewake',faction:'The Stonewake Hold',status:'unseen',remaining:125,reserve:100,casualties:0,warning:0};
+  march.redwater={id:'redwater',name:'Redwater Reach',faction:'The Redwater Watch',status:'unseen',remaining:160,reserve:120,casualties:0,warning:0};
+  const html=empirePanel({state:s,selectedIds:[],heroMode:false} as unknown as Runtime);
+  expect(html).toContain('STONEWAKE HOLD · GREYBANK RIDGE');expect(html).toContain('REDWATER REACH · THE REDWATER WATCH');
+  expect(html).toContain('Follow the fresh cart tracks');expect(html).toContain('Follow the old heath road');
  });
 
  it('reports Tallowmere independently from the Mossgate garrison',()=>{

@@ -11,10 +11,10 @@ test('touch Empire panel keeps the Redwater campaign readable at a phone viewpor
   for(const u of army(s))Object.assign(u,{x:14,y:24,target:{x:14,y:24},anchor:{x:14,y:24},path:[],order:'hold'});
   const travel=command(s,{type:'travel',ids:army(s).map(u=>u.id)});expect(travel.ok,travel.message).toBe(true);
   s.march!.seen.push('redwater-cairn');s.march!.rumors!.push('redwater');
-  const hero=s.units.find(u=>u.id===s.commander!.id)!;Object.assign(hero,{x:36,y:21,target:{x:36,y:21},anchor:{x:36,y:21},path:[],order:'hold'});empireStep(s,.1);
+  const hero=s.units.find(u=>u.id===s.commander!.id)!;Object.assign(hero,{x:41,y:20,target:{x:41,y:20},anchor:{x:41,y:20},path:[],order:'hold'});empireStep(s,.1);
   expect(decode(JSON.stringify(s))).not.toBeNull();
   await page.goto('/');await page.evaluate(raw=>localStorage.setItem('kingnamic.save.v2',raw),JSON.stringify(s));await page.reload();await page.locator('#start').tap();await page.locator('#tab-empire').tap();
-  await page.evaluate(()=>{const app=(window as any).__KINGNAMIC__;app.scene.focus({x:36,y:21});});await page.waitForTimeout(400);
+  await page.evaluate(()=>{const app=(window as any).__KINGNAMIC__;app.scene.focus({x:41,y:20});});await page.waitForTimeout(400);
   await expect(page.locator('#panel')).toContainText('REDWATER REACH · THE REDWATER WATCH');
   await expect(page.locator('#panel')).toContainText('Redwater Reach is contested');
   await expect(page.locator('#panel')).toContainText('160 of 160 defenders remain');
