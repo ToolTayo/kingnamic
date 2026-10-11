@@ -1,5 +1,8 @@
 import {isBarrier} from '../game/barriers';
 import {empirePanel} from './empirePanel';
+import {conquestPanel} from './conquestPanel';
+import {advanceRoute,CONQUEST_IDS,conquestGuide,conquestMoveOrders} from '../game/conquestGuide';
+import {findPath,navigation} from '../game/navigation';
 import {LANDMARKS,ROAD_EXIT,STRONGHOLDS} from '../game/empire';
 import { shopPanel } from './shopPanel';
 import { RESOURCE_NAMES } from '../game/treasury';
@@ -11,7 +14,7 @@ import { canAfford, capacity, healthy, idle, jobCapacity, rates } from '../game/
 import { tilesFor } from '../game/map';
 import type { Runtime } from '../game/runtime';
 import { army, enemies, hostiles } from '../game/state';
-import type { ArmyOrder, Building, BuildingKind, ExpeditionApproach, Job, Resources, SoldierKind, TerritoryId } from '../game/types';
+import type { ArmyOrder, Building, BuildingKind, ExpeditionApproach, Job, Resources, SoldierKind, StrongholdId, TerritoryId } from '../game/types';
 import { buildingArt } from '../render/art';
 import type { WorldScene } from '../render/WorldScene';
 import { icon } from './icons';
@@ -26,7 +29,7 @@ import { nextIllnessDeadline } from '../game/disease';
 import { ROAD_AMBUSHES, wildernessReadout } from '../game/wilderness';
 const escape = (str: string): string => str.replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]!));
 const resourceIcon: Record<keyof Resources, string> = { wood: 'wood', stone: 'crown', food: 'wheat', herbs: 'herb' };
-const panelIdentityAttributes = ['data-settlement', 'data-settlement-focus', 'data-kingdom-alert', 'data-kingdom-company', 'data-kingdom-defend', 'data-kingdom-recall', 'data-kingdom-build', 'data-kingdom-repair', 'data-rename-settlement', 'data-claim', 'data-focus', 'data-tab', 'data-weapon', 'data-approach', 'data-patrol', 'data-landmark', 'data-inspect', 'data-person-focus', 'data-remains-focus'] as const;
+const panelIdentityAttributes = ['data-conquest-route','data-conquest-siege','data-settlement', 'data-settlement-focus', 'data-kingdom-alert', 'data-kingdom-company', 'data-kingdom-defend', 'data-kingdom-recall', 'data-kingdom-build', 'data-kingdom-repair', 'data-rename-settlement', 'data-claim', 'data-focus', 'data-tab', 'data-weapon', 'data-approach', 'data-patrol', 'data-landmark', 'data-inspect', 'data-person-focus', 'data-remains-focus'] as const;
 function panelNodeKey(node: Node): string | null {
   if (!(node instanceof Element)) return null;
   if (node.id) return `#${node.id}`;
@@ -90,6 +93,7 @@ export class Interface {
   private restoreSpeed: 0 | 1 | 2 = 1;
   private pendingDispatchIds: number[] | null = null;
   private sound = false;
+  private routeSignature='';
   private audio?: AudioContext;
   constructor(rt: Runtime, scene: () => WorldScene) {
     this.rt = rt; this.scene = scene;
@@ -114,14 +118,14 @@ export class Interface {
           <div class="world-vignette"></div>
           <div class="world-top"><div><div class="eyebrow">THE ASHEN VALE <span>•</span> CHAPTER I</div><h1 id="world-title">Hearthmere</h1><p id="world-subtitle">A small light in a hollow world.</p></div><div class="day-card"><span id="day-icon">${icon('sun')}</span><div><strong id="day-label">Day 1</strong><span id="phase-label">Daylight · 72s to dusk</span></div><div class="day-track"><i id="day-progress"></i></div></div></div>
           <div class="alert-banner hidden" id="alert-banner" role="status"></div>
-          <div class="camera-controls"><button class="icon-button" id="zoom-in" aria-label="Zoom in">${icon('plus')}</button><button class="icon-button" id="zoom-out" aria-label="Zoom out">${icon('minus')}</button><button class="icon-button" id="home-camera" aria-label="Center on Hearthmere" title="Center on Hearthmere (H)">${icon('target')}</button></div>
+          <div class="camera-controls"><button id="open-world" data-tab="territories" class="icon-button" aria-label="World Conquest and routes" title="World Conquest and routes">${icon('map')}</button><button class="icon-button" id="zoom-in" aria-label="Zoom in">${icon('plus')}</button><button class="icon-button" id="zoom-out" aria-label="Zoom out">${icon('minus')}</button><button class="icon-button" id="home-camera" aria-label="Center on Hearthmere" title="Center on Hearthmere (H)">${icon('target')}</button></div>
           <section class="objectives-card"><div class="eyebrow">${icon('flag')} A KINGDOM FROM THE ASHES</div><div id="objectives"></div><div class="objective-footer"><span id="objective-count">0 / 5 milestones</span><span>CHAPTER I</span></div></section>
           <div id="hero-pad" class="hero-pad hidden" aria-label="Commander movement"><button data-walk="-1,-1" aria-label="Walk up">↑</button><div><button data-walk="-1,1" aria-label="Walk left">←</button><button data-walk="1,1" aria-label="Walk down">↓</button><button data-walk="1,-1" aria-label="Walk right">→</button></div><button id="hero-strike">Strike</button></div><div class="placement-bar hidden" id="placement-bar"></div>
-          <div class="minimap"><div class="minimap-title">${icon('map')} ASHEN VALE<span>N ↗</span></div><canvas id="minimap" width="180" height="115" aria-label="Overview of the four territories. Click to move the camera."></canvas><div class="minimap-legend"><i></i> Your realm <i class="hostile"></i> The Hollow</div></div>
+          <div class="minimap"><div class="minimap-title">${icon('map')} <b id="minimap-name">ASHEN VALE</b><span>N ↑</span></div><canvas id="minimap" width="180" height="115" aria-label="Current region overview. Numbered kingdom clues appear in Briar March. Click to move the camera."></canvas><div class="minimap-legend"><i></i> Your realm <i class="hostile"></i> The Hollow</div></div>
           <div class="world-hint" id="world-hint">Drag to explore <span>·</span> Scroll to zoom <span>·</span> Right-click to rally</div>
           <div id="bounty-feedback" class="bounty-feedback hidden" role="status" aria-live="polite"></div><div class="toast hidden" id="toast" role="status" aria-live="polite"></div>
         </section>
-        <aside class="sidebar"><nav class="tabs" aria-label="Kingdom management">${[['build', 'hammer', 'Build'], ['people', 'people', 'People'], ['army', 'shield', 'Army'], ['territories', 'map', 'Marches'],['empire','crown','Empire']].map(([id, i, name]) => `<button id="tab-${id}" data-tab="${id}" class="tab ${id === 'build' ? 'active' : ''}">${icon(i)}<span>${name}</span></button>`).join('')}</nav><div id="panel" class="panel"></div><div class="sidebar-bottom"><span class="beacon-dot"></span><span id="hearth-status">The beacon burns bright</span><button id="chronicle" title="Open the chronicle" aria-label="Open the chronicle">${icon('scroll')}</button></div></aside>
+        <aside class="sidebar"><nav class="tabs" aria-label="Kingdom management">${[['build', 'hammer', 'Build'], ['people', 'people', 'People'], ['army', 'shield', 'Army'], ['territories', 'map', 'World'],['empire','crown','Empire']].map(([id, i, name]) => `<button id="tab-${id}" data-tab="${id}" class="tab ${id === 'build' ? 'active' : ''}">${icon(i)}<span>${name}</span></button>`).join('')}</nav><div id="panel" class="panel"></div><div class="sidebar-bottom"><span class="beacon-dot"></span><span id="hearth-status">The beacon burns bright</span><button id="chronicle" title="Open the chronicle" aria-label="Open the chronicle">${icon('scroll')}</button></div></aside>
       </main>
       <footer class="statusbar"><div class="status-left"><span class="live-dot"></span><span id="save-status">Local kingdom</span><button id="save" title="Save now">Save now</button></div><div class="time-controls"><span id="time-status">Time is flowing</span><button id="pause" aria-label="Pause game" title="Pause / resume (Space)">${icon('pause')}</button><button id="speed-1" class="active" aria-label="Normal speed">1×</button><button id="speed-2" aria-label="Double speed">2×</button></div><button class="help-shortcut" id="help">${icon('scroll')} Field guide <kbd>?</kbd></button></footer>
       <dialog id="dialog" class="modal"></dialog>`;
@@ -134,6 +138,30 @@ export class Interface {
     document.addEventListener('click', e => {
       const el = (e.target as HTMLElement).closest<HTMLElement>('button, .brand'); if (!el) return;
       const id = el.id;
+      if(el.dataset.conquestRoute&&CONQUEST_IDS.includes(el.dataset.conquestRoute as StrongholdId)){
+        this.rt.conquestNavigation={id:el.dataset.conquestRoute as StrongholdId,stage:'',leg:0,path:[]};this.routeSignature='';this.rt.selection=null;this.tab='territories';this.rt.heroMode=false;this.rt.cancelPlacement();this.rt.orderMode=null;this.rt.rallyMode=false;this.render();
+        const point=this.rt.conquestNavigation.point;if(point)this.scene().focus(point);this.panel.querySelector('.conquest-route')?.scrollIntoView({block:'nearest'});return;
+      }
+      if(id==='conquest-clear'){this.rt.conquestNavigation=null;this.routeSignature='';this.render();return;}
+      if(id==='conquest-local'){this.panel.querySelector('#local-marches')?.scrollIntoView({block:'start'});return;}
+      if(id==='conquest-view'){const p=this.rt.conquestNavigation?.point;if(p)this.scene().focus(p);return;}
+      if(id==='conquest-select'){
+        const s=this.rt.state,ids=army(s).filter(u=>available(s,u)&&(u.id===s.commander?.id||u.order==='hold'&&!u.squadId)).map(u=>u.id);
+        this.rt.selectUnits(ids);this.rt.selection=null;this.tab='territories';this.render();return;
+      }
+      if(id==='conquest-move'){
+        const s=this.rt.state,hero=army(s).find(u=>u.id===s.commander?.id),p=this.rt.conquestNavigation?.point;
+        if(!s.region||!hero||!available(s,hero)||!p||s.expedition)return;
+        const chosen=[...new Set([...this.rt.selectedIds,hero.id])],ids=commandableIds(s,chosen),path=findPath(s,hero,p,false,navigation(s),'player');
+        if(!path.length&&Math.hypot(hero.x-p.x,hero.y-p.y)>1.5){this.rt.notify('The waypoint is blocked. Inspect the approach and breach barriers with Attack; no troops moved.','warn');this.render();return;}
+        this.rt.heroMode=false;this.rt.cancelPlacement();this.rt.selection=null;this.rt.orderMode=null;this.rt.rallyMode=false;
+        for(const order of conquestMoveOrders(s,ids,p)){const result=this.rt.act(order);if(!result.ok){this.render();return;}}
+        this.rt.notify(`Moving ${ids.length} fit soldiers toward ${p.name}. Commander leads; escorts keep formation. ${s.speed?'Watch for infected and patrols.':'Time is paused; press Play to walk.'}`);this.scene().focus(hero);this.render();return;
+      }
+      if(el.dataset.conquestSiege&&CONQUEST_IDS.includes(el.dataset.conquestSiege as StrongholdId)){
+        const id=el.dataset.conquestSiege as StrongholdId;this.tab='empire';this.rt.selection=null;this.scene().focus(STRONGHOLDS[id].center);this.render();
+        const button=id==='mossgate'?'capture-stronghold':'capture-'+id;document.getElementById(button)?.scrollIntoView({block:'center'});return;
+      }
       if(id==='edit-building'&&this.rt.selection?.type==='building'){this.rt.beginEdit(this.rt.selection.id);return;}
       if(id==='rotate-placement'){this.rt.placementRotation=this.rt.placementRotation?0:1;this.render();return;}
       if(el.dataset.tab||el.dataset.build||id==='cancel-placement'||id==='hero-toggle'||id==='place-outpost'||id==='rally'||id==='clear-selection')this.rt.cancelPlacement();
@@ -282,7 +310,10 @@ export class Interface {
     const t = TERRITORIES[id], s = this.rt.state, owned = s.owned.includes(id), locked = t.requirement && !s.owned.includes(t.requirement);
     return `<article class="territory-card"><div class="territory-top">${icon(id === 'pinewatch' ? 'wood' : id === 'greybank' ? 'crown' : 'herb')}<span class="tag ${owned ? 'owned' : ''}">${owned ? 'RECLAIMED' : locked ? 'UNREACHED' : 'UNCLAIMED'}</span></div><div class="eyebrow">${t.title}</div><h3>${t.name}</h3><p>${t.description}</p><div class="territory-actions"><button id="focus-${id}" class="text-button" data-focus="${id}">${icon('target')} View</button>${owned ? `<span class="owned-text">${icon('check')} Your banner flies</span>` : `<button id="claim-${id}" data-claim="${id}" class="secondary" ${locked || !canAfford(s, t.cost) || army(s).length < 4 || s.phase === 'night' || enemies(s).length ? 'disabled' : ''}>Reclaim ${icon('flag')}</button>`}</div>${!owned ? this.cost(t.cost) : ''}</article>`;
   }
-  private territoriesPanel(): string { if(this.rt.state.region)return this.panelHeader('CONNECTED LAND','Briar March','Discover this land by exploring with your commander.')+'<p>Clearing the infected and founding an outpost secures this region. The original three marches are managed from Hearthmere.</p><button data-tab="empire" class="primary full">Open Empire</button>';return this.panelHeader('BEYOND THE PALISADE', 'The three marches', 'More land. More hope. More ground to defend.') + `<div class="tip-box compact">${icon('flag')}<p>Reclaim in daylight with at least 4 soldiers and no infected remaining.</p></div>` + (['pinewatch', 'greybank', 'fen'] as TerritoryId[]).map(id => this.territoryCard(id)).join(''); }
+  private territoriesPanel(): string {
+    const local=this.rt.state.region?'<div class="local-marches-note"><h3>The three local Marches</h3><p>Pinewatch, Greybank and Saintless Fen are resource territories around Hearthmere. Return home to reclaim them; they are separate from rival kingdoms.</p><button data-tab="empire" class="secondary full">Settlements & travel →</button></div>':this.panelHeader('AROUND HEARTHMERE', 'The three local Marches', 'Resource territories, separate from the five rival kingdoms.') + `<div class="tip-box compact">${icon('flag')}<p>Reclaim in daylight with at least 4 soldiers and no infected remaining. This is optional preparation for exploration.</p></div>` + (['pinewatch', 'greybank', 'fen'] as TerritoryId[]).map(id => this.territoryCard(id)).join('');
+    return conquestPanel(this.rt)+`<section id="local-marches">${local}</section>`;
+  }
   private buildingPanel(b: Building): string {
     const d = BUILDINGS[b.kind], s = this.rt.state;
     if(b.owner==='rival'){const stronghold=STRONGHOLDS[b.rivalId??'mossgate'];return '<button class="back-button" id="clear-selection">← Back to kingdom</button>'+this.panelHeader('HOSTILE STRUCTURE · '+stronghold.faction.toUpperCase(),b.name??d.name,stronghold.name+' is under siege.')+'<div class="detail-art"><img alt="'+escape(d.name)+'" src="'+this.thumbs[b.kind]+'"/></div><p class="detail-description">'+d.description+'</p><div class="section-label">STRUCTURE HEALTH<span>'+Math.ceil(b.hp)+' / '+b.maxHp+'</span></div><div class="health-track"><i style="width:'+b.hp/b.maxHp*100+'%"></i></div><div class="war-card"><strong>Hostile property</strong><p>Right-click this building to focus the soldiers you command. Capture '+stronghold.name+' before repairing or moving it.</p></div>';}
@@ -291,6 +322,7 @@ export class Interface {
   private chroniclePanel(): string { return this.panelHeader('WORDS BY FIRELIGHT', 'The chronicle', 'A record of the kingdom you are becoming.') + `<div class="chronicle-list">${this.rt.state.logs.map(l => `<article class="log-${l.tone}"><span>${Math.floor(l.time / 60)}:${String(Math.floor(l.time % 60)).padStart(2, '0')}</span><p>${escape(l.text)}</p></article>`).join('')}</div>`; }
   render(): void {
     const s = this.rt.state, production = rates(s);
+    this.refreshConquestRoute();
     if (this.patrol) this.patrol = this.patrol.filter(id => readyArmy(s).some(u => u.id === id));
     if (this.wasAway && !s.expedition) { this.tab = 'expedition'; this.panel.scrollTop = 0; this.patrol = null; }
     this.wasAway = !!s.expedition;
@@ -391,7 +423,7 @@ export class Interface {
       alert.classList.toggle('hidden', !message); this.html('alert-banner', escape(message));
     } else {this.text('world-title',s.region?'Briar March':'Hearthmere');if(s.region){const settlements=s.buildings.filter(b=>b.kind==='hearth').length,status=s.march?.secured?settlements+' settlements · '+threats+' threats':'Explore · clear threats · found an outpost';this.text('world-subtitle',status+' · '+wildernessReadout(s));this.text('day-label','Briar March');this.text('phase-label',s.march?.redwater?.status==='occupied'?'Redwater under siege':s.march?.alderwatch?.status==='occupied'?'Alderwatch under siege':s.march?.stonewake?.status==='occupied'?'Stonewake under siege':s.march?.weirward?.status==='occupied'?'Tallowmere under siege':s.march?.rival?.status==='occupied'?'Mossgate under siege':s.march?.secured?'Watch the eastern road':'Explore the March roads');}}
     for (const b of document.querySelectorAll<HTMLButtonElement>('[data-tab]')) { b.disabled = !!s.expedition; if (s.expedition) b.classList.toggle('active', b.dataset.tab === 'army'); }
-    this.drawMinimap();
+    this.text('minimap-name',s.region?'BRIAR MARCH':'ASHEN VALE');this.drawMinimap();
     if (s.outcome !== 'playing' && this.lastOutcome !== s.outcome && this.rt.ready) { this.lastOutcome = s.outcome; this.ending(); this.rt.persist(); }
   }
   private text(id: string, value: string): void { const el = document.getElementById(id)!; if (el.textContent !== value) el.textContent = value; }
@@ -409,13 +441,23 @@ export class Interface {
     for(const p of [...s.units,...(s.residents??[])])if(infected.has(p.id)){const q=xy(p.x,p.y);c.strokeStyle='#e7dd75';c.lineWidth=1;c.beginPath();c.arc(q.x,q.y,2.5,0,Math.PI*2);c.stroke();}
     for(const p of s.corpses??[])if(p.tainted){const q=xy(p.x,p.y);c.strokeStyle='#ffaf7d';c.lineWidth=1.5;c.beginPath();c.arc(q.x,q.y,2,0,Math.PI*2);c.stroke();}
     for (const u of s.units) { const p=xy(u.x,u.y);c.fillStyle=isFriendly(u)?u.id===s.commander?.id?'#ffdda2':u.origin==='battalion'?'#e4ca88':'#97c5d0':'#ec9e7f';c.fillRect(p.x,p.y,2.5,2.5); }
+    if(s.region&&!s.theatre)CONQUEST_IDS.forEach((id,i)=>{const v=conquestGuide(s,id),p=xy(v.marker.x,v.marker.y);c.fillStyle=v.status==='secured'?'#dceabb':v.status==='unknown'?'#f1dda2':'#efb18b';c.beginPath();c.arc(p.x,p.y,4.5,0,Math.PI*2);c.fill();c.fillStyle='#253c31';c.font='bold 7px sans-serif';c.textAlign='center';c.fillText(String(i+1),p.x,p.y+2.5);});
+    const point=this.rt.conquestNavigation?.point;if(point&&!s.theatre){const p=xy(point.x,point.y);c.strokeStyle='#ffe099';c.lineWidth=2;c.strokeRect(p.x-4,p.y-4,8,8);}
+  }
+  private refreshConquestRoute():void{
+    const nav=this.rt.conquestNavigation,s=this.rt.state;if(!nav)return;
+    const point=advanceRoute(s,nav);nav.point=point;
+    const hero=army(s).find(u=>u.id===s.commander?.id),topology=navigation(s);
+    const signature=[s.region??'home',s.expedition?'expedition':'',hero?.id,nav.id,nav.stage,nav.leg,point?.x,point?.y,topology.signature].join(':');
+    if(signature===this.routeSignature)return;this.routeSignature=signature;
+    nav.path=hero&&point&&!s.expedition?findPath(s,hero,point,false,topology,'player'):[];
   }
   private restoreModal(): void { if (!this.modalPaused) return; this.modalPaused = false; if (this.rt.ready && (this.rt.state.outcome === 'playing' || this.rt.state.expedition)) this.rt.state.speed = this.restoreSpeed; }
   private closeModal(): void { this.restoreModal(); this.dialog.close(); }
   private dispatchCompany(ids:number[]):void{this.rt.act({type:'gather-company',ids});this.scene().focus(ROAD_EXIT);}
   private showModal(html: string): void { if (!this.dialog.open) { this.restoreSpeed = this.rt.state.speed; this.modalPaused = true; this.rt.state.speed = 0; } this.dialog.innerHTML = html; if (!this.dialog.open) this.dialog.showModal(); }
   private onboard(): void {
-    this.showModal(`<div class="intro-crest">${icon('crown')}</div><div class="eyebrow">KINGNAMIC · CHAPTER I</div><h2>${this.rt.loaded ? 'The hearth remembers.' : 'A kingdom worth defending.'}</h2><p class="modal-lead">${this.rt.loaded ? 'Your people kept the beacon burning. Return to Hearthmere and finish what you began.' : 'The Hollowing has silenced the old kingdoms. In one sheltered valley, a few still gather around the fire. Their future is in your hands.'}</p><div class="intro-steps"><div>${icon('hammer')}<strong>Build for Crowns</strong><p>Place a Trading post, then assign three traders in People.</p></div><div>${icon('shield')}<strong>Recruit your guard</strong><p>Choose Army → Recruit. Idle residents go first; eligible workers can follow automatically.</p></div><div>${icon('flag')}<strong>Lead beyond the wall</strong><p>Appoint a commander in Empire and explore from the southern road. Leave a fit soldier to guard Hearthmere; sending every ready defender will prompt a warning, but you can still choose to go.</p></div></div><div class="intro-note">${icon('sun')}Hold through five nights to reclaim the vale. Pause whenever you need.</div>${this.rt.message ? `<p class="load-message">${escape(this.rt.message)}</p>` : ''}<button class="primary intro-start" id="start">${this.rt.loaded ? 'Resume kingdom' : 'Light the beacon'}${icon('arrow')}</button><span class="modal-footnote">Original world · Offline saves · No accounts</span>`);
+    this.showModal(`<div class="intro-crest">${icon('crown')}</div><div class="eyebrow">KINGNAMIC · CHAPTER I</div><h2>${this.rt.loaded ? 'The hearth remembers.' : 'A kingdom worth defending.'}</h2><p class="modal-lead">${this.rt.loaded ? 'Your people kept the beacon burning. Return to Hearthmere and finish what you began.' : 'The Hollowing has silenced the old kingdoms. In one sheltered valley, a few still gather around the fire. Their future is in your hands.'}</p><div class="intro-steps"><div>${icon('hammer')}<strong>Build for Crowns</strong><p>Place a Trading post, then assign three traders in People.</p></div><div>${icon('shield')}<strong>Recruit your guard</strong><p>Choose Army → Recruit. Idle residents go first; eligible workers can follow automatically.</p></div><div>${icon('flag')}<strong>Lead beyond the wall</strong><p>Use World to plan routes to five rival kingdoms. Appoint a commander in Empire and explore from the southern road. Leave a fit soldier to guard Hearthmere; sending every ready defender will prompt a warning, but you can still choose to go.</p></div></div><div class="intro-note">${icon('sun')}Hold through five nights to reclaim the vale. Pause whenever you need.</div>${this.rt.message ? `<p class="load-message">${escape(this.rt.message)}</p>` : ''}<button class="primary intro-start" id="start">${this.rt.loaded ? 'Resume kingdom' : 'Light the beacon'}${icon('arrow')}</button><span class="modal-footnote">Original world · Offline saves · No accounts</span>`);
   }
   private guide(): void {
     this.showModal(`<button id="close-dialog" class="modal-close" aria-label="Close guide">${icon('close')}</button><div class="eyebrow">THE HEARTHKEEPER’S COMPANION</div><h2>Field guide</h2><div class="guide-grid"><section><h3>A strong beginning</h3><p>Timber builds homes, workplaces and palisades. Crowns fund recruitment and upgrades. Build a Trading post and assign 3 traders in People. Recruit two more soldiers in Army → Recruit. Build a Herbalist’s refuge and assign a healer before the second dawn.</p><h3>Surviving the Hollowing</h3><p>A confirmed zombie bite causes the Hollowing. Infected residents stop working. At 18 seconds symptoms appear; untreated illness can kill by 75 seconds of disease progression, and critical wounds can kill sooner. Only infected remains rise after 8 seconds. Ordinary wounds, proximity, ground and supplies do not spread infection. Infected people remain human and treatable. A death can reanimate only after confirmed infection and an eight-second corpse delay. Treat up to three for 5 herbs + 8 food, or quarantine to slow illness.</p><h3>Lead beyond the valley</h3><p>In Empire, appoint an existing soldier as commander. Choose a company in the Army roster and gather at the southern road. Keep a fit soldier at Hearthmere: dispatching every ready defender prompts a warning but remains your choice. Briar March opens into a broad hinterland of forests, river crossings, shrines, abandoned hamlets and infected watches. Explore on foot or with tactical orders; discovered caches replenish supplies, and clearing Mossgate or the wayfarer camp sends real survivors home. Bring two fit soldiers and two idle home residents to found each outpost for 80 Timber and 40 Crowns. Name settlements in the Empire ledger, leave guards at their doors, and build on cleared open ground.</p><h3>Expansion has a price</h3><p>Every credited infected kill pays Crowns: 1 Hollow, 2 runner, 3 brute, with no daily cutoff. Expedition encounter slots pay once across all visits; reanimated people pay none. Rewards appear over the battlefield and in the chronicle. With four soldiers, reclaim the marches during peaceful daylight. New resources and survivors arrive, but the next wave can attack from the new frontier. Add towers and move troops to cover it.</p></section><section><h3>Know your ground</h3><p>Each builder advances one construction project; the crew is shared between active sites. Scouts show tonight’s wave size below the kingdom name; orange minimap markers show its possible entry points. Wardens protect fragile rangers, whose damage falls at point-blank range. Spearmen punish runners; scouts evade nearby threats close to their rally ground. Shield line gives nearby wardens extra armor. Highlands strengthen rangers. Marshes slow movement. Walls divert enemies; gates let allies through across their opening. Select a building and Edit / Move to rearrange it for free during peace. Drag or tap a destination, then Confirm move; Cancel keeps the original. Rotate palisades and gates with R or Rotate. Walls connect to adjacent grid cells, including corners. Use stepped grid runs for diagonal perimeters.</p><h3>Command your kingdom</h3><dl><dt>Pan / zoom</dt><dd>Drag / scroll</dd><dt>Move camera</dt><dd>WASD / arrows</dd><dt>Pause / resume</dt><dd>Space</dd><dt>Build / rally</dt><dd>B / R</dd><dt>Rally directly</dt><dd>Right-click</dd><dt>Center / cancel</dt><dd>H / Esc</dd></dl><p>On touch screens, drag the map and use +/− to zoom. Tap a building site to preview it, then tap “Build here” to confirm. Tap “Set rally point” before choosing ground. Move orders take priority; guards return to protect a breached Hearth.</p></section></div><div class="guide-settings"><button class="secondary" id="sound-toggle">${this.sound ? 'Sound on' : 'Sound off'}</button><button class="text-button danger" id="reset-request">Start a new kingdom</button></div><p class="fine-print">Saves every 12 seconds while time runs, when leaving the tab, and on request. This device only. No progress passes while you are away.</p>`);

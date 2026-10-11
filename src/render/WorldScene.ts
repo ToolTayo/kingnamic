@@ -213,7 +213,7 @@ export class WorldScene extends Phaser.Scene {
       }
       return;
     }
-    if(this.rt.state.commander){const p=iso(ROAD_EXIT.x,ROAD_EXIT.y);this.labels.push(this.add.text(p.x,p.y-42,this.rt.world.region?'← HEARTHMERE ROAD':'BRIAR MARCH ROAD →',{fontFamily:'Georgia',fontSize:'13px',color:'#f1dda2',backgroundColor:'#213832dd',padding:{x:8,y:6}}).setOrigin(.5).setDepth(2500));}
+    {const p=iso(ROAD_EXIT.x,ROAD_EXIT.y);this.labels.push(this.add.text(p.x,p.y-42,this.rt.world.region?'← HEARTHMERE ROAD':'BRIAR MARCH ROAD →',{fontFamily:'Georgia',fontSize:'13px',color:'#f1dda2',backgroundColor:'#213832dd',padding:{x:8,y:6}}).setOrigin(.5).setDepth(2500));}
     if(this.rt.world.region){for(const site of LANDMARKS)if(this.rt.world.march?.seen.includes(site.id)){const p=iso(site.x,site.y);this.labels.push(this.add.text(p.x,p.y-55,site.name,{fontFamily:'Georgia',fontSize:'14px',color:'#f1dda2',backgroundColor:'#213832dd',padding:{x:8,y:6}}).setOrigin(.5).setDepth(2500));}return;}
     const bounds: Record<TerritoryId, [number, number, number, number]> = { hearthmere: [8.5, 6.5, 20.5, 18.5], pinewatch: [0.5, 6.5, 8.5, 18.5], greybank: [8.5, -0.5, 20.5, 6.5], fen: [20.5, 6.5, 29.5, 18.5] };
     for (const id of Object.keys(bounds) as TerritoryId[]) {
@@ -242,6 +242,12 @@ export class WorldScene extends Phaser.Scene {
     const hero=this.rt.world.units.find(u=>u.id===this.rt.state.commander?.id);if(this.rt.heroMode&&hero){const p=iso(hero.x,hero.y);this.cameras.main.centerOn(p.x,p.y-30);}
     if (time - this.lastDraw < 32) return; const blend = Math.min(1, (time - this.lastDraw) / 65); this.lastDraw = time;
     const s = this.rt.world; this.updateBorders(); this.overlay.clear(); this.hover.clear(); this.ground.clear();
+    const route=this.rt.conquestNavigation;
+    if(route?.point&&!s.theatre){
+      const path=route.path;this.ground.lineStyle(2,0xf1d68a,.65);
+      for(let i=1;i<Math.min(path.length,256);i++){const a=iso(path[i-1].x,path[i-1].y),b=iso(path[i].x,path[i].y);this.ground.lineBetween(a.x,a.y,b.x,b.y);}
+      this.diamond(this.ground,route.point.x,route.point.y,0xffdfa0,.9);const p=iso(route.point.x,route.point.y);this.ground.lineStyle(2,0xffdfa0,.7).strokeEllipse(p.x,p.y,70,35);
+    }
     if(hero){const p=iso(hero.x,hero.y);this.overlay.lineStyle(3,0xffde7d,.95).strokeEllipse(p.x,p.y,37,19);}
     const selected=new Set(this.rt.selectedIds), illnesses=new Map(s.infection.map(i=>[i.personId,i]));
     const attacks=new Map(s.effects.filter(e=>e.to&&e.source).map(e=>[e.source,e]));

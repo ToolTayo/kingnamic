@@ -1,4 +1,5 @@
 import { STEP } from './config';
+import type {ConquestNavigation} from './conquestGuide';
 import {relocationError} from './relocation';
 import {barrierIndex,barrierRotation} from './barriers';
 import {buildError} from './commands';
@@ -34,6 +35,7 @@ export class Runtime {
   orderMode: ArmyOrder | null = null;
   multiSelect = false;
   heroMode=false; heroWalk:Point={x:0,y:0}; heroAttack=false; heroAim?:Point; heroTouchWalk?:Point;heroTouchAttack=false;heroTap=false;
+  conquestNavigation:ConquestNavigation|null=null;
   rosterPage = 0;
   armyView:'orders'|'recruit'|'squads'|'roster'='orders';
   squadName = '';
@@ -116,5 +118,5 @@ export class Runtime {
     if (this.autosave >= 12) { this.autosave = 0; this.persist(); }
   }
   persist(): void { const r = save(storage, this.state); this.saveLabel = r.ok ? 'Saved on this device' : 'Save unavailable'; this.saveError = !r.ok; if (!r.ok) this.notify(r.message, 'warn'); }
-  reset(): void {this.cancelPlacement();this.heroMode=false;this.heroWalk={x:0,y:0};this.heroTouchWalk=undefined;this.heroAttack=false; this.selectedIds=[];this.orderMode=null;this.rosterPage=0;this.state = newGame(); this.selection = null; this.placement = null; this.placementPreview = null; this.rallyMode = false; this.ready = true; this.accumulator = 0; this.autosave = 0; this.persist(); this.onChange(); }
+  reset(): void {this.conquestNavigation=null;this.cancelPlacement();this.heroMode=false;this.heroWalk={x:0,y:0};this.heroTouchWalk=undefined;this.heroAttack=false; this.selectedIds=[];this.orderMode=null;this.rosterPage=0;this.state = newGame(); this.selection = null; this.placement = null; this.placementPreview = null; this.rallyMode = false; this.ready = true; this.accumulator = 0; this.autosave = 0; this.persist(); this.onChange(); }
 }
