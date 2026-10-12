@@ -416,13 +416,40 @@ test('a naturally recruited company discovers, assaults, captures, occupies and 
     expect(treatment.ok, treatment.message).toBe(true);
   }
   state = await read(page);
-  expect(state.infection.some((i: any) => i.personId === commander.id)).toBe(false);  const fitReturn = await fitCompany(page, [commander.id, ...survivors.filter(id => !garrisonIds.includes(id))]);
+  expect(state.infection.some((i: any) => i.personId === commander.id)).toBe(false);
+  const fitReturn = await fitCompany(page, [commander.id, ...survivors.filter(id => !garrisonIds.includes(id))]);
   const returnParty = fitReturn.slice(0, 7);
   expect(returnParty).toContain(commander.id);
+  // Occupation does not secure the entire frontier. Send a real escort to
+  // screen the return road rather than leaving six mustering soldiers to
+  // fight the next infected band alone. Keep the settlement garrison intact.
+  const escort = state.units.filter((u: any) => fitReturn.includes(u.id) && !returnParty.includes(u.id))
+    .sort((a: any, b: any) => Math.hypot(a.x-14,a.y-24)-Math.hypot(b.x-14,b.y-24)).slice(0,40).map((u: any) => u.id);
+  expect(escort.length).toBeGreaterThan(15);
+  const screen = await issue(page, escort, 'hunt', 14, 23);
+  expect(screen.ok, screen.message).toBe(true);
   await page.locator('#tab-army').click();
   await page.evaluate((ids: number[]) => (window as any).__KINGNAMIC__.runtime.selectUnits(ids.filter(id => id !== (window as any).__KINGNAMIC__.runtime.state.commander?.id)), returnParty);
   await page.locator('#tab-empire').click(); await page.locator('#gather-road').click(); await page.locator('#speed-2').click();
-  await expect(page.locator('#travel-region')).toBeEnabled({ timeout: 90000 });
+  // The return road still has finite wilderness encounters. A party that was
+  // fit at departure can be bitten while mustering; respond with the paid
+  // treatment command rather than assuming travel stays eligible for 90s.
+  await expect.poll(async () => {
+    const current = await read(page);
+    const bitten = current.infection.filter((i: any) => returnParty.includes(i.personId));
+    for (const illness of bitten) expect(illness.source).toBe('bite');
+    if (bitten.length) {
+      const herbsBefore = current.resources.herbs;
+      const treated = await page.evaluate((ids: number[]) =>
+        (window as any).__KINGNAMIC__.runtime.act({ type: 'treat', ids }), returnParty);
+      expect(treated.ok, treated.message).toBe(true);
+      const recovered = await read(page);
+      expect(recovered.resources.herbs).toBeLessThan(herbsBefore);
+      console.log('Alderwatch return convoy paid treatment', JSON.stringify({ ids: bitten.map((i: any) => i.personId), sources: bitten.map((i: any) => i.source), herbsBefore, herbsAfter: recovered.resources.herbs }));
+    }
+    expect(current.units.some((u: any) => u.id === commander.id && u.hp > 0), 'The original commander must survive the return journey.').toBe(true);
+    return page.locator('#travel-region').isEnabled();
+  }, { timeout: 90000, intervals: [500, 1000, 2000] }).toBe(true);
   await page.locator('#travel-region').click(); await waitRegion(page, 'heartmere');
   state = await read(page);
   expect(state.empire.reserve.march.alderwatch.status).toBe('captured');

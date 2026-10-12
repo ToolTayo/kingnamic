@@ -10,6 +10,14 @@ export interface Navigation { buildings: (Building | undefined)[]; fields: Map<n
 const caches=new WeakMap<State,Navigation>();
 export const navigationMetrics={fieldsBuilt:0,pathQueries:0};
 const CORNERS=[[-.12,-.12],[.12,-.12],[-.12,.12],[.12,.12]] as const;
+function leavesStartingOverlap(from:Point,to:Point,b:Building):boolean {
+  // Occupation/construction can add a footprint beside a fractional unit
+  // position. Permit movement away from that existing edge overlap only;
+  // moving toward or through the building must still be blocked.
+  const x=from.x-b.x,y=from.y-b.y;
+  const away=Math.abs(x)>=.5&&x*(to.x-from.x)>0||Math.abs(y)>=.5&&y*(to.y-from.y)>0;
+  return away&&CORNERS.some(([dx,dy])=>Math.round(from.x+dx)===b.x&&Math.round(from.y+dy)===b.y);
+}
 // Route costs may include a siege target, but physical motion never does.
 // Test the swept footprint, including fractional/crowd motion near corners.
 function gatePassage(gate:Building,faction:NavigationFaction):boolean{return gate.kind==='gate'&&(faction==='rival'?gate.owner==='rival':faction==='player'?gate.owner!=='rival':false);}
@@ -21,7 +29,7 @@ export function movementBlocker(nav:Navigation,from:Point,to:Point,enemy:boolean
     const x=Math.round(from.x+(to.x-from.x)*i/steps+dx),y=Math.round(from.y+(to.y-from.y)*i/steps+dy),t=tileAt(x,y,nav);
     if(!t||t.terrain==='water')return 'terrain';
     const k=y*MAP_W+x,b=nav.buildings[k];
-    if(b&&b.hp>0&&!(escapeOrigin&&k===origin)&&(b.kind!=='gate'||enemy||!gatePassage(b,faction)||!gateEdge(b,from,to,nav.rotations.get(b.id)??0)))return b;
+    if(b&&b.hp>0&&!(escapeOrigin&&(k===origin||leavesStartingOverlap(from,to,b)))&&(b.kind!=='gate'||enemy||!gatePassage(b,faction)||!gateEdge(b,from,to,nav.rotations.get(b.id)??0)))return b;
   }
   return;
 }

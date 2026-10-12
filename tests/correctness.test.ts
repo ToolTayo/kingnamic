@@ -13,6 +13,23 @@ import {key} from '../src/game/map';
 import type {SoldierKind} from '../src/game/types';
 function arena(){const s=newGame();s.units=[];s.buildings=s.buildings.filter(b=>b.kind==='hearth');s.residents=[];s.population=0;s.jobs={farmers:0,woodcutters:0,miners:0,healers:0,builders:0};s.resources.stone=0;return s;}
 function reload<T>(s:T):T {const r=decode(JSON.stringify(s));expect(r).not.toBeNull();return r as T;}
+
+describe('escaping new adjacent construction footprints',()=>{
+ it('a soldier overlapping a neighboring cottage edge can walk away after reload',()=>{
+  let s=arena();const u=makeUnit(s,'warden',11,14.48);makeBuilding(s,'cottage',11,15,true);
+  u.order='move';u.target={x:11,y:13};u.anchor={...u.target};u.repath=0;s=reload(s);
+  const soldier=s.units.find(v=>v.id===u.id)!;
+  for(let i=0;i<30;i++)combatStep(s,.1);
+  expect(Math.hypot(soldier.x-11,soldier.y-13)).toBeLessThan(.2);
+ });
+ it('edge recovery never permits movement toward or across an intact wall',()=>{
+  const s=arena(),b=makeBuilding(s,'wall',11,15,true),nav=navigation(s),from={x:11,y:14.48};
+  expect(movementBlocker(nav,from,{x:11,y:14.35},false,true)).toBeUndefined();
+  expect(movementBlocker(nav,from,{x:11,y:14.6},false,true)).toBe(b);
+  expect(movementBlocker(nav,from,{x:11,y:16},true,true)).toBe(b);
+  expect(movementBlocker(nav,{x:11,y:14.3},{x:11,y:14.48},false,true)).toBe(b);
+ });
+});
 describe('every eligible Crown reward settles once',()=>{
  for(const kind of ['warden','spearman','ranger','scout'] as SoldierKind[])it(kind+' and independent squads receive the same kill reward',()=>{let s=arena();const u=makeUnit(s,kind,10,14);command(s,{type:'squad-create',ids:[u.id],name:'Watch'});u.order='hold';const z=makeUnit(s,'runner',11,14);z.hp=1;s.bountyPaid=40;combatStep(s,.1);expect(s.resources.stone).toBe(2);expect(s.stats.slain).toBe(1);expect(awardBounty(s,z)).toBe(0);s=reload(s);combatStep(s,.1);expect(s.resources.stone).toBe(2);});
  for(const weapon of ['sword','spear','bow'] as const)it('commander '+weapon+' pays once beyond the former cap',()=>{const s=arena(),u=makeUnit(s,'warden',10,14);command(s,{type:'commander-appoint',id:u.id});command(s,{type:'commander-weapon',weapon});const z=makeUnit(s,'brute',11,14);z.hp=1;s.bountyPaid=40;combatStep(s,.1,false,{walk:{x:0,y:0},attack:true,aim:z});expect(s.resources.stone).toBe(3);expect(s.commander!.xp).toBe(1);expect(awardBounty(s,z)).toBe(0);reload(s);});
